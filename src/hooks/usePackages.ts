@@ -15,6 +15,25 @@ export interface Package {
   created_at: string;
 }
 
+export interface PackageBenefit {
+  id: string;
+  package_id: string;
+  service_id: string;
+  quantity: number;
+  service?: {
+    id: string;
+    name: string;
+    price: number;
+  };
+}
+
+export interface ClientPackageUsage {
+  id: string;
+  client_package_id: string;
+  service_id: string;
+  used_at: string;
+}
+
 export interface ClientPackage {
   id: string;
   user_id: string;
@@ -32,6 +51,8 @@ export interface ClientPackage {
     price: number;
     discount_percent: number;
   };
+  benefits?: PackageBenefit[];
+  usage?: ClientPackageUsage[];
 }
 
 export function useAdminPackages() {
@@ -60,16 +81,16 @@ export function useAdminPackages() {
   }, []);
 
   async function createPackage(pkg: Omit<Package, 'id' | 'created_at'>) {
-    const { error } = await supabase.from('packages').insert(pkg);
+    const { data, error } = await supabase.from('packages').insert(pkg).select().single();
 
     if (error) {
       toast({ title: 'Erro', description: 'Não foi possível criar pacote.', variant: 'destructive' });
-      return false;
+      return null;
     }
 
     toast({ title: 'Pacote criado!' });
     fetchPackages();
-    return true;
+    return data;
   }
 
   async function updatePackage(id: string, pkg: Partial<Package>) {
@@ -101,6 +122,69 @@ export function useAdminPackages() {
   return { packages, loading, fetchPackages, createPackage, updatePackage, deletePackage };
 }
 
+export function usePackageBenefits(packageId: string | null) {
+  const [benefits, setBenefits] = useState<PackageBenefit[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  async function fetchBenefits() {
+    if (!packageId) return;
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from('package_benefits')
+      .select('*, services(id, name, price)')
+      .eq('package_id', packageId);
+
+    if (error) {
+      console.error('Error fetching benefits:', error);
+    } else {
+      const formattedBenefits = (data || []).map((b: any) => ({
+        id: b.id,
+        package_id: b.package_id,
+        service_id: b.service_id,
+        quantity: b.quantity,
+        service: b.services,
+      }));
+      setBenefits(formattedBenefits);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    fetchBenefits();
+  }, [packageId]);
+
+  async function saveBenefits(newBenefits: { service_id: string; quantity: number }[]) {
+    if (!packageId) return false;
+
+    // Delete existing benefits
+    await supabase.from('package_benefits').delete().eq('package_id', packageId);
+
+    // Insert new benefits
+    if (newBenefits.length > 0) {
+      const { error } = await supabase.from('package_benefits').insert(
+        newBenefits.map((b) => ({
+          package_id: packageId,
+          service_id: b.service_id,
+          quantity: b.quantity,
+        }))
+      );
+
+      if (error) {
+        toast({ title: 'Erro', description: 'Não foi possível salvar benefícios.', variant: 'destructive' });
+        return false;
+      }
+    }
+
+    toast({ title: 'Benefícios salvos!' });
+    fetchBenefits();
+    return true;
+  }
+
+  return { benefits, loading, fetchBenefits, saveBenefits };
+}
+
 export function useClientPackages() {
   const [subscriptions, setSubscriptions] = useState<ClientPackage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,7 +204,6 @@ export function useClientPackages() {
       return;
     }
 
-    // Fetch profiles and packages for each subscription
     const subscriptionsWithDetails: ClientPackage[] = [];
 
     for (const sub of data || []) {
@@ -136,11 +219,33 @@ export function useClientPackages() {
         .eq('id', sub.package_id)
         .maybeSingle();
 
+      // Fetch benefits for this package
+      const { data: benefitsData } = await supabase
+        .from('package_benefits')
+        .select('*, services(id, name, price)')
+        .eq('package_id', sub.package_id);
+
+      // Fetch usage for this subscription
+      const { data: usageData } = await supabase
+        .from('client_package_usage')
+        .select('*')
+        .eq('client_package_id', sub.id);
+
+      const formattedBenefits = (benefitsData || []).map((b: any) => ({
+        id: b.id,
+        package_id: b.package_id,
+        service_id: b.service_id,
+        quantity: b.quantity,
+        service: b.services,
+      }));
+
       subscriptionsWithDetails.push({
         ...sub,
         status: sub.status as 'active' | 'expired' | 'cancelled',
         profile: profileData || { name: null, phone: null },
         package: packageData || { name: 'Pacote', price: 0, discount_percent: 0 },
+        benefits: formattedBenefits,
+        usage: usageData || [],
       });
     }
 
@@ -153,7 +258,6 @@ export function useClientPackages() {
   }, []);
 
   async function addSubscription(userId: string, packageId: string, startDate: string) {
-    // Get package duration
     const { data: pkg } = await supabase
       .from('packages')
       .select('duration_days')
@@ -201,5 +305,21 @@ export function useClientPackages() {
     return true;
   }
 
-  return { subscriptions, loading, fetchSubscriptions, addSubscription, cancelSubscription };
+  async function registerUsage(clientPackageId: string, serviceId: string, appointmentId?: string) {
+    const { error } = await supabase.from('client_package_usage').insert({
+      client_package_id: clientPackageId,
+      service_id: serviceId,
+      appointment_id: appointmentId || null,
+    });
+
+    if (error) {
+      toast({ title: 'Erro', description: 'Não foi possível registrar uso.', variant: 'destructive' });
+      return false;
+    }
+
+    fetchSubscriptions();
+    return true;
+  }
+
+  return { subscriptions, loading, fetchSubscriptions, addSubscription, cancelSubscription, registerUsage };
 }
