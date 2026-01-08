@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Crown, User, LogOut, ArrowLeft, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
@@ -8,12 +8,38 @@ import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useIsAdmin } from '@/hooks/useAdmin';
+import { useAdminNotifications } from '@/hooks/useNotifications';
 
 const Cliente = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
   const { isAdmin } = useIsAdmin();
+
+  // Subscribe to admin notifications if admin
+  useAdminNotifications({
+    enabled: isAdmin,
+    onNewAppointment: () => {
+      setPendingCount(prev => prev + 1);
+    }
+  });
+
+  // Fetch pending appointments count for admin badge
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const fetchPendingCount = async () => {
+      const { count } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      
+      setPendingCount(count || 0);
+    };
+
+    fetchPendingCount();
+  }, [isAdmin]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -79,10 +105,22 @@ const Cliente = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/admin')}
-                className="rounded-full text-primary gap-1 px-2"
+                className="rounded-full text-primary gap-1 px-2 relative"
               >
                 <Shield className="h-4 w-4" />
                 <span className="text-xs font-semibold">ADMIN</span>
+                <AnimatePresence>
+                  {pendingCount > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full"
+                    >
+                      {pendingCount > 9 ? '9+' : pendingCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </Button>
             )}
             <Button
