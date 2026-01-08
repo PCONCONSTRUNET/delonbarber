@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { MessageSquare, Sparkles, Loader2, Calendar, Clock, Scissors } from 'lucide-react';
+import { MessageSquare, Sparkles, Loader2, Calendar, Clock, Scissors, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface ParsedAppointment {
   client_name?: string;
+  client_phone?: string;
   date?: string;
   time?: string;
   services?: string[];
@@ -17,8 +18,8 @@ interface ParsedAppointment {
 export function WhatsAppAI() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [parsed, setParsed] = useState<ParsedAppointment | null>(null);
-  const { toast } = useToast();
 
   const parseMessage = async () => {
     if (!message.trim()) return;
@@ -34,16 +35,149 @@ export function WhatsAppAI() {
       if (error) throw error;
 
       setParsed(data);
-      toast({ title: "Mensagem interpretada!" });
+      toast.success("Mensagem interpretada!");
     } catch (error) {
       console.error('Error parsing message:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Não foi possível interpretar a mensagem.", 
-        variant: "destructive" 
-      });
+      toast.error("Não foi possível interpretar a mensagem.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createAppointment = async () => {
+    if (!parsed) return;
+
+    setCreating(true);
+
+    try {
+      // Parse the date from DD/MM/YYYY format
+      let appointmentDate: string | null = null;
+      if (parsed.date) {
+        const dateParts = parsed.date.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        if (dateParts) {
+          appointmentDate = `${dateParts[3]}-${dateParts[2]}-${dateParts[1]}`;
+        } else {
+          // Try other formats or use as-is if it's already in ISO format
+          const dateMatch = parsed.date.match(/(\d{4})-(\d{2})-(\d{2})/);
+          if (dateMatch) {
+            appointmentDate = parsed.date;
+          }
+        }
+      }
+
+      // Parse time to HH:MM format
+      let appointmentTime = parsed.time || '10:00';
+      if (appointmentTime && !appointmentTime.includes(':')) {
+        appointmentTime = `${appointmentTime}:00`;
+      }
+
+      if (!appointmentDate) {
+        toast.error("Data inválida. Por favor, verifique o formato.");
+        setCreating(false);
+        return;
+      }
+
+      // First, try to find or create a profile for the client
+      let userId: string | null = null;
+
+      // Check if there's a profile with this phone number
+      if (parsed.client_phone) {
+        const phone = parsed.client_phone.replace(/\D/g, '');
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('phone', phone)
+          .maybeSingle();
+
+        if (existingProfile) {
+          userId = existingProfile.user_id;
+        }
+      }
+
+      // If no user found, we need to get the admin's user id to create the appointment
+      // The appointment will be created by admin on behalf of the client
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error("Você precisa estar logado para criar agendamentos.");
+          setCreating(false);
+          return;
+        }
+        userId = user.id;
+      }
+
+      // Find services by name
+      const serviceNames = parsed.services || [];
+      let totalPrice = 0;
+      let totalDuration = 0;
+      const matchedServices: { id: string; price: number; duration: number }[] = [];
+
+      if (serviceNames.length > 0) {
+        const { data: servicesData } = await supabase
+          .from('services')
+          .select('id, name, price, duration_minutes')
+          .eq('is_active', true);
+
+        if (servicesData) {
+          for (const serviceName of serviceNames) {
+            const found = servicesData.find(s => 
+              s.name.toLowerCase().includes(serviceName.toLowerCase()) ||
+              serviceName.toLowerCase().includes(s.name.toLowerCase())
+            );
+            if (found) {
+              matchedServices.push({
+                id: found.id,
+                price: Number(found.price),
+                duration: found.duration_minutes
+              });
+              totalPrice += Number(found.price);
+              totalDuration += found.duration_minutes;
+            }
+          }
+        }
+      }
+
+      // Create the appointment
+      const { data: appointment, error: aptError } = await supabase
+        .from('appointments')
+        .insert({
+          user_id: userId,
+          appointment_date: appointmentDate,
+          appointment_time: appointmentTime,
+          notes: parsed.notes || `Cliente: ${parsed.client_name || 'Não informado'}${parsed.client_phone ? ` | Tel: ${parsed.client_phone}` : ''}`,
+          total_price: totalPrice,
+          total_duration: totalDuration,
+          status: 'pending',
+          payment_status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (aptError) {
+        console.error('Error creating appointment:', aptError);
+        throw aptError;
+      }
+
+      // Add services to appointment
+      if (matchedServices.length > 0 && appointment) {
+        const appointmentServices = matchedServices.map(service => ({
+          appointment_id: appointment.id,
+          service_id: service.id,
+          price_at_booking: service.price
+        }));
+
+        await supabase
+          .from('appointment_services')
+          .insert(appointmentServices);
+      }
+
+      toast.success("Agendamento criado com sucesso!");
+      clearResult();
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      toast.error("Erro ao criar agendamento. Verifique os dados.");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -51,6 +185,8 @@ export function WhatsAppAI() {
     setParsed(null);
     setMessage('');
   };
+
+  const canCreate = parsed && parsed.date && parsed.time;
 
   return (
     <div className="space-y-6">
@@ -107,6 +243,13 @@ Exemplo: 'Oi, quero agendar um corte degradê pra sexta às 14h. Meu nome é Jo�
               </div>
             )}
 
+            {parsed.client_phone && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
+                <span className="text-muted-foreground">Telefone:</span>
+                <span className="font-medium">{parsed.client_phone}</span>
+              </div>
+            )}
+
             {parsed.date && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
                 <Calendar className="h-4 w-4 text-primary" />
@@ -139,12 +282,32 @@ Exemplo: 'Oi, quero agendar um corte degradê pra sexta às 14h. Meu nome é Jo�
             )}
           </div>
 
+          {!canCreate && (
+            <p className="text-amber-500 text-sm mt-4">
+              ⚠️ Data e horário são obrigatórios para criar o agendamento.
+            </p>
+          )}
+
           <div className="flex gap-3 mt-6">
             <Button variant="outline" onClick={clearResult} className="flex-1">
               Limpar
             </Button>
-            <Button className="flex-1">
-              Criar Agendamento
+            <Button 
+              className="flex-1" 
+              onClick={createAppointment}
+              disabled={!canCreate || creating}
+            >
+              {creating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Criando...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Criar Agendamento
+                </>
+              )}
             </Button>
           </div>
         </motion.div>
@@ -158,7 +321,7 @@ Exemplo: 'Oi, quero agendar um corte degradê pra sexta às 14h. Meu nome é Jo�
           <li>2. Cole no campo acima</li>
           <li>3. Clique em "Interpretar com IA"</li>
           <li>4. Revise os dados extraídos</li>
-          <li>5. Crie o agendamento manualmente</li>
+          <li>5. Clique em "Criar Agendamento"</li>
         </ol>
       </div>
     </div>
