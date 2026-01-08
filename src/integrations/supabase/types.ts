@@ -154,6 +154,52 @@ export type Database = {
         }
         Relationships: []
       }
+      client_package_usage: {
+        Row: {
+          appointment_id: string | null
+          client_package_id: string
+          id: string
+          service_id: string
+          used_at: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_package_id: string
+          id?: string
+          service_id: string
+          used_at?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          client_package_id?: string
+          id?: string
+          service_id?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_package_usage_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_package_usage_client_package_id_fkey"
+            columns: ["client_package_id"]
+            isOneToOne: false
+            referencedRelation: "client_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_package_usage_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_packages: {
         Row: {
           created_at: string | null
@@ -191,6 +237,45 @@ export type Database = {
             columns: ["package_id"]
             isOneToOne: false
             referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_benefits: {
+        Row: {
+          created_at: string | null
+          id: string
+          package_id: string
+          quantity: number
+          service_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          package_id: string
+          quantity?: number
+          service_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          package_id?: string
+          quantity?: number
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_benefits_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_benefits_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]

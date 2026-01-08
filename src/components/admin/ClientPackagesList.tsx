@@ -5,27 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar, XCircle, Plus, Search } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Calendar, XCircle, Plus, Search, Scissors, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-interface ClientPackage {
-  id: string;
-  user_id: string;
-  package_id: string;
-  start_date: string;
-  end_date: string;
-  status: 'active' | 'expired' | 'cancelled';
-  profile?: {
-    name: string | null;
-    phone: string | null;
-  };
-  package?: {
-    name: string;
-    price: number;
-    discount_percent: number;
-  };
-}
+import { ClientPackage } from '@/hooks/usePackages';
 
 interface Package {
   id: string;
@@ -47,6 +31,7 @@ interface ClientPackagesListProps {
   selectedPackageId?: string;
   onAddSubscription: (userId: string, packageId: string, startDate: string) => Promise<boolean>;
   onCancelSubscription: (id: string) => Promise<boolean>;
+  onRegisterUsage?: (clientPackageId: string, serviceId: string) => Promise<boolean>;
 }
 
 export function ClientPackagesList({
@@ -56,6 +41,7 @@ export function ClientPackagesList({
   selectedPackageId,
   onAddSubscription,
   onCancelSubscription,
+  onRegisterUsage,
 }: ClientPackagesListProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedClient, setSelectedClient] = useState('');
@@ -63,6 +49,9 @@ export function ClientPackagesList({
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showUsageDialog, setShowUsageDialog] = useState<ClientPackage | null>(null);
+  const [selectedServiceForUsage, setSelectedServiceForUsage] = useState('');
+  const [registeringUsage, setRegisteringUsage] = useState(false);
 
   const filteredSubscriptions = subscriptions.filter((sub) => {
     const matchesSearch = search
@@ -86,6 +75,17 @@ export function ClientPackagesList({
     setLoading(false);
   };
 
+  const handleRegisterUsage = async () => {
+    if (!showUsageDialog || !selectedServiceForUsage || !onRegisterUsage) return;
+    setRegisteringUsage(true);
+    const success = await onRegisterUsage(showUsageDialog.id, selectedServiceForUsage);
+    if (success) {
+      setShowUsageDialog(null);
+      setSelectedServiceForUsage('');
+    }
+    setRegisteringUsage(false);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -97,6 +97,23 @@ export function ClientPackagesList({
       default:
         return <Badge>{status}</Badge>;
     }
+  };
+
+  const getUsageByService = (sub: ClientPackage) => {
+    const usage = sub.usage || [];
+    return usage.reduce((acc, u) => {
+      acc[u.service_id] = (acc[u.service_id] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  };
+
+  const getAvailableServices = (sub: ClientPackage) => {
+    const benefits = sub.benefits || [];
+    const usageByService = getUsageByService(sub);
+    return benefits.filter((b) => {
+      const used = usageByService[b.service_id] || 0;
+      return used < b.quantity;
+    });
   };
 
   return (
@@ -126,41 +143,89 @@ export function ClientPackagesList({
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredSubscriptions.map((sub) => (
-            <div
-              key={sub.id}
-              className="p-4 rounded-2xl glass-effect flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <h4 className="font-semibold">{sub.profile?.name || 'Cliente'}</h4>
-                  {getStatusBadge(sub.status)}
-                </div>
-                <p className="text-sm text-muted-foreground">{sub.profile?.phone || 'Sem telefone'}</p>
-                <p className="text-sm text-primary font-medium mt-1">
-                  {sub.package?.name} • R$ {Number(sub.package?.price || 0).toFixed(0)}
-                </p>
-              </div>
+          {filteredSubscriptions.map((sub) => {
+            const benefits = sub.benefits || [];
+            const usageByService = getUsageByService(sub);
+            const availableServices = getAvailableServices(sub);
 
-              <div className="flex flex-col sm:items-end gap-2">
-                <div className="text-sm text-muted-foreground">
-                  {format(new Date(sub.start_date), 'dd/MM/yyyy', { locale: ptBR })} -{' '}
-                  {format(new Date(sub.end_date), 'dd/MM/yyyy', { locale: ptBR })}
+            return (
+              <div key={sub.id} className="p-4 rounded-2xl glass-effect space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h4 className="font-semibold">{sub.profile?.name || 'Cliente'}</h4>
+                      {getStatusBadge(sub.status)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{sub.profile?.phone || 'Sem telefone'}</p>
+                    <p className="text-sm text-primary font-medium mt-1">
+                      {sub.package?.name} • R$ {Number(sub.package?.price || 0).toFixed(0)}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:items-end gap-2">
+                    <div className="text-sm text-muted-foreground">
+                      {format(new Date(sub.start_date), 'dd/MM/yyyy', { locale: ptBR })} -{' '}
+                      {format(new Date(sub.end_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    </div>
+                    <div className="flex gap-2">
+                      {sub.status === 'active' && availableServices.length > 0 && onRegisterUsage && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowUsageDialog(sub)}
+                        >
+                          <Scissors className="h-3 w-3 mr-1" />
+                          Registrar Uso
+                        </Button>
+                      )}
+                      {sub.status === 'active' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive"
+                          onClick={() => onCancelSubscription(sub.id)}
+                        >
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Cancelar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                {sub.status === 'active' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-destructive"
-                    onClick={() => onCancelSubscription(sub.id)}
-                  >
-                    <XCircle className="h-3 w-3 mr-1" />
-                    Cancelar
-                  </Button>
+
+                {/* Benefits usage */}
+                {benefits.length > 0 && (
+                  <div className="space-y-2 pt-3 border-t border-border">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Uso dos Benefícios
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {benefits.map((benefit) => {
+                        const used = usageByService[benefit.service_id] || 0;
+                        const remaining = benefit.quantity - used;
+                        const percentage = (used / benefit.quantity) * 100;
+
+                        return (
+                          <div key={benefit.id} className="space-y-1">
+                            <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2">
+                                <Scissors className="h-3 w-3 text-muted-foreground" />
+                                <span className="truncate">{benefit.service?.name}</span>
+                              </div>
+                              <span className={remaining > 0 ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                                {remaining}/{benefit.quantity}
+                              </span>
+                            </div>
+                            <Progress value={percentage} className="h-1.5" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -224,6 +289,56 @@ export function ClientPackagesList({
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Usage Dialog */}
+      <Dialog open={!!showUsageDialog} onOpenChange={() => setShowUsageDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Uso de Benefício</DialogTitle>
+          </DialogHeader>
+          {showUsageDialog && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Cliente: <span className="font-medium text-foreground">{showUsageDialog.profile?.name}</span>
+              </p>
+
+              <div>
+                <Label>Serviço Utilizado</Label>
+                <Select value={selectedServiceForUsage} onValueChange={setSelectedServiceForUsage}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um serviço" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableServices(showUsageDialog).map((benefit) => {
+                      const used = getUsageByService(showUsageDialog)[benefit.service_id] || 0;
+                      const remaining = benefit.quantity - used;
+                      return (
+                        <SelectItem key={benefit.service_id} value={benefit.service_id}>
+                          {benefit.service?.name} ({remaining} restantes)
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={() => setShowUsageDialog(null)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleRegisterUsage}
+                  disabled={!selectedServiceForUsage || registeringUsage}
+                  className="flex-1"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  {registeringUsage ? 'Registrando...' : 'Confirmar'}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -202,7 +202,7 @@ export function AdminIA() {
 export function AdminPacotes() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const { packages, loading: packagesLoading, createPackage, updatePackage, deletePackage } = useAdminPackages();
-  const { subscriptions, loading: subsLoading, addSubscription, cancelSubscription } = useClientPackages();
+  const { subscriptions, loading: subsLoading, addSubscription, cancelSubscription, registerUsage } = useClientPackages();
   const { clients, loading: clientsLoading } = useAdminClients();
   const [showForm, setShowForm] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | undefined>();
@@ -263,6 +263,7 @@ export function AdminPacotes() {
               selectedPackageId={selectedPackageId}
               onAddSubscription={addSubscription}
               onCancelSubscription={cancelSubscription}
+              onRegisterUsage={registerUsage}
             />
           )}
         </TabsContent>
