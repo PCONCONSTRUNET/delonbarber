@@ -12,12 +12,16 @@ interface ServiceSelectionProps {
 const categoryLabels: Record<string, string> = {
   corte: '✂️ Cortes',
   barba: '🧔 Barba',
+  sobrancelha: '👁️ Sobrancelha',
   combo: '⭐ Combos',
   adicional: '➕ Extras'
 };
 
+const categoryOrder = ['corte', 'barba', 'sobrancelha', 'combo', 'adicional'];
+
 export function ServiceSelection({ services, selectedServices, onToggleService }: ServiceSelectionProps) {
-  const categories = [...new Set(services.map(s => s.category))];
+  const categories = [...new Set(services.map(s => s.category))]
+    .sort((a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b));
 
   const isSelected = (service: Service) => 
     selectedServices.some(s => s.id === service.id);
@@ -38,6 +42,7 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
           <div className="space-y-3">
             {services
               .filter(s => s.category === category)
+              .sort((a, b) => category === 'corte' ? Number(b.price) - Number(a.price) : 0)
               .map((service, index) => (
                 <motion.div
                   key={service.id}
