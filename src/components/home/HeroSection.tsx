@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Calendar, Sparkles } from "lucide-react";
+import { User, Sparkles } from "lucide-react";
 import heroImage from "@/assets/hero-barbershop.jpg";
 
 export function HeroSection() {
@@ -51,15 +51,15 @@ export function HeroSection() {
             className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in"
             style={{ animationDelay: "0.3s" }}
           >
-            <Link to="/agendar">
+            <Link to="/login">
               <Button size="lg" className="gap-2 glow-effect text-lg px-8">
-                <Calendar className="h-5 w-5" />
-                Agendar Horário
+                <User className="h-5 w-5" />
+                Entrar
               </Button>
             </Link>
-            <Link to="/servicos">
+            <Link to="/login">
               <Button variant="outline" size="lg" className="text-lg px-8 border-foreground/20 hover:bg-foreground/5">
-                Ver Serviços
+                Criar Conta
               </Button>
             </Link>
           </div>
