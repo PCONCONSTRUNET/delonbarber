@@ -90,7 +90,7 @@ const Agendar = () => {
     }
   };
 
-  const handleConfirm = async (paymentMethod: 'pix' | 'cash' | 'card') => {
+  const handleConfirm = async (paymentMethod: 'pix' | 'cash' | 'card' | 'subscriber') => {
     if (!user) {
       navigate('/login');
       return;
@@ -103,8 +103,8 @@ const Agendar = () => {
     setIsSubmitting(false);
 
     if (result) {
-      // Only show payment dialog for PIX
-      if (paymentMethod === 'pix') {
+      // Only show payment dialog for PIX (and not for subscriber)
+      if (paymentMethod === 'pix' && Number(result.total_price) > 0) {
         setPaymentDialog({
           open: true,
           appointmentId: result.id,
@@ -114,7 +114,7 @@ const Agendar = () => {
           services: selectedServices.map(s => s.name),
         });
       } else {
-        // For cash/card, just go to history
+        // For cash/card/subscriber, just go to history
         setActiveTab('historico');
       }
 
