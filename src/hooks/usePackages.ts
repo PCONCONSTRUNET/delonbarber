@@ -40,7 +40,7 @@ export interface ClientPackage {
   package_id: string;
   start_date: string;
   end_date: string;
-  status: 'active' | 'expired' | 'cancelled';
+  status: 'active' | 'expired' | 'cancelled' | 'pending';
   created_at: string;
   profile?: {
     name: string | null;
@@ -305,6 +305,29 @@ export function useClientPackages() {
     return true;
   }
 
+  async function deleteSubscription(id: string) {
+    // First delete usage records
+    await supabase
+      .from('client_package_usage')
+      .delete()
+      .eq('client_package_id', id);
+
+    // Then delete the subscription
+    const { error } = await supabase
+      .from('client_packages')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({ title: 'Erro', description: 'Não foi possível excluir.', variant: 'destructive' });
+      return false;
+    }
+
+    toast({ title: 'Assinatura excluída!' });
+    fetchSubscriptions();
+    return true;
+  }
+
   async function registerUsage(clientPackageId: string, serviceId: string, appointmentId?: string) {
     const { error } = await supabase.from('client_package_usage').insert({
       client_package_id: clientPackageId,
@@ -321,5 +344,5 @@ export function useClientPackages() {
     return true;
   }
 
-  return { subscriptions, loading, fetchSubscriptions, addSubscription, cancelSubscription, registerUsage };
+  return { subscriptions, loading, fetchSubscriptions, addSubscription, cancelSubscription, deleteSubscription, registerUsage };
 }
