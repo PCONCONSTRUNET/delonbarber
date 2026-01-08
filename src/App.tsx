@@ -8,6 +8,8 @@ import Servicos from "./pages/Servicos";
 import Agendar from "./pages/Agendar";
 import Login from "./pages/Login";
 import Perfil from "./pages/Perfil";
+import Cliente from "./pages/Cliente";
+import Pacotes from "./pages/Pacotes";
 import NotFound from "./pages/NotFound";
 import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminIA } from "./pages/Admin";
 
@@ -25,6 +27,8 @@ const App = () => (
           <Route path="/agendar" element={<Agendar />} />
           <Route path="/login" element={<Login />} />
           <Route path="/perfil" element={<Perfil />} />
+          <Route path="/cliente" element={<Cliente />} />
+          <Route path="/pacotes" element={<Pacotes />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/agenda" element={<AdminAgenda />} />
           <Route path="/admin/clientes" element={<AdminClientes />} />
