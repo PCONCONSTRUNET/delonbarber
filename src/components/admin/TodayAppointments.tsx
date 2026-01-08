@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone, MessageCircle } from 'lucide-react';
+import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { PixIcon } from '@/components/icons/PixIcon';
+import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { toast } from 'sonner';
 
 interface TodayAppointmentsProps {
@@ -150,7 +151,7 @@ Qualquer dúvida, estamos à disposição! 💈`;
                           className="ml-1 p-1 rounded-full hover:bg-green-500/20 transition-colors group"
                           title="Enviar mensagem no WhatsApp"
                         >
-                          <MessageCircle className="h-4 w-4 text-green-500 group-hover:scale-110 transition-transform" />
+                          <WhatsAppIcon size={16} className="group-hover:scale-110 transition-transform" />
                         </button>
                       </>
                     )}
