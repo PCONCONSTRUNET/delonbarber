@@ -57,6 +57,9 @@ export type Database = {
           created_at: string | null
           id: string
           notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_status: string | null
           status: Database["public"]["Enums"]["appointment_status"] | null
           total_duration: number | null
           total_price: number | null
@@ -69,6 +72,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           status?: Database["public"]["Enums"]["appointment_status"] | null
           total_duration?: number | null
           total_price?: number | null
@@ -81,6 +87,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           status?: Database["public"]["Enums"]["appointment_status"] | null
           total_duration?: number | null
           total_price?: number | null
@@ -118,6 +127,30 @@ export type Database = {
           id?: string
           is_open?: boolean | null
           open_time?: string
+        }
+        Relationships: []
+      }
+      client_notes: {
+        Row: {
+          admin_id: string | null
+          client_id: string
+          created_at: string | null
+          id: string
+          note: string
+        }
+        Insert: {
+          admin_id?: string | null
+          client_id: string
+          created_at?: string | null
+          id?: string
+          note: string
+        }
+        Update: {
+          admin_id?: string | null
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          note?: string
         }
         Relationships: []
       }
@@ -187,14 +220,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "user"
       appointment_status: "pending" | "confirmed" | "completed" | "cancelled"
     }
     CompositeTypes: {
@@ -323,6 +384,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       appointment_status: ["pending", "confirmed", "completed", "cancelled"],
     },
   },
