@@ -140,35 +140,33 @@ const Login = () => {
       
       <main className="pt-24 pb-24 flex items-center justify-center min-h-screen">
         <div className="container px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
-            {/* Left side - Image */}
-            <div className="hidden lg:block relative">
-              <div className="relative rounded-2xl overflow-hidden">
-                <img 
-                  src={barberPhoto} 
-                  alt="Barbeiro Alan Delon" 
-                  className="w-full h-auto rounded-2xl object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
-                <div className="absolute bottom-6 left-6 right-6">
-                  <p className="font-display text-xl font-semibold">Tradição em cada corte</p>
-                  <p className="text-muted-foreground text-sm mt-1">Mais de 10 anos de experiência</p>
+          <div className="max-w-md mx-auto">
+            {/* Circular Photo with Ring */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary via-primary/50 to-primary/20 blur-xl opacity-60 animate-pulse-glow" />
+                <div className="relative w-28 h-28 rounded-full p-1 bg-gradient-to-br from-primary to-primary/50">
+                  <div className="w-full h-full rounded-full overflow-hidden border-4 border-background">
+                    <img 
+                      src={barberPhoto} 
+                      alt="Barbearia Alan Delon" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Right side - Form */}
-            <div>
-              {/* Logo */}
-              <div className="flex items-center justify-center gap-3 mb-8">
-                <Scissors className="h-10 w-10 text-primary" />
-                <span className="font-display text-2xl font-semibold tracking-wider">
-                  ALAN DELON
-                </span>
-              </div>
+            {/* Logo */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <Scissors className="h-8 w-8 text-primary" />
+              <span className="font-display text-xl font-semibold tracking-wider">
+                ALAN DELON
+              </span>
+            </div>
 
             <Card className="glass-effect border-border">
-              <CardHeader className="text-center">
+              <CardHeader className="text-center pt-6 pb-4">
                 <CardTitle className="font-display text-2xl">Bem-vindo</CardTitle>
                 <CardDescription>
                   Entre ou crie sua conta para agendar
@@ -299,7 +297,6 @@ const Login = () => {
                 </Tabs>
               </CardContent>
             </Card>
-            </div>
           </div>
         </div>
       </main>
