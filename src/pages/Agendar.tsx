@@ -140,26 +140,26 @@ const Agendar = () => {
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
       <AnimatedBackground />
       
-      <main className="pt-6 pb-16 px-4 max-w-lg mx-auto">
+      <main className="pt-4 sm:pt-6 pb-20 px-3 sm:px-4 max-w-lg mx-auto safe-area-top">
         {/* Header com botão voltar */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6"
+          className="flex items-center justify-between mb-4 sm:mb-6"
         >
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/cliente')}
-            className="rounded-full"
+            className="rounded-full h-9 w-9 sm:h-10 sm:w-10"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
           
-          <h1 className="font-display text-2xl font-bold text-foreground">
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">
             ✂️ Agendar
           </h1>
           
@@ -202,11 +202,11 @@ const Agendar = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-2xl p-1">
-            <TabsTrigger value="agendar" className="rounded-xl text-sm">
+          <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6 h-11 sm:h-12 rounded-2xl p-1">
+            <TabsTrigger value="agendar" className="rounded-xl text-xs sm:text-sm">
               📅 Agendar
             </TabsTrigger>
-            <TabsTrigger value="historico" className="rounded-xl text-sm">
+            <TabsTrigger value="historico" className="rounded-xl text-xs sm:text-sm">
               📋 Histórico
             </TabsTrigger>
           </TabsList>
@@ -219,7 +219,7 @@ const Agendar = () => {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex justify-center mb-6"
+              className="flex justify-center mb-4 sm:mb-6"
             >
               <div className="flex items-center gap-1">
                 {steps.map((step, index) => {
@@ -230,7 +230,7 @@ const Agendar = () => {
                     <div key={step.id} className="flex items-center">
                       <div
                         className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                          "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all",
                           isActive || isCompleted
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted text-muted-foreground"
@@ -241,7 +241,7 @@ const Agendar = () => {
                       
                       {index < steps.length - 1 && (
                         <div className={cn(
-                          "w-8 h-0.5 mx-1",
+                          "w-6 sm:w-8 h-0.5 mx-0.5 sm:mx-1",
                           isCompleted ? "bg-primary" : "bg-muted"
                         )} />
                       )}
@@ -256,9 +256,9 @@ const Agendar = () => {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-primary/10 rounded-2xl p-3 mb-4 flex items-center justify-between"
+                className="bg-primary/10 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 mb-3 sm:mb-4 flex items-center justify-between"
               >
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-xs sm:text-sm">
                   <span className="font-semibold text-foreground">
                     {selectedServices.length}x
                   </span>
@@ -266,7 +266,7 @@ const Agendar = () => {
                     {totalDuration}min
                   </span>
                 </div>
-                <span className="text-lg font-bold text-primary">
+                <span className="text-base sm:text-lg font-bold text-primary">
                   R$ {totalPrice.toFixed(0)}
                 </span>
               </motion.div>
@@ -352,13 +352,13 @@ const Agendar = () => {
             </AnimatePresence>
 
             {/* Navigation Buttons - fixos no bottom */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-lg border-t border-border">
-              <div className="max-w-lg mx-auto flex gap-3">
+            <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-background/90 backdrop-blur-lg border-t border-border safe-area-bottom">
+              <div className="max-w-lg mx-auto flex gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setCurrentStep(prev => prev - 1)}
                   disabled={currentStep === 1}
-                  className="flex-1 h-12 rounded-2xl"
+                  className="flex-1 h-11 sm:h-12 rounded-xl sm:rounded-2xl text-sm"
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Voltar
@@ -368,7 +368,7 @@ const Agendar = () => {
                   <Button
                     onClick={() => setCurrentStep(prev => prev + 1)}
                     disabled={!canProceed()}
-                    className="flex-1 h-12 rounded-2xl"
+                    className="flex-1 h-11 sm:h-12 rounded-xl sm:rounded-2xl text-sm"
                   >
                     Próximo
                     <ChevronRight className="w-4 h-4 ml-1" />
