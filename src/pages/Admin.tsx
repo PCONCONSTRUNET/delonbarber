@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { MobileAdminNav } from '@/components/admin/MobileAdminNav';
 import { DashboardStats } from '@/components/admin/DashboardStats';
 import { DashboardCharts } from '@/components/admin/DashboardCharts';
 import { TodayAppointments } from '@/components/admin/TodayAppointments';
@@ -30,9 +31,19 @@ interface AdminLayoutProps {
 function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="flex min-h-screen w-full bg-background">
-      <AdminSidebar />
-      <main className="flex-1 p-6 overflow-auto">
-        {children}
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block">
+        <AdminSidebar />
+      </div>
+      
+      {/* Mobile Navigation */}
+      <MobileAdminNav />
+      
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto pt-14 pb-20 md:pt-0 md:pb-0">
+        <div className="p-4 md:p-6">
+          {children}
+        </div>
       </main>
     </div>
   );
@@ -58,11 +69,11 @@ export function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <h1 className="font-display text-3xl font-bold">Dashboard</h1>
-            <span title="Notificações ativas">
+            <h1 className="font-display text-2xl md:text-3xl font-bold">Dashboard</h1>
+            <span title="Notificações ativas" className="hidden md:inline">
               <Bell className="h-5 w-5 text-green-500 animate-pulse" />
             </span>
           </div>
@@ -77,9 +88,9 @@ export function AdminDashboard() {
         {/* Charts Section */}
         <DashboardCharts appointments={appointments} />
         
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
           <div>
-            <h2 className="font-semibold mb-4">Agendamentos de Hoje</h2>
+            <h2 className="font-semibold mb-3 md:mb-4 text-sm md:text-base">Agendamentos de Hoje</h2>
             {loading ? <Loader2 className="animate-spin" /> : (
               <TodayAppointments 
                 appointments={appointments}
@@ -89,7 +100,9 @@ export function AdminDashboard() {
               />
             )}
           </div>
-          <CalendarView appointments={appointments} view="month" onSelectDate={setSelectedDate} selectedDate={selectedDate} />
+          <div className="hidden lg:block">
+            <CalendarView appointments={appointments} view="month" onSelectDate={setSelectedDate} selectedDate={selectedDate} />
+          </div>
         </div>
       </div>
     </AdminLayout>
@@ -110,19 +123,21 @@ export function AdminAgenda() {
 
   return (
     <AdminLayout>
-      <h1 className="font-display text-3xl font-bold mb-6">Agenda</h1>
+      <h1 className="font-display text-2xl md:text-3xl font-bold mb-4 md:mb-6">Agenda</h1>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
-          <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
-          <TabsTrigger value="horarios">Bloquear Horários</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 mb-4 md:mb-6 h-10 md:h-11">
+          <TabsTrigger value="agendamentos" className="text-xs md:text-sm">Agendamentos</TabsTrigger>
+          <TabsTrigger value="horarios" className="text-xs md:text-sm">Bloquear</TabsTrigger>
         </TabsList>
 
         <TabsContent value="agendamentos">
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
             <CalendarView appointments={appointments} view="month" onSelectDate={setSelectedDate} selectedDate={selectedDate} />
             <div>
-              <h2 className="font-semibold mb-4">{selectedDate.toLocaleDateString('pt-BR', { dateStyle: 'long' })}</h2>
+              <h2 className="font-semibold mb-3 md:mb-4 text-sm md:text-base">
+                {selectedDate.toLocaleDateString('pt-BR', { dateStyle: 'long' })}
+              </h2>
               {loading ? <Loader2 className="animate-spin" /> : (
                 <TodayAppointments 
                   appointments={dayAppointments.length ? dayAppointments.map(a => ({ ...a, appointment_date: dateStr })) : []}
@@ -185,11 +200,11 @@ export function AdminClientes() {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl font-bold">Clientes</h1>
-        <Button onClick={exportToCSV} variant="outline" disabled={loading || clients.length === 0}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
+        <h1 className="font-display text-2xl md:text-3xl font-bold">Clientes</h1>
+        <Button onClick={exportToCSV} variant="outline" size="sm" disabled={loading || clients.length === 0}>
           <Download className="h-4 w-4 mr-2" />
-          Exportar CSV
+          <span className="hidden sm:inline">Exportar</span> CSV
         </Button>
       </div>
       {loading ? <Loader2 className="animate-spin" /> : <ClientList clients={clients} onDeleteClient={deleteClient} />}
@@ -215,25 +230,28 @@ export function AdminServicos() {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl font-bold">Serviços</h1>
-        <Button onClick={() => { setEditingService(null); setShowForm(true); }}><Plus className="h-4 w-4 mr-2" />Novo Serviço</Button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
+        <h1 className="font-display text-2xl md:text-3xl font-bold">Serviços</h1>
+        <Button size="sm" onClick={() => { setEditingService(null); setShowForm(true); }}>
+          <Plus className="h-4 w-4 mr-1" />
+          <span className="hidden sm:inline">Novo</span> Serviço
+        </Button>
       </div>
       
       {loading ? <Loader2 className="animate-spin" /> : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {services.map(service => (
-            <div key={service.id} className={`p-4 rounded-2xl glass-effect relative ${!service.is_active ? 'opacity-50' : ''}`}>
+            <div key={service.id} className={`p-3 md:p-4 rounded-2xl glass-effect relative ${!service.is_active ? 'opacity-50' : ''}`}>
               {service.subscribers_only && (
                 <div className="absolute -top-2 -right-2">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-medium">
                     <Crown className="h-3 w-3" />
-                    Exclusivo
+                    VIP
                   </span>
                 </div>
               )}
-              <h3 className="font-semibold">{service.name}</h3>
-              <p className="text-sm text-muted-foreground">{service.description}</p>
+              <h3 className="font-semibold text-sm md:text-base">{service.name}</h3>
+              <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">{service.description}</p>
               <p className="text-primary font-bold mt-2">R$ {Number(service.price).toFixed(0)}</p>
               <div className="flex gap-2 mt-3">
                 <Button size="sm" variant="outline" onClick={() => { setEditingService(service); setShowForm(true); }}><Pencil className="h-3 w-3" /></Button>
@@ -262,8 +280,8 @@ export function AdminFinanceiro() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 className="font-display text-3xl font-bold">Financeiro</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
+        <h1 className="font-display text-2xl md:text-3xl font-bold">Financeiro</h1>
         <ReportExport appointments={appointments} />
       </div>
       {loading ? <Loader2 className="animate-spin" /> : <FinancialReport appointments={appointments} />}
@@ -279,7 +297,7 @@ export function AdminIA() {
 
   return (
     <AdminLayout>
-      <h1 className="font-display text-3xl font-bold mb-6">IA WhatsApp</h1>
+      <h1 className="font-display text-2xl md:text-3xl font-bold mb-4 md:mb-6">IA WhatsApp</h1>
       <WhatsAppAI />
     </AdminLayout>
   );
@@ -311,18 +329,18 @@ export function AdminPacotes() {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl font-bold">Pacotes Premium</h1>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Pacote
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
+        <h1 className="font-display text-2xl md:text-3xl font-bold">Pacotes VIP</h1>
+        <Button size="sm" onClick={() => setShowForm(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Novo
         </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
-          <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
-          <TabsTrigger value="assinantes">Assinantes</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 mb-4 md:mb-6 h-10 md:h-11">
+          <TabsTrigger value="pacotes" className="text-xs md:text-sm">Pacotes</TabsTrigger>
+          <TabsTrigger value="assinantes" className="text-xs md:text-sm">Assinantes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pacotes">
