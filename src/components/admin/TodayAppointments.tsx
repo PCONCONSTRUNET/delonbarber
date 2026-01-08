@@ -222,12 +222,26 @@ Qualquer dúvida, estamos à disposição! 💈`;
                     </>
                   )}
                   {apt.status === 'confirmed' && (
-                    <Button
-                      size="sm"
-                      onClick={() => onUpdateStatus(apt.id, 'completed')}
-                    >
-                      Concluir
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => onUpdateStatus(apt.id, 'completed')}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Concluir
+                      </Button>
+                      {apt.payment_status !== 'paid' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-green-500 text-green-500 gap-1"
+                          onClick={() => handleOpenPayment(apt)}
+                        >
+                          <PixIcon size={16} />
+                          Pagar
+                        </Button>
+                      )}
+                    </>
                   )}
                   {apt.status === 'completed' && apt.payment_status !== 'paid' && (
                     <Button
