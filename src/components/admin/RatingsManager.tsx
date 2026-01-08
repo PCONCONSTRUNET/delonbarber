@@ -219,88 +219,147 @@ export function RatingsManager() {
         />
       </div>
 
-      {/* Ratings List */}
+      {/* Ratings List - Mobile cards + Desktop table */}
       {filteredRatings.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Star className="h-12 w-12 mx-auto mb-3 opacity-20" />
           <p>{searchTerm ? 'Nenhuma avaliação encontrada' : 'Nenhuma avaliação ainda'}</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Avaliação</TableHead>
-                <TableHead className="hidden md:table-cell">Comentário</TableHead>
-                <TableHead className="hidden sm:table-cell">Data</TableHead>
-                <TableHead>Visível</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <AnimatePresence>
-                {filteredRatings.map((rating) => (
-                  <motion.tr
-                    key={rating.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="border-b last:border-0"
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
-                          {rating.profile?.name?.[0]?.toUpperCase() || '?'}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{rating.profile?.name || 'Cliente'}</p>
-                          <p className="text-xs text-muted-foreground hidden sm:block">{rating.profile?.phone}</p>
-                        </div>
+        <>
+          {/* Mobile Cards View */}
+          <div className="space-y-3 md:hidden">
+            <AnimatePresence>
+              {filteredRatings.map((rating) => (
+                <motion.div
+                  key={rating.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="p-4 rounded-xl border border-border bg-card"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                        {rating.profile?.name?.[0]?.toUpperCase() || '?'}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <RatingStars rating={rating.rating} size="sm" />
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell max-w-xs">
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {rating.comment || '-'}
-                      </p>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
+                      <div>
+                        <p className="font-medium text-sm">{rating.profile?.name || 'Cliente'}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {format(new Date(rating.created_at), "dd/MM/yy", { locale: ptBR })}
+                        </p>
+                      </div>
+                    </div>
+                    <RatingStars rating={rating.rating} size="sm" />
+                  </div>
+                  
+                  {rating.comment && (
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      "{rating.comment}"
+                    </p>
+                  )}
+                  
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={rating.is_public}
+                        onCheckedChange={() => toggleVisibility(rating.id, rating.is_public)}
+                      />
                       <span className="text-xs text-muted-foreground">
-                        {format(new Date(rating.created_at), "dd/MM/yy", { locale: ptBR })}
+                        {rating.is_public ? 'Pública' : 'Oculta'}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={rating.is_public}
-                          onCheckedChange={() => toggleVisibility(rating.id, rating.is_public)}
-                        />
-                        {rating.is_public ? (
-                          <Eye className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => setDeleteId(rating.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
-            </TableBody>
-          </Table>
-        </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive h-8 px-2"
+                      onClick={() => setDeleteId(rating.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block rounded-xl border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Avaliação</TableHead>
+                  <TableHead>Comentário</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Visível</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <AnimatePresence>
+                  {filteredRatings.map((rating) => (
+                    <motion.tr
+                      key={rating.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="border-b last:border-0"
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                            {rating.profile?.name?.[0]?.toUpperCase() || '?'}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{rating.profile?.name || 'Cliente'}</p>
+                            <p className="text-xs text-muted-foreground">{rating.profile?.phone}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <RatingStars rating={rating.rating} size="sm" />
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {rating.comment || '-'}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(rating.created_at), "dd/MM/yy", { locale: ptBR })}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={rating.is_public}
+                            onCheckedChange={() => toggleVisibility(rating.id, rating.is_public)}
+                          />
+                          {rating.is_public ? (
+                            <Eye className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setDeleteId(rating.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       {/* Delete Confirmation */}

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Phone, Mail, Camera, Loader2, Save, Bell, Calendar, Clock } from "lucide-react";
+import { User, Phone, Mail, Camera, Loader2, Save, Bell, Calendar, Clock, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useClientNotifications } from "@/hooks/useNotifications";
@@ -158,15 +158,28 @@ const Perfil = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <AnimatedBackground />
       
-      <main className="pt-32 pb-24">
+      <main className="pt-6 pb-24 safe-area-top">
         <div className="container mx-auto px-4">
-          <div className="max-w-lg mx-auto space-y-6">
-            <h1 className="font-display text-3xl md:text-4xl font-bold text-center mb-8">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6 max-w-lg mx-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="rounded-full"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="font-display text-xl sm:text-2xl font-bold">
               Meu <span className="text-gradient">Perfil</span>
             </h1>
+            <div className="w-10" />
+          </div>
+          
+          <div className="max-w-lg mx-auto space-y-4 sm:space-y-6">
 
             <Card className="glass-effect border-border">
               <CardHeader className="text-center pb-2">

@@ -181,30 +181,30 @@ Aguardo a confirmação! 🙏`;
   }
 
   return (
-    <div className="min-h-screen bg-background pb-8">
+    <div className="min-h-screen bg-background pb-8 overflow-x-hidden">
       <AnimatedBackground />
       
-      <main className="pt-6 px-4 max-w-lg mx-auto">
+      <main className="pt-4 sm:pt-6 px-3 sm:px-4 max-w-lg mx-auto safe-area-top">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6"
+          className="flex items-center justify-between mb-4 sm:mb-6"
         >
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/cliente')}
-            className="rounded-full"
+            className="rounded-full h-9 w-9 sm:h-10 sm:w-10"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
           
-          <h1 className="font-display text-2xl font-bold text-foreground">
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">
             👑 Pacotes VIP
           </h1>
           
-          <div className="w-10" />
+          <div className="w-9 sm:w-10" />
         </motion.div>
 
         {/* Intro */}
@@ -212,9 +212,9 @@ Aguardo a confirmação! 🙏`;
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-center mb-8"
+          className="text-center mb-6 sm:mb-8"
         >
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Assine e economize com nossos pacotes exclusivos
           </p>
         </motion.div>
@@ -234,7 +234,7 @@ Aguardo a confirmação! 🙏`;
         )}
 
         {/* Pacotes */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {packages.map((pkg, index) => {
             const totalValue = calculateTotalValue(pkg);
             const savings = calculateSavings(pkg);
@@ -246,37 +246,37 @@ Aguardo a confirmação! 🙏`;
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 + index * 0.1 }}
-                className={`p-6 rounded-2xl glass-effect relative ${
+                className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl glass-effect relative ${
                   isPopular ? 'border-2 border-primary' : ''
                 }`}
               >
                 {/* Popular badge */}
                 {isPopular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1">
-                    <Star className="h-3 w-3" />
+                  <div className="absolute -top-2.5 sm:-top-3 left-1/2 -translate-x-1/2 px-3 sm:px-4 py-0.5 sm:py-1 rounded-full bg-primary text-primary-foreground text-[10px] sm:text-xs font-bold flex items-center gap-1">
+                    <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     Mais Popular
                   </div>
                 )}
 
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-3 sm:mb-4">
                   <div>
-                    <h3 className="font-display text-xl font-semibold">{pkg.name}</h3>
+                    <h3 className="font-display text-lg sm:text-xl font-semibold">{pkg.name}</h3>
                     <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-3xl font-bold text-primary">R$ {pkg.price}</span>
-                      <span className="text-sm text-muted-foreground">/{pkg.duration_days} dias</span>
+                      <span className="text-2xl sm:text-3xl font-bold text-primary">R$ {pkg.price}</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground">/{pkg.duration_days} dias</span>
                     </div>
                     {totalValue > 0 && (
-                      <p className="text-xs text-muted-foreground line-through">
+                      <p className="text-[10px] sm:text-xs text-muted-foreground line-through">
                         Valor: R$ {totalValue.toFixed(0)}
                       </p>
                     )}
                     {savings > 0 && (
-                      <Badge className="mt-1 bg-green-500/20 text-green-500">
+                      <Badge className="mt-1 bg-green-500/20 text-green-500 text-[10px] sm:text-xs">
                         Economia de R$ {savings.toFixed(0)}
                       </Badge>
                     )}
                   </div>
-                  <Crown className={`h-8 w-8 ${isPopular ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <Crown className={`h-6 w-6 sm:h-8 sm:w-8 ${isPopular ? 'text-primary' : 'text-muted-foreground'}`} />
                 </div>
 
                 {/* Description */}

@@ -76,10 +76,10 @@ const Cliente = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <AnimatedBackground />
       
-      <main className="pt-8 pb-16 px-4 max-w-lg mx-auto">
+      <main className="pt-6 pb-20 px-4 max-w-lg mx-auto safe-area-top safe-area-bottom">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -147,18 +147,18 @@ const Cliente = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-center mb-10"
+          className="text-center mb-8"
         >
-          <h2 className="font-display text-3xl font-bold mb-2">
+          <h2 className="font-display text-2xl sm:text-3xl font-bold mb-2">
             Olá, <span className="text-gradient">Cliente</span>!
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             O que você gostaria de fazer hoje?
           </p>
         </motion.div>
 
         {/* Options */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Agendar */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -166,17 +166,17 @@ const Cliente = () => {
             transition={{ delay: 0.2 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/agendar')}
-            className="p-6 rounded-2xl glass-effect cursor-pointer hover:border-primary/50 transition-all group"
+            className="p-4 sm:p-6 rounded-2xl glass-effect cursor-pointer hover:border-primary/50 transition-all group active:scale-[0.98]"
           >
-            <div className="flex items-center gap-4">
-              <div className="p-4 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                <Calendar className="h-8 w-8 text-primary" />
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-3 sm:p-4 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-display text-xl font-semibold mb-1">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-display text-lg sm:text-xl font-semibold mb-0.5 sm:mb-1">
                   Agendar Horário
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   Escolha seus serviços e marque seu horário
                 </p>
               </div>
@@ -190,22 +190,22 @@ const Cliente = () => {
             transition={{ delay: 0.3 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/pacotes')}
-            className="p-6 rounded-2xl glass-effect cursor-pointer hover:border-primary/50 transition-all group relative overflow-hidden"
+            className="p-4 sm:p-6 rounded-2xl glass-effect cursor-pointer hover:border-primary/50 transition-all group relative overflow-hidden active:scale-[0.98]"
           >
             {/* Premium badge */}
-            <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs font-bold">
+            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-[10px] sm:text-xs font-bold">
               VIP
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="p-4 rounded-xl bg-gradient-to-br from-yellow-500/20 to-amber-500/20 group-hover:from-yellow-500/30 group-hover:to-amber-500/30 transition-colors">
-                <Crown className="h-8 w-8 text-yellow-500" />
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-yellow-500/20 to-amber-500/20 group-hover:from-yellow-500/30 group-hover:to-amber-500/30 transition-colors">
+                <Crown className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-display text-xl font-semibold mb-1">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-display text-lg sm:text-xl font-semibold mb-0.5 sm:mb-1">
                   Pacotes Premium
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   Assine e ganhe descontos exclusivos
                 </p>
               </div>
