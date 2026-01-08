@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { DashboardStats } from '@/components/admin/DashboardStats';
+import { DashboardCharts } from '@/components/admin/DashboardCharts';
 import { TodayAppointments } from '@/components/admin/TodayAppointments';
 import { CalendarView } from '@/components/admin/CalendarView';
 import { ServiceForm } from '@/components/admin/ServiceForm';
 import { ClientList } from '@/components/admin/ClientList';
 import { FinancialReport } from '@/components/admin/FinancialReport';
+import { ReportExport } from '@/components/admin/ReportExport';
 import { WhatsAppAI } from '@/components/admin/WhatsAppAI';
 import { PackageForm } from '@/components/admin/PackageForm';
 import { PackageList } from '@/components/admin/PackageList';
@@ -71,6 +73,9 @@ export function AdminDashboard() {
         </div>
         
         <DashboardStats appointments={appointments} />
+        
+        {/* Charts Section */}
+        <DashboardCharts appointments={appointments} />
         
         <div className="grid lg:grid-cols-2 gap-6">
           <div>
@@ -210,7 +215,10 @@ export function AdminFinanceiro() {
 
   return (
     <AdminLayout>
-      <h1 className="font-display text-3xl font-bold mb-6">Financeiro</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <h1 className="font-display text-3xl font-bold">Financeiro</h1>
+        <ReportExport appointments={appointments} />
+      </div>
       {loading ? <Loader2 className="animate-spin" /> : <FinancialReport appointments={appointments} />}
     </AdminLayout>
   );
