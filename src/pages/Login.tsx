@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Navbar } from "@/components/layout/Navbar";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,7 +136,6 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       <AnimatedBackground />
-      <Navbar />
       
       <main className="pt-24 pb-24 flex items-center justify-center min-h-screen">
         <div className="container px-4">

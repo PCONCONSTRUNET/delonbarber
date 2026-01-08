@@ -1,9 +1,8 @@
 import { Link } from "react-router-dom";
-import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { Button } from "@/components/ui/button";
-import { Instagram, MessageSquare, Smartphone } from "lucide-react";
+import { Instagram, Smartphone, MessageSquare } from "lucide-react";
 import barberPhoto from "@/assets/barber-photo.png";
 
 const Index = () => {

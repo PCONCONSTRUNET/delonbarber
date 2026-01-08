@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scissors, ChevronRight, ChevronLeft, CalendarDays, History } from 'lucide-react';
-import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { Button } from '@/components/ui/button';
@@ -108,7 +107,6 @@ const Agendar = () => {
   return (
     <div className="min-h-screen bg-background">
       <AnimatedBackground />
-      <Navbar />
       
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
