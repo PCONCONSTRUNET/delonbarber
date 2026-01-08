@@ -319,17 +319,36 @@ export function useBookedSlots(date: Date | undefined) {
     async function fetchBookedSlots() {
       if (!date) return;
 
-      const { data, error } = await supabase
+      const dateStr = date.toISOString().split('T')[0];
+
+      // Fetch booked appointments
+      const { data: appointments, error: aptError } = await supabase
         .from('appointments')
         .select('appointment_time')
-        .eq('appointment_date', date.toISOString().split('T')[0])
+        .eq('appointment_date', dateStr)
         .in('status', ['pending', 'confirmed']);
 
-      if (error) {
-        console.error('Error fetching booked slots:', error);
-      } else {
-        setBookedSlots(data?.map(a => a.appointment_time) || []);
+      if (aptError) {
+        console.error('Error fetching booked slots:', aptError);
       }
+
+      // Fetch blocked slots
+      const { data: blockedSlots, error: blockedError } = await supabase
+        .from('blocked_slots')
+        .select('blocked_time')
+        .eq('blocked_date', dateStr);
+
+      if (blockedError) {
+        console.error('Error fetching blocked slots:', blockedError);
+      }
+
+      // Combine both - blocked slots and booked appointments
+      const bookedTimes = appointments?.map(a => a.appointment_time) || [];
+      const blockedTimes = blockedSlots?.map(b => b.blocked_time) || [];
+      
+      // Merge and deduplicate
+      const allBlockedSlots = [...new Set([...bookedTimes, ...blockedTimes])];
+      setBookedSlots(allBlockedSlots);
     }
 
     fetchBookedSlots();

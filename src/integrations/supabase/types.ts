@@ -106,6 +106,47 @@ export type Database = {
           },
         ]
       }
+      blocked_slots: {
+        Row: {
+          appointment_id: string | null
+          blocked_date: string
+          blocked_time: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_manual: boolean
+          reason: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          blocked_date: string
+          blocked_time: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_manual?: boolean
+          reason?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          blocked_date?: string
+          blocked_time?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_manual?: boolean
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_slots_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_hours: {
         Row: {
           close_time: string
