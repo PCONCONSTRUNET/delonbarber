@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, User, Check, X, Trash2, QrCode, CreditCard, Banknote } from 'lucide-react';
+import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
+import { PixIcon } from '@/components/icons/PixIcon';
 
 interface TodayAppointmentsProps {
   appointments: AdminAppointment[];
@@ -29,11 +30,28 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Cancelado',
 };
 
-const paymentMethodLabels: Record<string, { label: string; icon: typeof QrCode }> = {
-  pix: { label: 'PIX', icon: QrCode },
-  credit: { label: 'Crédito', icon: CreditCard },
-  debit: { label: 'Débito', icon: CreditCard },
-  cash: { label: 'Dinheiro', icon: Banknote },
+const paymentMethodConfig: Record<string, { label: string; color: string }> = {
+  pix: { label: 'PIX', color: 'text-teal-400' },
+  credit: { label: 'Crédito', color: 'text-blue-400' },
+  debit: { label: 'Débito', color: 'text-purple-400' },
+  cash: { label: 'Dinheiro', color: 'text-green-400' },
+  card: { label: 'Cartão', color: 'text-blue-400' },
+};
+
+const PaymentIcon = ({ method, size = 14 }: { method: string; size?: number }) => {
+  switch (method) {
+    case 'pix':
+      return <PixIcon size={size} />;
+    case 'credit':
+    case 'card':
+      return <CreditCard className={`text-blue-400`} style={{ width: size, height: size }} />;
+    case 'debit':
+      return <Smartphone className={`text-purple-400`} style={{ width: size, height: size }} />;
+    case 'cash':
+      return <Banknote className={`text-green-400`} style={{ width: size, height: size }} />;
+    default:
+      return null;
+  }
 };
 
 export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePayment, onDelete }: TodayAppointmentsProps) {
@@ -67,7 +85,8 @@ export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePaymen
     <>
       <div className="space-y-3">
         {sortedAppts.map((apt, index) => {
-          const PaymentIcon = apt.payment_method ? paymentMethodLabels[apt.payment_method]?.icon : null;
+          const paymentMethod = apt.payment_method;
+          const methodConfig = paymentMethod ? paymentMethodConfig[paymentMethod] : null;
           
           return (
             <motion.div
@@ -97,18 +116,33 @@ export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePaymen
                     {apt.services.map(s => s.name).join(', ')}
                   </p>
                   
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <p className="text-primary font-semibold">
                       R$ {Number(apt.total_price).toFixed(0)}
                     </p>
+                    
+                    {/* Payment method badge */}
+                    {paymentMethod && methodConfig && (
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "text-xs gap-1 border-muted-foreground/30",
+                          methodConfig.color
+                        )}
+                      >
+                        <PaymentIcon method={paymentMethod} size={12} />
+                        {methodConfig.label}
+                      </Badge>
+                    )}
+                    
+                    {/* Payment status badge */}
                     {apt.payment_status === 'paid' ? (
-                      <Badge className="bg-green-500/20 text-green-500 text-xs gap-1">
-                        {PaymentIcon && <PaymentIcon className="h-3 w-3" />}
-                        Pago {apt.payment_method && `• ${paymentMethodLabels[apt.payment_method]?.label}`}
+                      <Badge className="bg-green-500/20 text-green-400 text-xs border border-green-500/30">
+                        ✓ Pago
                       </Badge>
                     ) : (
-                      <Badge className="bg-yellow-500/20 text-yellow-500 text-xs">
-                        Pendente
+                      <Badge className="bg-yellow-500/20 text-yellow-400 text-xs border border-yellow-500/30">
+                        Aguardando
                       </Badge>
                     )}
                   </div>
@@ -150,7 +184,7 @@ export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePaymen
                       className="border-green-500 text-green-500 gap-1"
                       onClick={() => handleOpenPayment(apt)}
                     >
-                      <QrCode className="h-4 w-4" />
+                      <PixIcon size={16} />
                       Pagar
                     </Button>
                   )}
