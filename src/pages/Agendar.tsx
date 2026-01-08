@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, History } from 'lucide-react';
+import { ChevronRight, ChevronLeft, History, ArrowLeft, LogOut, User as UserIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Footer } from '@/components/layout/Footer';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
@@ -110,15 +110,50 @@ const Agendar = () => {
       <AnimatedBackground />
       
       <main className="pt-6 pb-16 px-4 max-w-lg mx-auto">
-        {/* Header - mais compacto */}
+        {/* Header com botão voltar */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6"
+          className="flex items-center justify-between mb-6"
         >
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            className="rounded-full"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          
           <h1 className="font-display text-2xl font-bold text-foreground">
             ✂️ Agendar
           </h1>
+          
+          <div className="flex gap-1">
+            {user && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/perfil')}
+                  className="rounded-full"
+                >
+                  <UserIcon className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate('/');
+                  }}
+                  className="rounded-full text-muted-foreground"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </>
+            )}
+          </div>
         </motion.div>
 
         {/* Tabs */}
