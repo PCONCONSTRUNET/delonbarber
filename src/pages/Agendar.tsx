@@ -11,6 +11,7 @@ import { ServiceSelection } from '@/components/agendar/ServiceSelection';
 import { DateTimeSelection } from '@/components/agendar/DateTimeSelection';
 import { AppointmentSummary } from '@/components/agendar/AppointmentSummary';
 import { AppointmentHistory } from '@/components/agendar/AppointmentHistory';
+import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
 import { 
   useServices, 
   useBusinessHours, 
@@ -179,6 +180,9 @@ const Agendar = () => {
           </TabsList>
 
           <TabsContent value="agendar" className="mt-0">
+            {/* My Package Benefits - compact view */}
+            {user && <MyPackagesBenefits compact />}
+
             {/* Progress Steps - compacto */}
             <motion.div
               initial={{ opacity: 0 }}
