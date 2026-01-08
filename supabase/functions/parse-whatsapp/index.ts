@@ -33,17 +33,22 @@ serve(async (req) => {
 
 Extraia as seguintes informações da mensagem do cliente:
 - Nome do cliente (se mencionado)
+- Número de telefone do cliente (se mencionado - pode estar em qualquer formato: com DDD, com 55, com espaços, parênteses, etc. Extraia EXATAMENTE como está escrito na mensagem)
 - Data desejada (converta para formato DD/MM/YYYY, considerando que hoje é ${today.toLocaleDateString('pt-BR')})
 - Horário desejado (formato HH:MM)
 - Serviços desejados (corte, barba, sobrancelha, combo, etc)
 - Observações adicionais
 
-Se alguma informação não estiver clara, deixe como null.
-Para datas relativas como "amanhã", "sexta", "próxima semana", converta para a data real.
+IMPORTANTE:
+- Se alguma informação não estiver clara, deixe como null.
+- Para datas relativas como "amanhã", "sexta", "próxima semana", converta para a data real.
+- O telefone deve ser extraído EXATAMENTE como aparece na mensagem, apenas removendo caracteres especiais como parênteses, traços e espaços.
+- Números de telefone brasileiros geralmente têm 10-11 dígitos (com DDD).
 
 Responda APENAS com um JSON válido no formato:
 {
   "client_name": "string ou null",
+  "client_phone": "string com apenas números ou null",
   "date": "DD/MM/YYYY ou null",
   "time": "HH:MM ou null",
   "services": ["array de strings"] ou [],
@@ -62,13 +67,27 @@ Responda APENAS com um JSON válido no formato:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
-        temperature: 0.3,
+        temperature: 0.1, // Lower temperature for more consistent extraction
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI API error:', errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Limite de requisições excedido. Tente novamente em alguns segundos.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'Créditos insuficientes. Adicione créditos ao workspace.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       throw new Error(`AI API error: ${response.status}`);
     }
 
@@ -84,6 +103,13 @@ Responda APENAS com um JSON válido no formato:
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
+    
+    // Ensure client_phone only contains digits
+    if (parsed.client_phone) {
+      parsed.client_phone = parsed.client_phone.replace(/\D/g, '');
+    }
+
+    console.log('Parsed data:', parsed);
 
     return new Response(
       JSON.stringify(parsed),
