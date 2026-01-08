@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Cinzel', 'serif'],
-        elegant: ['Playfair Display', 'serif'],
+        display: ['Bodoni Moda', 'serif'],
+        elegant: ['Old Standard TT', 'serif'],
         body: ['Inter', 'sans-serif'],
       },
       colors: {
