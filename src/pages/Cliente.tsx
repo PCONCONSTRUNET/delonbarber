@@ -77,11 +77,12 @@ const Cliente = () => {
             {isAdmin && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={() => navigate('/admin')}
-                className="rounded-full text-primary"
+                className="rounded-full text-primary gap-1 px-2"
               >
-                <Shield className="h-5 w-5" />
+                <Shield className="h-4 w-4" />
+                <span className="text-xs font-semibold">ADMIN</span>
               </Button>
             )}
             <Button
