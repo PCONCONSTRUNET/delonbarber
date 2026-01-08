@@ -1,10 +1,16 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Scissors } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, Scissors, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { User as SupabaseUser } from "@supabase/supabase-js";
 
-const navItems = [
+const publicNavItems = [
+  { label: "Home", path: "/" },
+];
+
+const authNavItems = [
   { label: "Home", path: "/" },
   { label: "Serviços", path: "/servicos" },
   { label: "Agendar", path: "/agendar" },
@@ -13,7 +19,9 @@ const navItems = [
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,6 +30,26 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsOpen(false);
+    navigate("/");
+  };
+
+  const navItems = user ? authNavItems : publicNavItems;
 
   return (
     <header
@@ -61,11 +89,39 @@ export function Navbar() {
               )}
             </Link>
           ))}
-          <Link to="/login">
-            <Button variant="outline" size="sm" className="border-primary/50 hover:bg-primary hover:text-primary-foreground">
-              Login
-            </Button>
-          </Link>
+          
+          {user ? (
+            <div className="flex items-center gap-4">
+              <Link to="/perfil">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <User className="h-4 w-4" />
+                  Perfil
+                </Button>
+              </Link>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 border-primary/50 hover:bg-primary hover:text-primary-foreground"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
+                Sair
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Link to="/login">
+                <Button variant="ghost" size="sm">
+                  Entrar
+                </Button>
+              </Link>
+              <Link to="/login">
+                <Button size="sm">
+                  Criar Conta
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -82,7 +138,7 @@ export function Navbar() {
       <div
         className={cn(
           "md:hidden absolute top-full left-0 right-0 glass-effect transition-all duration-300 overflow-hidden",
-          isOpen ? "max-h-80 border-b border-border" : "max-h-0"
+          isOpen ? "max-h-96 border-b border-border" : "max-h-0"
         )}
       >
         <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
@@ -101,11 +157,38 @@ export function Navbar() {
               {item.label}
             </Link>
           ))}
-          <Link to="/login" onClick={() => setIsOpen(false)}>
-            <Button variant="outline" className="w-full border-primary/50 hover:bg-primary hover:text-primary-foreground">
-              Login
-            </Button>
-          </Link>
+          
+          {user ? (
+            <>
+              <Link to="/perfil" onClick={() => setIsOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start gap-2">
+                  <User className="h-4 w-4" />
+                  Perfil
+                </Button>
+              </Link>
+              <Button 
+                variant="outline" 
+                className="w-full gap-2 border-primary/50 hover:bg-primary hover:text-primary-foreground"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
+                Sair
+              </Button>
+            </>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Link to="/login" onClick={() => setIsOpen(false)}>
+                <Button variant="ghost" className="w-full">
+                  Entrar
+                </Button>
+              </Link>
+              <Link to="/login" onClick={() => setIsOpen(false)}>
+                <Button className="w-full">
+                  Criar Conta
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </header>
