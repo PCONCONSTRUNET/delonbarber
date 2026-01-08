@@ -5,6 +5,7 @@ import {
   Scissors, 
   DollarSign,
   MessageSquare,
+  Crown,
   LogOut,
   ChevronLeft
 } from 'lucide-react';
@@ -19,6 +20,7 @@ const menuItems = [
   { icon: Calendar, label: 'Agenda', path: '/admin/agenda' },
   { icon: Users, label: 'Clientes', path: '/admin/clientes' },
   { icon: Scissors, label: 'Serviços', path: '/admin/servicos' },
+  { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
   { icon: DollarSign, label: 'Financeiro', path: '/admin/financeiro' },
   { icon: MessageSquare, label: 'IA WhatsApp', path: '/admin/ia' },
 ];

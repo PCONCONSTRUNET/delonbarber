@@ -8,10 +8,15 @@ import { ServiceForm } from '@/components/admin/ServiceForm';
 import { ClientList } from '@/components/admin/ClientList';
 import { FinancialReport } from '@/components/admin/FinancialReport';
 import { WhatsAppAI } from '@/components/admin/WhatsAppAI';
+import { PackageForm } from '@/components/admin/PackageForm';
+import { PackageList } from '@/components/admin/PackageList';
+import { ClientPackagesList } from '@/components/admin/ClientPackagesList';
 import { useIsAdmin, useAdminAppointments, useAdminClients, useAdminServices, useBusinessStatus } from '@/hooks/useAdmin';
+import { useAdminPackages, useClientPackages } from '@/hooks/usePackages';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -190,6 +195,87 @@ export function AdminIA() {
     <AdminLayout>
       <h1 className="font-display text-3xl font-bold mb-6">IA WhatsApp</h1>
       <WhatsAppAI />
+    </AdminLayout>
+  );
+}
+
+export function AdminPacotes() {
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { packages, loading: packagesLoading, createPackage, updatePackage, deletePackage } = useAdminPackages();
+  const { subscriptions, loading: subsLoading, addSubscription, cancelSubscription } = useClientPackages();
+  const { clients, loading: clientsLoading } = useAdminClients();
+  const [showForm, setShowForm] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | undefined>();
+  const [activeTab, setActiveTab] = useState('pacotes');
+
+  if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
+  if (!isAdmin) return <Navigate to="/login" replace />;
+
+  const handleSubmit = async (data: any) => {
+    await createPackage(data);
+    setShowForm(false);
+  };
+
+  const handleViewSubscribers = (packageId: string) => {
+    setSelectedPackageId(packageId);
+    setActiveTab('assinantes');
+  };
+
+  const activePackages = packages.filter(p => p.is_active);
+
+  return (
+    <AdminLayout>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-display text-3xl font-bold">Pacotes Premium</h1>
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Pacote
+        </Button>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+          <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
+          <TabsTrigger value="assinantes">Assinantes</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pacotes">
+          {packagesLoading ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <PackageList
+              packages={activePackages}
+              onUpdate={updatePackage}
+              onDelete={deletePackage}
+              onViewSubscribers={handleViewSubscribers}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="assinantes">
+          {subsLoading || clientsLoading ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <ClientPackagesList
+              subscriptions={subscriptions}
+              packages={activePackages}
+              clients={clients}
+              selectedPackageId={selectedPackageId}
+              onAddSubscription={addSubscription}
+              onCancelSubscription={cancelSubscription}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Pacote</DialogTitle>
+          </DialogHeader>
+          <PackageForm onSubmit={handleSubmit} onCancel={() => setShowForm(false)} />
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
