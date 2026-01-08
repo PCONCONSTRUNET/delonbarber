@@ -189,7 +189,34 @@ export function useAdminAppointments() {
     return true;
   }
 
-  return { appointments, loading, fetchAppointments, updateAppointmentStatus, updatePaymentStatus };
+  async function deleteAppointment(id: string) {
+    // First delete related services
+    const { error: servicesError } = await supabase
+      .from('appointment_services')
+      .delete()
+      .eq('appointment_id', id);
+
+    if (servicesError) {
+      console.error('Error deleting appointment services:', servicesError);
+    }
+
+    // Then delete the appointment
+    const { error } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({ title: "Erro", description: "Não foi possível excluir.", variant: "destructive" });
+      return false;
+    }
+
+    toast({ title: "Excluído!", description: "Agendamento removido." });
+    fetchAppointments();
+    return true;
+  }
+
+  return { appointments, loading, fetchAppointments, updateAppointmentStatus, updatePaymentStatus, deleteAppointment };
 }
 
 export function useAdminClients() {

@@ -1,4 +1,4 @@
-import { Clock, User, Check, X } from 'lucide-react';
+import { Clock, User, Check, X, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ interface TodayAppointmentsProps {
   appointments: AdminAppointment[];
   onUpdateStatus: (id: string, status: string) => void;
   onUpdatePayment: (id: string, status: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const statusColors: Record<string, string> = {
@@ -25,7 +26,7 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Cancelado',
 };
 
-export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePayment }: TodayAppointmentsProps) {
+export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePayment, onDelete }: TodayAppointmentsProps) {
   const sortedAppts = [...appointments]
     .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 
@@ -112,6 +113,16 @@ export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePaymen
                   onClick={() => onUpdatePayment(apt.id, 'paid')}
                 >
                   Pagar
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={() => onDelete(apt.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               )}
             </div>
