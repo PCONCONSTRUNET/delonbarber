@@ -26,22 +26,20 @@ const statusLabels: Record<string, string> = {
 };
 
 export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePayment }: TodayAppointmentsProps) {
-  const today = new Date().toISOString().split('T')[0];
-  const todayAppts = appointments
-    .filter(a => a.appointment_date === today)
+  const sortedAppts = [...appointments]
     .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 
-  if (todayAppts.length === 0) {
+  if (sortedAppts.length === 0) {
     return (
       <div className="p-6 rounded-2xl glass-effect text-center">
-        <p className="text-muted-foreground">Nenhum agendamento para hoje</p>
+        <p className="text-muted-foreground">Nenhum agendamento para este dia</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      {todayAppts.map((apt, index) => (
+      {sortedAppts.map((apt, index) => (
         <motion.div
           key={apt.id}
           initial={{ opacity: 0, x: -20 }}
