@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Check, Clock, Crown } from 'lucide-react';
+import { Check, Clock, Crown, Lock } from 'lucide-react';
 import { Service } from '@/hooks/useAppointments';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { cn } from '@/lib/utils';
@@ -22,9 +22,20 @@ const categoryLabels: Record<string, string> = {
 const categoryOrder = ['corte', 'barba', 'sobrancelha', 'combo', 'adicional'];
 
 export function ServiceSelection({ services, selectedServices, onToggleService }: ServiceSelectionProps) {
-  const { getRemainingForService } = useMyPackages();
+  const { packages, getRemainingForService } = useMyPackages();
   
-  const categories = [...new Set(services.map(s => s.category))]
+  // Check if user has any active package
+  const hasActivePackage = packages.some(p => p.status === 'active');
+  
+  // Filter services: hide subscribers_only services for non-subscribers
+  const visibleServices = services.filter(service => {
+    if (service.subscribers_only && !hasActivePackage) {
+      return false;
+    }
+    return true;
+  });
+
+  const categories = [...new Set(visibleServices.map(s => s.category))]
     .sort((a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b));
 
   const isSelected = (service: Service) => 
@@ -44,12 +55,13 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
           </h3>
           
           <div className="space-y-3">
-            {services
+            {visibleServices
               .filter(s => s.category === category)
               .sort((a, b) => category === 'corte' ? Number(b.price) - Number(a.price) : 0)
               .map((service, index) => {
                 const remaining = getRemainingForService(service.id);
                 const hasBenefit = remaining > 0;
+                const isExclusive = service.subscribers_only;
 
                 return (
                   <motion.div
@@ -70,13 +82,21 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
                           : "bg-card/80 border-2 border-transparent"
                     )}
                   >
-                    {/* VIP Badge */}
-                    {hasBenefit && (
-                      <div className="absolute -top-2 -right-2">
-                        <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-[10px] px-2 py-0">
-                          <Crown className="w-3 h-3 mr-1" />
-                          {remaining}x VIP
-                        </Badge>
+                    {/* VIP/Exclusive Badges */}
+                    {(hasBenefit || isExclusive) && (
+                      <div className="absolute -top-2 -right-2 flex gap-1">
+                        {isExclusive && !hasBenefit && (
+                          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] px-2 py-0">
+                            <Crown className="w-3 h-3 mr-1" />
+                            Exclusivo
+                          </Badge>
+                        )}
+                        {hasBenefit && (
+                          <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-[10px] px-2 py-0">
+                            <Crown className="w-3 h-3 mr-1" />
+                            {remaining}x VIP
+                          </Badge>
+                        )}
                       </div>
                     )}
 
