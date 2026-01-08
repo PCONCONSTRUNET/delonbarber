@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { Footer } from "@/components/layout/Footer";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
+import { PublicRatings } from "@/components/ratings/PublicRatings";
 import { Button } from "@/components/ui/button";
-import { Instagram, Smartphone, MessageSquare } from "lucide-react";
+import { Instagram, Smartphone } from "lucide-react";
 import barberPhoto from "@/assets/barber-photo.png";
 
 const Index = () => {
@@ -101,23 +102,8 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Reviews Section */}
-        <section className="py-16 px-4">
-          <div className="container max-w-4xl mx-auto">
-            {/* Section Header */}
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-1 h-6 bg-primary rounded-full" />
-              <MessageSquare className="h-5 w-5 text-muted-foreground" />
-              <h2 className="font-display text-xl font-semibold">Avaliações dos Clientes</h2>
-            </div>
-
-            {/* Reviews Card */}
-            <div className="glass-effect rounded-2xl p-12 text-center">
-              <MessageSquare className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-              <p className="text-muted-foreground">Ainda não há avaliações.</p>
-            </div>
-          </div>
-        </section>
+        {/* Public Ratings Section */}
+        <PublicRatings />
       </main>
 
       <Footer />

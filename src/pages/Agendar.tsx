@@ -13,6 +13,7 @@ import { AppointmentSummary } from '@/components/agendar/AppointmentSummary';
 import { AppointmentHistory } from '@/components/agendar/AppointmentHistory';
 import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
 import { PaymentConfirmationDialog } from '@/components/payments/PaymentConfirmationDialog';
+import { PendingRatings } from '@/components/ratings/PendingRatings';
 import { 
   useServices, 
   useBusinessHours, 
@@ -408,10 +409,13 @@ const Agendar = () => {
                 </motion.span>
               </div>
             ) : (
-              <AppointmentHistory
-                appointments={appointments}
-                onCancel={cancelAppointment}
-              />
+              <>
+                <PendingRatings />
+                <AppointmentHistory
+                  appointments={appointments}
+                  onCancel={cancelAppointment}
+                />
+              </>
             )}
           </TabsContent>
         </Tabs>
