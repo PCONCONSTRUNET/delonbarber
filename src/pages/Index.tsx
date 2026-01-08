@@ -97,7 +97,7 @@ const Index = () => {
             <Button 
               size="lg" 
               className="min-w-[180px] text-lg font-semibold"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/login?tab=signup")}
             >
               Criar Conta
             </Button>
@@ -105,7 +105,7 @@ const Index = () => {
               variant="outline" 
               size="lg" 
               className="min-w-[180px] text-lg border-foreground/20 hover:bg-foreground/5"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/login?tab=login")}
             >
               Já tenho conta
             </Button>
