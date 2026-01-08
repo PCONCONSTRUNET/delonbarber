@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageSquare, Sparkles, Loader2, Calendar, Clock, Scissors, Check } from 'lucide-react';
+import { MessageSquare, Sparkles, Loader2, Calendar, Clock, Scissors, Check, Phone, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -77,33 +77,12 @@ export function WhatsAppAI() {
         return;
       }
 
-      // First, try to find or create a profile for the client
-      let userId: string | null = null;
-
-      // Check if there's a profile with this phone number
-      if (parsed.client_phone) {
-        const phone = parsed.client_phone.replace(/\D/g, '');
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('user_id')
-          .eq('phone', phone)
-          .maybeSingle();
-
-        if (existingProfile) {
-          userId = existingProfile.user_id;
-        }
-      }
-
-      // If no user found, we need to get the admin's user id to create the appointment
-      // The appointment will be created by admin on behalf of the client
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast.error("Você precisa estar logado para criar agendamentos.");
-          setCreating(false);
-          return;
-        }
-        userId = user.id;
+      // Get admin's user id (the one creating the appointment)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Você precisa estar logado para criar agendamentos.");
+        setCreating(false);
+        return;
       }
 
       // Find services by name
@@ -137,18 +116,21 @@ export function WhatsAppAI() {
         }
       }
 
-      // Create the appointment
+      // Create the appointment with guest client data
       const { data: appointment, error: aptError } = await supabase
         .from('appointments')
         .insert({
-          user_id: userId,
+          user_id: user.id, // Admin creates the appointment
           appointment_date: appointmentDate,
           appointment_time: appointmentTime,
-          notes: parsed.notes || `Cliente: ${parsed.client_name || 'Não informado'}${parsed.client_phone ? ` | Tel: ${parsed.client_phone}` : ''}`,
+          notes: parsed.notes || null,
           total_price: totalPrice,
           total_duration: totalDuration,
           status: 'pending',
-          payment_status: 'pending'
+          payment_status: 'pending',
+          // Guest client fields - stores exact data from WhatsApp
+          guest_name: parsed.client_name || null,
+          guest_phone: parsed.client_phone?.replace(/\D/g, '') || null
         })
         .select()
         .single();
@@ -171,7 +153,7 @@ export function WhatsAppAI() {
           .insert(appointmentServices);
       }
 
-      toast.success("Agendamento criado com sucesso!");
+      toast.success(`Agendamento criado para ${parsed.client_name || 'Cliente'}!`);
       clearResult();
     } catch (error) {
       console.error('Error creating appointment:', error);
@@ -202,9 +184,13 @@ export function WhatsAppAI() {
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Cole aqui a mensagem do cliente do WhatsApp...
 
-Exemplo: 'Oi, quero agendar um corte degradê pra sexta às 14h. Meu nome é João.'"
-          rows={5}
-          className="mb-4"
+Exemplo:
+João Pereira
+48998601201
+corte tradicional + barba
+dia 12/02 as 12:00"
+          rows={6}
+          className="mb-4 font-mono text-sm"
         />
 
         <Button 
@@ -238,15 +224,17 @@ Exemplo: 'Oi, quero agendar um corte degradê pra sexta às 14h. Meu nome é Jo�
           <div className="space-y-3">
             {parsed.client_name && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
+                <User className="h-4 w-4 text-primary" />
                 <span className="text-muted-foreground">Cliente:</span>
-                <span className="font-medium">{parsed.client_name}</span>
+                <span className="font-medium text-primary">{parsed.client_name}</span>
               </div>
             )}
 
             {parsed.client_phone && (
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
+                <Phone className="h-4 w-4 text-green-500" />
                 <span className="text-muted-foreground">Telefone:</span>
-                <span className="font-medium">{parsed.client_phone}</span>
+                <span className="font-medium text-green-500">{parsed.client_phone}</span>
               </div>
             )}
 
@@ -315,7 +303,7 @@ Exemplo: 'Oi, quero agendar um corte degradê pra sexta às 14h. Meu nome é Jo�
 
       {/* Instructions */}
       <div className="rounded-2xl glass-effect p-6">
-        <h4 className="font-medium mb-2">Como usar:</h4>
+        <h4 className="font-medium mb-2">💡 Como usar:</h4>
         <ol className="text-sm text-muted-foreground space-y-2">
           <li>1. Copie a mensagem do cliente no WhatsApp</li>
           <li>2. Cole no campo acima</li>
@@ -323,6 +311,9 @@ Exemplo: 'Oi, quero agendar um corte degradê pra sexta às 14h. Meu nome é Jo�
           <li>4. Revise os dados extraídos</li>
           <li>5. Clique em "Criar Agendamento"</li>
         </ol>
+        <p className="text-xs text-muted-foreground mt-3 p-2 rounded bg-muted">
+          ℹ️ O agendamento será criado com os dados do cliente exatamente como foram enviados no WhatsApp.
+        </p>
       </div>
     </div>
   );
