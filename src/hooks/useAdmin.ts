@@ -273,6 +273,7 @@ export function useAdminServices() {
     const { data, error } = await supabase
       .from('services')
       .select('*')
+      .eq('is_active', true)
       .order('category', { ascending: true })
       .order('price', { ascending: false });
 
