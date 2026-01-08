@@ -11,7 +11,7 @@ import Perfil from "./pages/Perfil";
 import Cliente from "./pages/Cliente";
 import Pacotes from "./pages/Pacotes";
 import NotFound from "./pages/NotFound";
-import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminIA, AdminPacotes } from "./pages/Admin";
+import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminIA, AdminPacotes, AdminAvaliacoes } from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +36,7 @@ const App = () => (
           <Route path="/admin/financeiro" element={<AdminFinanceiro />} />
           <Route path="/admin/ia" element={<AdminIA />} />
           <Route path="/admin/pacotes" element={<AdminPacotes />} />
+          <Route path="/admin/avaliacoes" element={<AdminAvaliacoes />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

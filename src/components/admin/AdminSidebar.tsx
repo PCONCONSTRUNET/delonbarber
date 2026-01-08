@@ -9,7 +9,8 @@ import {
   LogOut,
   ChevronLeft,
   CalendarPlus,
-  ExternalLink
+  ExternalLink,
+  Star
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ const menuItems = [
   { icon: Users, label: 'Clientes', path: '/admin/clientes' },
   { icon: Scissors, label: 'Serviços', path: '/admin/servicos' },
   { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
+  { icon: Star, label: 'Avaliações', path: '/admin/avaliacoes' },
   { icon: DollarSign, label: 'Financeiro', path: '/admin/financeiro' },
   { icon: MessageSquare, label: 'IA WhatsApp', path: '/admin/ia' },
 ];
