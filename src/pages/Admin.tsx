@@ -145,7 +145,7 @@ export function AdminAgenda() {
 
 export function AdminClientes() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const { clients, loading } = useAdminClients();
+  const { clients, loading, deleteClient } = useAdminClients();
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!isAdmin) return <Navigate to="/login" replace />;
@@ -153,7 +153,7 @@ export function AdminClientes() {
   return (
     <AdminLayout>
       <h1 className="font-display text-3xl font-bold mb-6">Clientes</h1>
-      {loading ? <Loader2 className="animate-spin" /> : <ClientList clients={clients} />}
+      {loading ? <Loader2 className="animate-spin" /> : <ClientList clients={clients} onDeleteClient={deleteClient} />}
     </AdminLayout>
   );
 }
