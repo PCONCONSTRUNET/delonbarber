@@ -85,10 +85,7 @@ export function useAdminAppointments() {
     
     const { data: appointmentsData, error } = await supabase
       .from('appointments')
-      .select(`
-        *,
-        profiles!appointments_user_id_fkey(name, phone)
-      `)
+      .select('*')
       .order('appointment_date', { ascending: true })
       .order('appointment_time', { ascending: true });
 
@@ -101,6 +98,14 @@ export function useAdminAppointments() {
     const appointmentsWithServices: AdminAppointment[] = [];
     
     for (const apt of appointmentsData || []) {
+      // Fetch profile separately
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('name, phone')
+        .eq('user_id', apt.user_id)
+        .maybeSingle();
+
+      // Fetch services
       const { data: servicesData } = await supabase
         .from('appointment_services')
         .select('service_id, price_at_booking, services(id, name)')
@@ -108,7 +113,7 @@ export function useAdminAppointments() {
 
       appointmentsWithServices.push({
         ...apt,
-        profile: apt.profiles,
+        profile: profileData || { name: null, phone: null },
         services: servicesData?.map((s: any) => ({
           id: s.services?.id,
           name: s.services?.name,
