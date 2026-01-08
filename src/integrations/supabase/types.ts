@@ -14,6 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_services: {
+        Row: {
+          appointment_id: string
+          id: string
+          price_at_booking: number
+          service_id: string
+        }
+        Insert: {
+          appointment_id: string
+          id?: string
+          price_at_booking: number
+          service_id: string
+        }
+        Update: {
+          appointment_id?: string
+          id?: string
+          price_at_booking?: number
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_services_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointments: {
+        Row: {
+          appointment_date: string
+          appointment_time: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["appointment_status"] | null
+          total_duration: number | null
+          total_price: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          appointment_date: string
+          appointment_time: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["appointment_status"] | null
+          total_duration?: number | null
+          total_price?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["appointment_status"] | null
+          total_duration?: number | null
+          total_price?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      business_hours: {
+        Row: {
+          close_time: string
+          day_of_week: number
+          id: string
+          is_open: boolean | null
+          open_time: string
+        }
+        Insert: {
+          close_time: string
+          day_of_week: number
+          id?: string
+          is_open?: boolean | null
+          open_time: string
+        }
+        Update: {
+          close_time?: string
+          day_of_week?: number
+          id?: string
+          is_open?: boolean | null
+          open_time?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -44,6 +151,42 @@ export type Database = {
         }
         Relationships: []
       }
+      services: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          duration_minutes: number
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          price: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          price: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -52,7 +195,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      appointment_status: "pending" | "confirmed" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -179,6 +322,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      appointment_status: ["pending", "confirmed", "completed", "cancelled"],
+    },
   },
 } as const
