@@ -92,12 +92,12 @@ export function Navbar() {
           
           {user ? (
             <div className="flex items-center gap-4">
-              <Link to="/perfil">
-                <Button variant="ghost" size="sm" className="gap-2">
+              <Button asChild variant="ghost" size="sm" className="gap-2">
+                <Link to="/perfil">
                   <User className="h-4 w-4" />
                   Perfil
-                </Button>
-              </Link>
+                </Link>
+              </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -110,16 +110,12 @@ export function Navbar() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <Link to="/login">
-                <Button variant="ghost" size="sm">
-                  Entrar
-                </Button>
-              </Link>
-              <Link to="/login">
-                <Button size="sm">
-                  Criar Conta
-                </Button>
-              </Link>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/login">Entrar</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link to="/login">Criar Conta</Link>
+              </Button>
             </div>
           )}
         </div>
@@ -160,12 +156,12 @@ export function Navbar() {
           
           {user ? (
             <>
-              <Link to="/perfil" onClick={() => setIsOpen(false)}>
-                <Button variant="ghost" className="w-full justify-start gap-2">
+              <Button asChild variant="ghost" className="w-full justify-start gap-2">
+                <Link to="/perfil" onClick={() => setIsOpen(false)}>
                   <User className="h-4 w-4" />
                   Perfil
-                </Button>
-              </Link>
+                </Link>
+              </Button>
               <Button 
                 variant="outline" 
                 className="w-full gap-2 border-primary/50 hover:bg-primary hover:text-primary-foreground"
@@ -177,16 +173,12 @@ export function Navbar() {
             </>
           ) : (
             <div className="flex flex-col gap-2">
-              <Link to="/login" onClick={() => setIsOpen(false)}>
-                <Button variant="ghost" className="w-full">
-                  Entrar
-                </Button>
-              </Link>
-              <Link to="/login" onClick={() => setIsOpen(false)}>
-                <Button className="w-full">
-                  Criar Conta
-                </Button>
-              </Link>
+              <Button asChild variant="ghost" className="w-full">
+                <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
+              </Button>
+              <Button asChild className="w-full">
+                <Link to="/login" onClick={() => setIsOpen(false)}>Criar Conta</Link>
+              </Button>
             </div>
           )}
         </div>
