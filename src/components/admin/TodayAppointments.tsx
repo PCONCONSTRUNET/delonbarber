@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone } from 'lucide-react';
+import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { PixIcon } from '@/components/icons/PixIcon';
+import { toast } from 'sonner';
 
 interface TodayAppointmentsProps {
   appointments: AdminAppointment[];
@@ -73,6 +74,38 @@ export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePaymen
     }
   };
 
+  const handleWhatsApp = (apt: AdminAppointment) => {
+    const phone = apt.profile?.phone?.replace(/\D/g, '');
+    if (!phone) {
+      toast.error('Cliente não possui telefone cadastrado');
+      return;
+    }
+
+    const clientName = apt.profile?.name || 'Cliente';
+    const services = apt.services.map(s => s.name).join(', ');
+    const status = statusLabels[apt.status];
+    const paymentStatus = apt.payment_status === 'paid' ? 'Pago ✅' : 'Aguardando pagamento';
+    const time = apt.appointment_time.slice(0, 5);
+    const price = Number(apt.total_price).toFixed(0);
+
+    const message = `Olá ${clientName}! 👋
+
+📋 *Resumo do seu agendamento:*
+
+✂️ Serviços: ${services}
+📅 Horário: ${time}
+💰 Valor: R$ ${price}
+📊 Status: ${status}
+💳 Pagamento: ${paymentStatus}
+
+Qualquer dúvida, estamos à disposição! 💈`;
+
+    const whatsappUrl = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    
+    toast.success('Abrindo WhatsApp...');
+  };
+
   if (sortedAppts.length === 0) {
     return (
       <div className="p-6 rounded-2xl glass-effect text-center">
@@ -109,7 +142,18 @@ export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePaymen
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                     <User className="h-3 w-3" />
                     <span>{apt.profile?.name || 'Cliente'}</span>
-                    {apt.profile?.phone && <span>• {apt.profile.phone}</span>}
+                    {apt.profile?.phone && (
+                      <>
+                        <span>• {apt.profile.phone}</span>
+                        <button
+                          onClick={() => handleWhatsApp(apt)}
+                          className="ml-1 p-1 rounded-full hover:bg-green-500/20 transition-colors group"
+                          title="Enviar mensagem no WhatsApp"
+                        >
+                          <MessageCircle className="h-4 w-4 text-green-500 group-hover:scale-110 transition-transform" />
+                        </button>
+                      </>
+                    )}
                   </div>
                   
                   <p className="text-sm text-foreground">
