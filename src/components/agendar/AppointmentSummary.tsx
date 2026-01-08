@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Clock, FileText, Check, QrCode, Banknote, CreditCard } from 'lucide-react';
+import { Calendar, Clock, FileText, Check, Banknote, CreditCard, Crown } from 'lucide-react';
 import { Service } from '@/hooks/useAppointments';
+import { useMyPackages } from '@/hooks/useMyPackages';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { PixIcon } from '@/components/icons/PixIcon';
 import { cn } from '@/lib/utils';
 
-type PaymentMethod = 'pix' | 'cash' | 'card';
+export type PaymentMethod = 'pix' | 'cash' | 'card' | 'subscriber';
 
 interface AppointmentSummaryProps {
   selectedServices: Service[];
@@ -27,13 +28,8 @@ interface PaymentMethodConfig {
   description: string;
   iconColor: string;
   isPix?: boolean;
+  isSubscriber?: boolean;
 }
-
-const paymentMethods: PaymentMethodConfig[] = [
-  { id: 'pix', label: 'PIX', description: 'Pague agora e garanta seu horário', iconColor: '', isPix: true },
-  { id: 'cash', label: 'Dinheiro', description: 'Pagar no local', iconColor: 'text-green-500' },
-  { id: 'card', label: 'Cartão', description: 'Pagar no local', iconColor: 'text-blue-500' },
-];
 
 export function AppointmentSummary({
   selectedServices,
@@ -45,15 +41,78 @@ export function AppointmentSummary({
   isSubmitting
 }: AppointmentSummaryProps) {
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('pix');
+  const { packages, getRemainingForService } = useMyPackages();
+
+  // Calculate which services can be covered by package benefits
+  const getServiceCoverage = () => {
+    const coverage: Record<string, { covered: boolean; remaining: number }> = {};
+    
+    for (const service of selectedServices) {
+      const remaining = getRemainingForService(service.id);
+      coverage[service.id] = {
+        covered: remaining > 0,
+        remaining
+      };
+    }
+    
+    return coverage;
+  };
+
+  const serviceCoverage = getServiceCoverage();
   
-  const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
+  // Check if ALL selected services can be covered by subscriber benefits
+  const allServicesCovered = selectedServices.every(s => serviceCoverage[s.id]?.covered);
+  
+  // Check if user has any active package
+  const hasActivePackage = packages.some(p => p.status === 'active');
+  
+  // Show subscriber option only if user has package AND all services can be covered
+  const showSubscriberOption = hasActivePackage && allServicesCovered && selectedServices.length > 0;
+
+  // Calculate prices
+  const originalTotal = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
+  
+  // If subscriber payment is selected, calculate covered price
+  const calculateFinalPrice = () => {
+    if (selectedPayment === 'subscriber') {
+      return 0; // All covered services are free
+    }
+    return originalTotal;
+  };
+  
+  const finalPrice = calculateFinalPrice();
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
+
+  // Reset payment method if subscriber option becomes unavailable
+  useEffect(() => {
+    if (selectedPayment === 'subscriber' && !showSubscriberOption) {
+      setSelectedPayment('pix');
+    }
+  }, [showSubscriberOption, selectedPayment]);
+
+  const basePaymentMethods: PaymentMethodConfig[] = [
+    { id: 'pix', label: 'PIX', description: 'Pague agora e garanta seu horário', iconColor: '', isPix: true },
+    { id: 'cash', label: 'Dinheiro', description: 'Pagar no local', iconColor: 'text-green-500' },
+    { id: 'card', label: 'Cartão', description: 'Pagar no local', iconColor: 'text-blue-500' },
+  ];
+
+  // Add subscriber option if available
+  const paymentMethods: PaymentMethodConfig[] = showSubscriberOption
+    ? [
+        { id: 'subscriber', label: 'Assinante', description: 'Usar benefícios do seu pacote', iconColor: 'text-yellow-500', isSubscriber: true },
+        ...basePaymentMethods,
+      ]
+    : basePaymentMethods;
 
   const formatTime = (time: string) => time.slice(0, 5);
 
   const renderPaymentIcon = (method: PaymentMethodConfig, isSelected: boolean) => {
     if (method.isPix) {
       return <PixIcon size={22} />;
+    }
+    
+    if (method.isSubscriber) {
+      return <Crown className="h-5 w-5 text-yellow-500" />;
     }
     
     const iconClass = cn("h-5 w-5", method.iconColor);
@@ -80,20 +139,45 @@ export function AppointmentSummary({
           ✂️ Serviços
         </h3>
         <div className="space-y-2">
-          {selectedServices.map((service, index) => (
-            <motion.div
-              key={service.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="flex justify-between items-center"
-            >
-              <span className="text-foreground text-sm">{service.name}</span>
-              <span className="text-primary font-semibold text-sm">
-                R$ {Number(service.price).toFixed(0)}
-              </span>
-            </motion.div>
-          ))}
+          {selectedServices.map((service, index) => {
+            const isCovered = serviceCoverage[service.id]?.covered;
+            const showCoveredPrice = selectedPayment === 'subscriber' && isCovered;
+            
+            return (
+              <motion.div
+                key={service.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="flex justify-between items-center"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-foreground text-sm">{service.name}</span>
+                  {isCovered && selectedPayment === 'subscriber' && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-500 font-medium">
+                      VIP
+                    </span>
+                  )}
+                </div>
+                <div className="text-right">
+                  {showCoveredPrice ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground line-through">
+                        R$ {Number(service.price).toFixed(0)}
+                      </span>
+                      <span className="text-yellow-500 font-bold text-sm">
+                        GRÁTIS
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-primary font-semibold text-sm">
+                      R$ {Number(service.price).toFixed(0)}
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 
@@ -145,7 +229,10 @@ export function AppointmentSummary({
         <h3 className="text-sm font-semibold text-muted-foreground mb-3">
           💳 Forma de Pagamento
         </h3>
-        <div className="grid grid-cols-3 gap-2">
+        <div className={cn(
+          "grid gap-2",
+          showSubscriberOption ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"
+        )}>
           {paymentMethods.map((method) => {
             const isSelected = selectedPayment === method.id;
             
@@ -157,14 +244,20 @@ export function AppointmentSummary({
                 className={cn(
                   "flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all",
                   isSelected
-                    ? "border-primary bg-primary/10"
+                    ? method.isSubscriber
+                      ? "border-yellow-500 bg-yellow-500/10"
+                      : "border-primary bg-primary/10"
                     : "border-border bg-card/50 hover:bg-muted/50"
                 )}
               >
                 {renderPaymentIcon(method, isSelected)}
                 <span className={cn(
                   "text-xs font-medium",
-                  isSelected ? "text-primary" : "text-foreground"
+                  isSelected 
+                    ? method.isSubscriber 
+                      ? "text-yellow-500" 
+                      : "text-primary" 
+                    : "text-foreground"
                 )}>
                   {method.label}
                 </span>
@@ -177,9 +270,32 @@ export function AppointmentSummary({
         </p>
       </div>
 
+      {/* Subscriber Benefits Info */}
+      <AnimatePresence>
+        {selectedPayment === 'subscriber' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="h-5 w-5 text-yellow-500" />
+                <span className="text-sm font-semibold text-yellow-500">Usando Benefícios VIP</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Seus benefícios de assinante serão usados para cobrir os serviços selecionados.
+                Após confirmar, o uso será registrado automaticamente.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* PIX QR Code Preview */}
       <AnimatePresence>
-        {selectedPayment === 'pix' && totalPrice > 0 && (
+        {selectedPayment === 'pix' && originalTotal > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -206,7 +322,10 @@ export function AppointmentSummary({
       </AnimatePresence>
 
       {/* Total */}
-      <div className="bg-primary/10 rounded-2xl p-4">
+      <div className={cn(
+        "rounded-2xl p-4",
+        selectedPayment === 'subscriber' ? "bg-yellow-500/10" : "bg-primary/10"
+      )}>
         <div className="flex justify-between items-center">
           <div>
             <p className="text-xs text-muted-foreground">Duração</p>
@@ -214,9 +333,20 @@ export function AppointmentSummary({
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-2xl font-bold text-primary">
-              R$ {totalPrice.toFixed(0)}
-            </p>
+            {selectedPayment === 'subscriber' ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground line-through">
+                  R$ {originalTotal.toFixed(0)}
+                </span>
+                <span className="text-2xl font-bold text-yellow-500">
+                  GRÁTIS
+                </span>
+              </div>
+            ) : (
+              <p className="text-2xl font-bold text-primary">
+                R$ {finalPrice.toFixed(0)}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -226,7 +356,10 @@ export function AppointmentSummary({
         <Button
           onClick={() => onConfirm(selectedPayment)}
           disabled={isSubmitting}
-          className="w-full h-14 text-base font-bold rounded-2xl"
+          className={cn(
+            "w-full h-14 text-base font-bold rounded-2xl",
+            selectedPayment === 'subscriber' && "bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black"
+          )}
         >
           {isSubmitting ? (
             <span className="flex items-center gap-2">
@@ -240,8 +373,17 @@ export function AppointmentSummary({
             </span>
           ) : (
             <span className="flex items-center gap-2">
-              <Check className="w-5 h-5" />
-              Confirmar Agendamento
+              {selectedPayment === 'subscriber' ? (
+                <>
+                  <Crown className="w-5 h-5" />
+                  Usar Benefício VIP
+                </>
+              ) : (
+                <>
+                  <Check className="w-5 h-5" />
+                  Confirmar Agendamento
+                </>
+              )}
             </span>
           )}
         </Button>
