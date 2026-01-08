@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Crown, Check, ArrowLeft, Star, Clock, Loader2, Gift } from 'lucide-react';
+import { Crown, Check, ArrowLeft, Star, Clock, Loader2, Gift, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
+import { PixQRCode } from '@/components/payments/PixQRCode';
+import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { User } from '@supabase/supabase-js';
@@ -36,6 +39,13 @@ const Pacotes = () => {
   const [packages, setPackages] = useState<PackageWithBenefits[]>([]);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [paymentModal, setPaymentModal] = useState<{
+    open: boolean;
+    package: PackageWithBenefits | null;
+    subscriptionId: string | null;
+  }>({ open: false, package: null, subscriptionId: null });
+
+  const WHATSAPP_NUMBER = '5548999520220';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -98,13 +108,13 @@ const Pacotes = () => {
       const startDate = format(new Date(), 'yyyy-MM-dd');
       const endDate = format(addDays(new Date(), pkg.duration_days), 'yyyy-MM-dd');
 
-      const { error } = await supabase.from('client_packages').insert({
+      const { data, error } = await supabase.from('client_packages').insert({
         user_id: user.id,
         package_id: pkg.id,
         start_date: startDate,
         end_date: endDate,
-        status: 'active',
-      });
+        status: 'pending', // Status pending until payment confirmed
+      }).select().single();
 
       if (error) {
         console.error('Error subscribing:', error);
@@ -114,15 +124,41 @@ const Pacotes = () => {
           variant: "destructive",
         });
       } else {
-        toast({
-          title: "Assinatura realizada! 🎉",
-          description: `Você agora é assinante do pacote ${pkg.name}!`,
+        // Open payment modal with QR code
+        setPaymentModal({
+          open: true,
+          package: pkg,
+          subscriptionId: data?.id || null,
         });
-        navigate('/cliente');
       }
     } finally {
       setSubscribing(null);
     }
+  };
+
+  const handleWhatsAppClick = () => {
+    const pkg = paymentModal.package;
+    if (!pkg) return;
+
+    const message = `Olá! 👋
+
+Acabei de assinar o pacote *${pkg.name}* no valor de *R$ ${pkg.price}*.
+
+Segue o comprovante de pagamento: 📎
+
+Aguardo a confirmação! 🙏`;
+
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleClosePayment = () => {
+    setPaymentModal({ open: false, package: null, subscriptionId: null });
+    toast({
+      title: "Assinatura registrada! 📝",
+      description: "Após confirmar o pagamento, seu pacote será ativado.",
+    });
+    navigate('/cliente');
   };
 
   const calculateTotalValue = (pkg: PackageWithBenefits) => {
@@ -323,6 +359,89 @@ const Pacotes = () => {
           Cancele a qualquer momento. Sem fidelidade.
         </motion.p>
       </main>
+
+      {/* Payment Modal */}
+      <Dialog open={paymentModal.open} onOpenChange={(open) => !open && handleClosePayment()}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+          {/* Header */}
+          <div className="bg-primary/10 p-6 text-center border-b border-border">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', delay: 0.1 }}
+              className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center"
+            >
+              <Crown className="h-8 w-8 text-primary" />
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-xl font-bold text-foreground"
+            >
+              Pacote {paymentModal.package?.name}
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-3xl font-bold text-primary mt-2"
+            >
+              R$ {paymentModal.package?.price}
+            </motion.p>
+          </div>
+
+          {/* Warning */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="p-4 bg-yellow-500/10 border-b border-border"
+          >
+            <p className="text-center text-sm font-medium text-yellow-600">
+              ⚠️ Pague o valor total via PIX e envie o comprovante no WhatsApp para ativar seu pacote
+            </p>
+          </motion.div>
+
+          {/* PIX QR Code */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="p-6"
+          >
+            {paymentModal.package && (
+              <PixQRCode
+                amount={paymentModal.package.price}
+                transactionId={paymentModal.subscriptionId || paymentModal.package.id}
+              />
+            )}
+          </motion.div>
+
+          {/* WhatsApp Button */}
+          <div className="p-4 border-t border-border bg-muted/30 space-y-3">
+            <Button
+              onClick={handleWhatsAppClick}
+              className="w-full h-12 bg-green-600 hover:bg-green-700 gap-2"
+            >
+              <WhatsAppIcon size={20} />
+              Enviar Comprovante no WhatsApp
+            </Button>
+            
+            <Button
+              onClick={handleClosePayment}
+              variant="outline"
+              className="w-full"
+            >
+              Fechar
+            </Button>
+            
+            <p className="text-xs text-center text-muted-foreground">
+              Seu pacote será ativado após a confirmação do pagamento
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
