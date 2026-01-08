@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
+import { AdminNotificationBell } from './AdminNotificationBell';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -54,14 +55,17 @@ export function AdminSidebar() {
             Admin
           </h1>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className="text-sidebar-foreground"
-        >
-          <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
-        </Button>
+        <div className="flex items-center gap-1">
+          <AdminNotificationBell />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(!collapsed)}
+            className="text-sidebar-foreground"
+          >
+            <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+          </Button>
+        </div>
       </div>
 
       {/* Navigation */}
