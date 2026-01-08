@@ -11,7 +11,7 @@ import { Scissors, Mail, Lock, User, Phone, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import barberPhoto from "@/assets/barber-photo.png";
 
 const loginSchema = z.object({
@@ -303,211 +303,158 @@ const Login = () => {
                       </TabsList>
                     </motion.div>
 
-                    <div className="min-h-[280px]">
-                      <AnimatePresence mode="wait">
-                        {/* Login Tab */}
-                        {activeTab === "login" && (
-                          <TabsContent value="login" forceMount key="login">
-                            <motion.form 
-                              onSubmit={handleLogin} 
-                              className="space-y-5"
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: 20 }}
-                              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    <div className="min-h-[320px]">
+                      {/* Login Tab */}
+                      <TabsContent value="login">
+                        <motion.form 
+                          onSubmit={handleLogin} 
+                          className="space-y-5"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <div className="space-y-2">
+                            <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                id="login-email"
+                                type="email"
+                                placeholder="seu@email.com"
+                                value={loginEmail}
+                                onChange={(e) => setLoginEmail(e.target.value)}
+                                className="pl-10 h-12 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                required
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="login-password" className="text-sm font-medium">Senha</Label>
+                            <div className="relative">
+                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                id="login-password"
+                                type="password"
+                                placeholder="••••••••"
+                                value={loginPassword}
+                                onChange={(e) => setLoginPassword(e.target.value)}
+                                className="pl-10 h-12 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                required
+                              />
+                            </div>
+                          </div>
+                          
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Button 
+                              type="submit" 
+                              className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40" 
+                              disabled={isLoading}
                             >
-                              <motion.div 
-                                className="space-y-2"
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: 0.1 }}
-                              >
-                                <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
-                                <motion.div 
-                                  className="relative"
-                                  whileFocus={{ scale: 1.02 }}
-                                >
-                                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors" />
-                                  <Input
-                                    id="login-email"
-                                    type="email"
-                                    placeholder="seu@email.com"
-                                    value={loginEmail}
-                                    onChange={(e) => setLoginEmail(e.target.value)}
-                                    className="pl-10 h-12 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
-                                    required
-                                  />
-                                </motion.div>
-                              </motion.div>
-                              
-                              <motion.div 
-                                className="space-y-2"
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: 0.2 }}
-                              >
-                                <Label htmlFor="login-password" className="text-sm font-medium">Senha</Label>
-                                <div className="relative">
-                                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    id="login-password"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    value={loginPassword}
-                                    onChange={(e) => setLoginPassword(e.target.value)}
-                                    className="pl-10 h-12 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
-                                    required
-                                  />
-                                </div>
-                              </motion.div>
-                              
-                              <motion.div
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: 0.3 }}
-                              >
-                                <motion.div
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                >
-                                  <Button 
-                                    type="submit" 
-                                    className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40" 
-                                    disabled={isLoading}
-                                  >
-                                    {isLoading ? (
-                                      <Loader2 className="h-5 w-5 animate-spin" />
-                                    ) : (
-                                      "Entrar"
-                                    )}
-                                  </Button>
-                                </motion.div>
-                              </motion.div>
-                            </motion.form>
-                          </TabsContent>
-                        )}
+                              {isLoading ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                              ) : (
+                                "Entrar"
+                              )}
+                            </Button>
+                          </motion.div>
+                        </motion.form>
+                      </TabsContent>
 
-                        {/* Signup Tab */}
-                        {activeTab === "signup" && (
-                          <TabsContent value="signup" forceMount key="signup">
-                            <motion.form 
-                              onSubmit={handleSignup} 
-                              className="space-y-4"
-                              initial={{ opacity: 0, x: 20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: -20 }}
-                              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                      {/* Signup Tab */}
+                      <TabsContent value="signup">
+                        <motion.form 
+                          onSubmit={handleSignup} 
+                          className="space-y-4"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-name" className="text-sm font-medium">Nome</Label>
+                            <div className="relative">
+                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                id="signup-name"
+                                type="text"
+                                placeholder="Seu nome"
+                                value={signupName}
+                                onChange={(e) => setSignupName(e.target.value)}
+                                className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                required
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-phone" className="text-sm font-medium">Telefone</Label>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                id="signup-phone"
+                                type="tel"
+                                placeholder="(48) 99999-9999"
+                                value={signupPhone}
+                                onChange={(e) => setSignupPhone(e.target.value)}
+                                className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                required
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-email" className="text-sm font-medium">Email</Label>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                id="signup-email"
+                                type="email"
+                                placeholder="seu@email.com"
+                                value={signupEmail}
+                                onChange={(e) => setSignupEmail(e.target.value)}
+                                className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                required
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="signup-password" className="text-sm font-medium">Senha</Label>
+                            <div className="relative">
+                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                id="signup-password"
+                                type="password"
+                                placeholder="••••••••"
+                                value={signupPassword}
+                                onChange={(e) => setSignupPassword(e.target.value)}
+                                className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                required
+                              />
+                            </div>
+                          </div>
+                          
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Button 
+                              type="submit" 
+                              className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40" 
+                              disabled={isLoading}
                             >
-                              <motion.div 
-                                className="space-y-2"
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: 0.05 }}
-                              >
-                                <Label htmlFor="signup-name" className="text-sm font-medium">Nome</Label>
-                                <div className="relative">
-                                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    id="signup-name"
-                                    type="text"
-                                    placeholder="Seu nome"
-                                    value={signupName}
-                                    onChange={(e) => setSignupName(e.target.value)}
-                                    className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
-                                    required
-                                  />
-                                </div>
-                              </motion.div>
-                              
-                              <motion.div 
-                                className="space-y-2"
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: 0.1 }}
-                              >
-                                <Label htmlFor="signup-phone" className="text-sm font-medium">Telefone</Label>
-                                <div className="relative">
-                                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    id="signup-phone"
-                                    type="tel"
-                                    placeholder="(48) 99999-9999"
-                                    value={signupPhone}
-                                    onChange={(e) => setSignupPhone(e.target.value)}
-                                    className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
-                                    required
-                                  />
-                                </div>
-                              </motion.div>
-                              
-                              <motion.div 
-                                className="space-y-2"
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: 0.15 }}
-                              >
-                                <Label htmlFor="signup-email" className="text-sm font-medium">Email</Label>
-                                <div className="relative">
-                                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    id="signup-email"
-                                    type="email"
-                                    placeholder="seu@email.com"
-                                    value={signupEmail}
-                                    onChange={(e) => setSignupEmail(e.target.value)}
-                                    className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
-                                    required
-                                  />
-                                </div>
-                              </motion.div>
-                              
-                              <motion.div 
-                                className="space-y-2"
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: 0.2 }}
-                              >
-                                <Label htmlFor="signup-password" className="text-sm font-medium">Senha</Label>
-                                <div className="relative">
-                                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    id="signup-password"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    value={signupPassword}
-                                    onChange={(e) => setSignupPassword(e.target.value)}
-                                    className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
-                                    required
-                                  />
-                                </div>
-                              </motion.div>
-                              
-                              <motion.div
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: 0.25 }}
-                              >
-                                <motion.div
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                >
-                                  <Button 
-                                    type="submit" 
-                                    className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40" 
-                                    disabled={isLoading}
-                                  >
-                                    {isLoading ? (
-                                      <Loader2 className="h-5 w-5 animate-spin" />
-                                    ) : (
-                                      "Criar Conta"
-                                    )}
-                                  </Button>
-                                </motion.div>
-                              </motion.div>
-                            </motion.form>
-                          </TabsContent>
-                        )}
-                      </AnimatePresence>
+                              {isLoading ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                              ) : (
+                                "Criar Conta"
+                              )}
+                            </Button>
+                          </motion.div>
+                        </motion.form>
+                      </TabsContent>
                     </div>
                   </Tabs>
                 </CardContent>
