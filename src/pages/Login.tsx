@@ -11,6 +11,7 @@ import { Scissors, Mail, Lock, User, Phone, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
+import barberPhoto from "@/assets/barber-photo.png";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -137,16 +138,34 @@ const Login = () => {
       <AnimatedBackground />
       <Navbar />
       
-      <main className="pt-32 pb-24 flex items-center justify-center">
+      <main className="pt-24 pb-24 flex items-center justify-center min-h-screen">
         <div className="container px-4">
-          <div className="max-w-md mx-auto">
-            {/* Logo */}
-            <div className="flex items-center justify-center gap-3 mb-8">
-              <Scissors className="h-10 w-10 text-primary" />
-              <span className="font-display text-2xl font-semibold tracking-wider">
-                ALAN DELON
-              </span>
+          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
+            {/* Left side - Image */}
+            <div className="hidden lg:block relative">
+              <div className="relative rounded-2xl overflow-hidden">
+                <img 
+                  src={barberPhoto} 
+                  alt="Barbeiro Alan Delon" 
+                  className="w-full h-auto rounded-2xl object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
+                <div className="absolute bottom-6 left-6 right-6">
+                  <p className="font-display text-xl font-semibold">Tradição em cada corte</p>
+                  <p className="text-muted-foreground text-sm mt-1">Mais de 10 anos de experiência</p>
+                </div>
+              </div>
             </div>
+
+            {/* Right side - Form */}
+            <div>
+              {/* Logo */}
+              <div className="flex items-center justify-center gap-3 mb-8">
+                <Scissors className="h-10 w-10 text-primary" />
+                <span className="font-display text-2xl font-semibold tracking-wider">
+                  ALAN DELON
+                </span>
+              </div>
 
             <Card className="glass-effect border-border">
               <CardHeader className="text-center">
@@ -280,6 +299,7 @@ const Login = () => {
                 </Tabs>
               </CardContent>
             </Card>
+            </div>
           </div>
         </div>
       </main>
