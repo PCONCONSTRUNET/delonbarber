@@ -76,13 +76,15 @@ export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePaymen
   };
 
   const handleWhatsApp = (apt: AdminAppointment) => {
-    const phone = apt.profile?.phone?.replace(/\D/g, '');
+    // Prefer guest phone, fallback to profile phone
+    const phone = (apt.guest_phone || apt.profile?.phone)?.replace(/\D/g, '');
     if (!phone) {
       toast.error('Cliente não possui telefone cadastrado');
       return;
     }
 
-    const clientName = apt.profile?.name || 'Cliente';
+    // Prefer guest name, fallback to profile name
+    const clientName = apt.guest_name || apt.profile?.name || 'Cliente';
     const services = apt.services.map(s => s.name).join(', ');
     const status = statusLabels[apt.status];
     const paymentStatus = apt.payment_status === 'paid' ? 'Pago ✅' : 'Aguardando pagamento';
@@ -142,10 +144,15 @@ Qualquer dúvida, estamos à disposição! 💈`;
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                     <User className="h-3 w-3" />
-                    <span>{apt.profile?.name || 'Cliente'}</span>
-                    {apt.profile?.phone && (
+                    {/* Show guest name if available, otherwise show profile name */}
+                    <span className={apt.guest_name ? "text-amber-400 font-medium" : ""}>
+                      {apt.guest_name || apt.profile?.name || 'Cliente'}
+                      {apt.guest_name && <span className="text-xs ml-1">(WhatsApp)</span>}
+                    </span>
+                    {/* Show guest phone or profile phone */}
+                    {(apt.guest_phone || apt.profile?.phone) && (
                       <>
-                        <span>• {apt.profile.phone}</span>
+                        <span>• {apt.guest_phone || apt.profile?.phone}</span>
                         <button
                           onClick={() => handleWhatsApp(apt)}
                           className="ml-1 p-1 rounded-full hover:bg-green-500/20 transition-colors group"

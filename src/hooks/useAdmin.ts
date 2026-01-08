@@ -15,6 +15,8 @@ export interface AdminAppointment {
   payment_method: string | null;
   created_at: string;
   user_id: string;
+  guest_name: string | null;
+  guest_phone: string | null;
   profile?: {
     name: string | null;
     phone: string | null;

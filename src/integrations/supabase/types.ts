@@ -55,6 +55,8 @@ export type Database = {
           appointment_date: string
           appointment_time: string
           created_at: string | null
+          guest_name: string | null
+          guest_phone: string | null
           id: string
           notes: string | null
           payment_date: string | null
@@ -70,6 +72,8 @@ export type Database = {
           appointment_date: string
           appointment_time: string
           created_at?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
           id?: string
           notes?: string | null
           payment_date?: string | null
@@ -85,6 +89,8 @@ export type Database = {
           appointment_date?: string
           appointment_time?: string
           created_at?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
           id?: string
           notes?: string | null
           payment_date?: string | null
