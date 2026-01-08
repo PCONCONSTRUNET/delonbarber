@@ -83,16 +83,12 @@ const Index = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link to="/login">
-              <Button size="lg" className="min-w-[180px] text-lg font-semibold">
-                Criar Conta
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button variant="outline" size="lg" className="min-w-[180px] text-lg border-foreground/20 hover:bg-foreground/5">
-                Já tenho conta
-              </Button>
-            </Link>
+            <Button asChild size="lg" className="min-w-[180px] text-lg font-semibold">
+              <Link to="/login">Criar Conta</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="min-w-[180px] text-lg border-foreground/20 hover:bg-foreground/5">
+              <Link to="/login">Já tenho conta</Link>
+            </Button>
           </div>
         </section>
 
