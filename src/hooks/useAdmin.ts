@@ -307,11 +307,26 @@ export function useAdminServices() {
   }
 
   async function deleteService(id: string) {
-    const { error } = await supabase.from('services').update({ is_active: false }).eq('id', id);
+    console.log('Deleting service:', id);
+    const { error, data } = await supabase
+      .from('services')
+      .update({ is_active: false })
+      .eq('id', id)
+      .select();
+    
+    console.log('Delete result:', { error, data });
+    
     if (error) {
-      toast({ title: "Erro", description: "Não foi possível remover.", variant: "destructive" });
+      console.error('Delete service error:', error);
+      toast({ title: "Erro", description: error.message || "Não foi possível remover.", variant: "destructive" });
       return false;
     }
+    
+    if (!data || data.length === 0) {
+      toast({ title: "Erro", description: "Serviço não encontrado ou sem permissão.", variant: "destructive" });
+      return false;
+    }
+    
     toast({ title: "Serviço removido!" });
     fetchServices();
     return true;
