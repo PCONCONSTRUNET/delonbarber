@@ -154,6 +154,83 @@ export type Database = {
         }
         Relationships: []
       }
+      client_packages: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          id: string
+          package_id: string
+          start_date: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          id?: string
+          package_id: string
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          package_id?: string
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_packages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      packages: {
+        Row: {
+          benefits: string[] | null
+          created_at: string | null
+          description: string | null
+          discount_percent: number
+          duration_days: number
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+        }
+        Insert: {
+          benefits?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          discount_percent?: number
+          duration_days?: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price: number
+        }
+        Update: {
+          benefits?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          discount_percent?: number
+          duration_days?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
