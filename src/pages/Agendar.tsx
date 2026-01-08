@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Scissors, ChevronRight, ChevronLeft, CalendarDays, History } from 'lucide-react';
+import { ChevronRight, ChevronLeft, History } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Footer } from '@/components/layout/Footer';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { Button } from '@/components/ui/button';
@@ -21,9 +22,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 
 const steps = [
-  { id: 1, title: 'Serviços', icon: Scissors },
-  { id: 2, title: 'Data e Hora', icon: CalendarDays },
-  { id: 3, title: 'Confirmar', icon: ChevronRight },
+  { id: 1, title: 'Serviços' },
+  { id: 2, title: 'Data e Hora' },
+  { id: 3, title: 'Confirmar' },
 ];
 
 const Agendar = () => {
@@ -105,184 +106,179 @@ const Agendar = () => {
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       <AnimatedBackground />
       
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
-          >
-            <h1 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Agende seu <span className="text-gradient">Horário</span>
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Escolha seus serviços e agende seu horário
-            </p>
-          </motion.div>
+      <main className="pt-6 pb-16 px-4 max-w-lg mx-auto">
+        {/* Header - mais compacto */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-6"
+        >
+          <h1 className="font-display text-2xl font-bold text-foreground">
+            ✂️ Agendar
+          </h1>
+        </motion.div>
 
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-8">
-              <TabsTrigger value="agendar" className="gap-2">
-                <CalendarDays className="w-4 h-4" />
-                Novo Agendamento
-              </TabsTrigger>
-              <TabsTrigger value="historico" className="gap-2">
-                <History className="w-4 h-4" />
-                Meu Histórico
-              </TabsTrigger>
-            </TabsList>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-2xl p-1">
+            <TabsTrigger value="agendar" className="rounded-xl text-sm">
+              📅 Agendar
+            </TabsTrigger>
+            <TabsTrigger value="historico" className="rounded-xl text-sm">
+              📋 Histórico
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="agendar">
-              {/* Progress Steps */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex justify-center mb-10"
-              >
-                <div className="flex items-center gap-2 sm:gap-4">
-                  {steps.map((step, index) => {
-                    const StepIcon = step.icon;
-                    const isActive = currentStep === step.id;
-                    const isCompleted = currentStep > step.id;
+          <TabsContent value="agendar" className="mt-0">
+            {/* Progress Steps - compacto */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex justify-center mb-6"
+            >
+              <div className="flex items-center gap-1">
+                {steps.map((step, index) => {
+                  const isActive = currentStep === step.id;
+                  const isCompleted = currentStep > step.id;
 
-                    return (
-                      <div key={step.id} className="flex items-center">
-                        <motion.div
-                          initial={false}
-                          animate={{
-                            scale: isActive ? 1.1 : 1,
-                            backgroundColor: isActive || isCompleted ? 'hsl(var(--primary))' : 'hsl(var(--muted))'
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 rounded-full"
-                        >
-                          <StepIcon className={`w-5 h-5 ${isActive || isCompleted ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
-                          <span className={`hidden sm:inline text-sm font-medium ${isActive || isCompleted ? 'text-primary-foreground' : 'text-muted-foreground'}`}>
-                            {step.title}
-                          </span>
-                        </motion.div>
-                        
-                        {index < steps.length - 1 && (
-                          <ChevronRight className="w-5 h-5 text-muted-foreground mx-2" />
+                  return (
+                    <div key={step.id} className="flex items-center">
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                          isActive || isCompleted
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
                         )}
+                      >
+                        {step.id}
                       </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
+                      
+                      {index < steps.length - 1 && (
+                        <div className={cn(
+                          "w-8 h-0.5 mx-1",
+                          isCompleted ? "bg-primary" : "bg-muted"
+                        )} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
 
-              {/* Selected services summary bar */}
-              {selectedServices.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-8 flex flex-wrap items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-foreground">
-                      <strong>{selectedServices.length}</strong> serviço(s) selecionado(s)
-                    </span>
-                    <span className="text-sm text-muted-foreground">|</span>
-                    <span className="text-sm text-foreground">
-                      ⏱️ {totalDuration} min
-                    </span>
-                  </div>
-                  <span className="text-xl font-bold text-primary">
-                    R$ {totalPrice.toFixed(2)}
+            {/* Selected services summary - fixo no topo quando tem seleção */}
+            {selectedServices.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-primary/10 rounded-2xl p-3 mb-4 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-semibold text-foreground">
+                    {selectedServices.length}x
                   </span>
+                  <span className="text-muted-foreground">
+                    {totalDuration}min
+                  </span>
+                </div>
+                <span className="text-lg font-bold text-primary">
+                  R$ {totalPrice.toFixed(0)}
+                </span>
+              </motion.div>
+            )}
+
+            {/* Step Content */}
+            <AnimatePresence mode="wait">
+              {currentStep === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                >
+                  {servicesLoading ? (
+                    <div className="flex justify-center py-12">
+                      <motion.span
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                        className="text-3xl"
+                      >
+                        ✂️
+                      </motion.span>
+                    </div>
+                  ) : (
+                    <ServiceSelection
+                      services={services}
+                      selectedServices={selectedServices}
+                      onToggleService={toggleService}
+                    />
+                  )}
                 </motion.div>
               )}
 
-              {/* Step Content */}
-              <AnimatePresence mode="wait">
-                {currentStep === 1 && (
-                  <motion.div
-                    key="step1"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                  >
-                    {servicesLoading ? (
-                      <div className="flex justify-center py-12">
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ repeat: Infinity, duration: 1 }}
-                        >
-                          <Scissors className="w-8 h-8 text-primary" />
-                        </motion.div>
-                      </div>
-                    ) : (
-                      <ServiceSelection
-                        services={services}
-                        selectedServices={selectedServices}
-                        onToggleService={toggleService}
-                      />
-                    )}
-                  </motion.div>
-                )}
-
-                {currentStep === 2 && (
-                  <motion.div
-                    key="step2"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                  >
-                    {hoursLoading ? (
-                      <div className="flex justify-center py-12">
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ repeat: Infinity, duration: 1 }}
-                        >
-                          <Scissors className="w-8 h-8 text-primary" />
-                        </motion.div>
-                      </div>
-                    ) : (
-                      <DateTimeSelection
-                        businessHours={businessHours}
-                        bookedSlots={bookedSlots}
-                        selectedDate={selectedDate}
-                        selectedTime={selectedTime}
-                        onSelectDate={handleDateSelect}
-                        onSelectTime={setSelectedTime}
-                      />
-                    )}
-                  </motion.div>
-                )}
-
-                {currentStep === 3 && (
-                  <motion.div
-                    key="step3"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                  >
-                    <AppointmentSummary
-                      selectedServices={selectedServices}
+              {currentStep === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                >
+                  {hoursLoading ? (
+                    <div className="flex justify-center py-12">
+                      <motion.span
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                        className="text-3xl"
+                      >
+                        ✂️
+                      </motion.span>
+                    </div>
+                  ) : (
+                    <DateTimeSelection
+                      businessHours={businessHours}
+                      bookedSlots={bookedSlots}
                       selectedDate={selectedDate}
                       selectedTime={selectedTime}
-                      notes={notes}
-                      onNotesChange={setNotes}
-                      onConfirm={handleConfirm}
-                      isSubmitting={isSubmitting}
+                      onSelectDate={handleDateSelect}
+                      onSelectTime={setSelectedTime}
                     />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  )}
+                </motion.div>
+              )}
 
-              {/* Navigation Buttons */}
-              <div className="flex justify-between mt-10 max-w-2xl mx-auto">
+              {currentStep === 3 && (
+                <motion.div
+                  key="step3"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                >
+                  <AppointmentSummary
+                    selectedServices={selectedServices}
+                    selectedDate={selectedDate}
+                    selectedTime={selectedTime}
+                    notes={notes}
+                    onNotesChange={setNotes}
+                    onConfirm={handleConfirm}
+                    isSubmitting={isSubmitting}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Navigation Buttons - fixos no bottom */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-lg border-t border-border">
+              <div className="max-w-lg mx-auto flex gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setCurrentStep(prev => prev - 1)}
                   disabled={currentStep === 1}
-                  className="gap-2"
+                  className="flex-1 h-12 rounded-2xl"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-4 h-4 mr-1" />
                   Voltar
                 </Button>
 
@@ -290,65 +286,55 @@ const Agendar = () => {
                   <Button
                     onClick={() => setCurrentStep(prev => prev + 1)}
                     disabled={!canProceed()}
-                    className="gap-2"
+                    className="flex-1 h-12 rounded-2xl"
                   >
                     Próximo
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
                 )}
               </div>
+            </div>
+          </TabsContent>
 
-              {/* Login prompt */}
-              {!user && currentStep === 3 && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center text-muted-foreground mt-4"
-                >
-                  Você será redirecionado para fazer login ao confirmar
-                </motion.p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="historico">
-              {!user ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center py-12"
-                >
-                  <History className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    Faça login para ver seu histórico
-                  </h3>
-                  <p className="text-muted-foreground mb-6">
-                    Você precisa estar logado para ver seus agendamentos
-                  </p>
-                  <Button onClick={() => navigate('/login')}>
-                    Fazer Login
-                  </Button>
-                </motion.div>
-              ) : appointmentsLoading ? (
-                <div className="flex justify-center py-12">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1 }}
-                  >
-                    <Scissors className="w-8 h-8 text-primary" />
-                  </motion.div>
+          <TabsContent value="historico" className="mt-0">
+            {!user ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16"
+              >
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+                  <History className="w-10 h-10 text-muted-foreground" />
                 </div>
-              ) : (
-                <AppointmentHistory
-                  appointments={appointments}
-                  onCancel={cancelAppointment}
-                />
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  Faça login
+                </h3>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Para ver seus agendamentos
+                </p>
+                <Button onClick={() => navigate('/login')} className="rounded-2xl">
+                  Entrar
+                </Button>
+              </motion.div>
+            ) : appointmentsLoading ? (
+              <div className="flex justify-center py-12">
+                <motion.span
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                  className="text-3xl"
+                >
+                  ✂️
+                </motion.span>
+              </div>
+            ) : (
+              <AppointmentHistory
+                appointments={appointments}
+                onCancel={cancelAppointment}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
-
-      <Footer />
     </div>
   );
 };

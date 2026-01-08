@@ -1,10 +1,9 @@
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Clock, X, CheckCircle, AlertCircle, History } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, History } from 'lucide-react';
 import { Appointment } from '@/hooks/useAppointments';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface AppointmentHistoryProps {
@@ -15,23 +14,23 @@ interface AppointmentHistoryProps {
 const statusConfig = {
   pending: {
     label: 'Pendente',
-    icon: AlertCircle,
-    className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'
+    emoji: '⏳',
+    className: 'bg-yellow-500/10 text-yellow-500'
   },
   confirmed: {
     label: 'Confirmado',
-    icon: CheckCircle,
-    className: 'bg-green-500/10 text-green-500 border-green-500/30'
+    emoji: '✅',
+    className: 'bg-green-500/10 text-green-500'
   },
   completed: {
     label: 'Concluído',
-    icon: CheckCircle,
-    className: 'bg-blue-500/10 text-blue-500 border-blue-500/30'
+    emoji: '✔️',
+    className: 'bg-blue-500/10 text-blue-500'
   },
   cancelled: {
     label: 'Cancelado',
-    icon: X,
-    className: 'bg-red-500/10 text-red-500 border-red-500/30'
+    emoji: '❌',
+    className: 'bg-red-500/10 text-red-500'
   }
 };
 
@@ -43,13 +42,15 @@ export function AppointmentHistory({ appointments, onCancel }: AppointmentHistor
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="text-center py-12"
+        className="text-center py-16"
       >
-        <History className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-foreground mb-2">
-          Nenhum agendamento ainda
+        <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+          <History className="w-10 h-10 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-semibold text-foreground mb-2">
+          Nenhum agendamento
         </h3>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Seus agendamentos aparecerão aqui
         </p>
       </motion.div>
@@ -57,86 +58,80 @@ export function AppointmentHistory({ appointments, onCancel }: AppointmentHistor
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {appointments.map((appointment, index) => {
         const status = statusConfig[appointment.status];
-        const StatusIcon = status.icon;
         const canCancel = ['pending', 'confirmed'].includes(appointment.status);
 
         return (
           <motion.div
             key={appointment.id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="bg-card border border-border rounded-xl p-5 shadow-lg"
+            className="bg-card/80 rounded-2xl p-4"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              {/* Date & Time */}
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-xl flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-primary">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex flex-col items-center justify-center">
+                  <span className="text-lg font-bold text-primary leading-none">
                     {format(new Date(appointment.appointment_date), 'dd')}
                   </span>
-                  <span className="text-xs text-muted-foreground uppercase">
+                  <span className="text-[10px] text-muted-foreground uppercase">
                     {format(new Date(appointment.appointment_date), 'MMM', { locale: ptBR })}
                   </span>
                 </div>
-
                 <div>
-                  <div className="flex items-center gap-2 text-foreground font-semibold">
-                    <Calendar className="w-4 h-4 text-primary" />
-                    {format(new Date(appointment.appointment_date), "EEEE", { locale: ptBR })}
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock className="w-4 h-4" />
+                  <p className="font-semibold text-foreground">
                     {formatTime(appointment.appointment_time)}
-                  </div>
+                  </p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {format(new Date(appointment.appointment_date), 'EEEE', { locale: ptBR })}
+                  </p>
                 </div>
               </div>
-
-              {/* Status & Price */}
-              <div className="flex items-center gap-4">
-                <Badge className={cn("flex items-center gap-1", status.className)}>
-                  <StatusIcon className="w-3 h-3" />
-                  {status.label}
-                </Badge>
-                <span className="text-xl font-bold text-primary">
-                  R$ {Number(appointment.total_price).toFixed(2)}
+              
+              <div className="text-right">
+                <span className={cn("text-xs px-2 py-1 rounded-full", status.className)}>
+                  {status.emoji} {status.label}
                 </span>
+                <p className="text-primary font-bold mt-1">
+                  R$ {Number(appointment.total_price).toFixed(0)}
+                </p>
               </div>
             </div>
 
             {/* Services */}
-            <div className="mt-4 pt-4 border-t border-border">
-              <div className="flex flex-wrap gap-2">
-                {appointment.services.map(service => (
-                  <Badge key={service.id} variant="secondary" className="text-xs">
-                    {service.name}
-                  </Badge>
-                ))}
-              </div>
-
-              {appointment.notes && (
-                <p className="mt-3 text-sm text-muted-foreground italic">
-                  "{appointment.notes}"
-                </p>
-              )}
+            <div className="flex flex-wrap gap-1 mb-3">
+              {appointment.services.map(service => (
+                <span 
+                  key={service.id} 
+                  className="text-xs bg-muted/50 text-muted-foreground px-2 py-1 rounded-lg"
+                >
+                  {service.name}
+                </span>
+              ))}
             </div>
+
+            {/* Notes */}
+            {appointment.notes && (
+              <p className="text-xs text-muted-foreground italic mb-3 bg-muted/30 rounded-lg p-2">
+                "{appointment.notes}"
+              </p>
+            )}
 
             {/* Cancel button */}
             {canCancel && (
-              <div className="mt-4 flex justify-end">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => onCancel(appointment.id)}
-                  className="gap-2"
-                >
-                  <X className="w-4 h-4" />
-                  Cancelar
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onCancel(appointment.id)}
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancelar
+              </Button>
             )}
           </motion.div>
         );
