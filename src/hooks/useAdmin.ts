@@ -128,6 +128,27 @@ export function useAdminAppointments() {
 
   useEffect(() => {
     fetchAppointments();
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('admin-appointments')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments'
+        },
+        (payload) => {
+          console.log('Realtime update:', payload);
+          fetchAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   async function updateAppointmentStatus(id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled') {
