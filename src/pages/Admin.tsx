@@ -31,7 +31,7 @@ function AdminLayout({ children }: AdminLayoutProps) {
 
 export function AdminDashboard() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const { appointments, loading, updateAppointmentStatus, updatePaymentStatus } = useAdminAppointments();
+  const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment } = useAdminAppointments();
   const { isOpen, toggleStatus } = useBusinessStatus();
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -59,6 +59,7 @@ export function AdminDashboard() {
                 appointments={appointments}
                 onUpdateStatus={(id, status) => updateAppointmentStatus(id, status as any)}
                 onUpdatePayment={updatePaymentStatus}
+                onDelete={deleteAppointment}
               />
             )}
           </div>
@@ -71,7 +72,7 @@ export function AdminDashboard() {
 
 export function AdminAgenda() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const { appointments, loading, updateAppointmentStatus, updatePaymentStatus } = useAdminAppointments();
+  const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment } = useAdminAppointments();
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
@@ -92,6 +93,7 @@ export function AdminAgenda() {
               appointments={dayAppointments.length ? dayAppointments.map(a => ({ ...a, appointment_date: dateStr })) : []}
               onUpdateStatus={(id, status) => updateAppointmentStatus(id, status as any)}
               onUpdatePayment={updatePaymentStatus}
+              onDelete={deleteAppointment}
             />
           )}
         </div>
