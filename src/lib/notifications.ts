@@ -1,47 +1,63 @@
-// Notification sound utility
+// Notification sound utilities
 const NOTIFICATION_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
+const SUCCESS_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2190/2190-preview.mp3';
 
 let audioContext: AudioContext | null = null;
 let notificationBuffer: AudioBuffer | null = null;
+let successBuffer: AudioBuffer | null = null;
 
 async function initAudio() {
   if (audioContext) return;
   
   try {
     audioContext = new AudioContext();
-    const response = await fetch(NOTIFICATION_SOUND_URL);
-    const arrayBuffer = await response.arrayBuffer();
-    notificationBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const [notifResponse, successResponse] = await Promise.all([
+      fetch(NOTIFICATION_SOUND_URL),
+      fetch(SUCCESS_SOUND_URL)
+    ]);
+    const [notifArrayBuffer, successArrayBuffer] = await Promise.all([
+      notifResponse.arrayBuffer(),
+      successResponse.arrayBuffer()
+    ]);
+    notificationBuffer = await audioContext.decodeAudioData(notifArrayBuffer);
+    successBuffer = await audioContext.decodeAudioData(successArrayBuffer);
   } catch (error) {
     console.error('Failed to init audio:', error);
   }
 }
 
-export async function playNotificationSound() {
+async function playSound(buffer: AudioBuffer | null, fallbackUrl: string) {
   try {
-    // Try Web Audio API first for better control
     if (!audioContext) {
       await initAudio();
     }
     
-    if (audioContext && notificationBuffer) {
+    if (audioContext && buffer) {
       if (audioContext.state === 'suspended') {
         await audioContext.resume();
       }
       const source = audioContext.createBufferSource();
-      source.buffer = notificationBuffer;
+      source.buffer = buffer;
       source.connect(audioContext.destination);
       source.start(0);
       return;
     }
     
     // Fallback to simple Audio
-    const audio = new Audio(NOTIFICATION_SOUND_URL);
+    const audio = new Audio(fallbackUrl);
     audio.volume = 0.5;
     await audio.play();
   } catch (error) {
-    console.error('Failed to play notification sound:', error);
+    console.error('Failed to play sound:', error);
   }
+}
+
+export async function playNotificationSound() {
+  await playSound(notificationBuffer, NOTIFICATION_SOUND_URL);
+}
+
+export async function playSuccessSound() {
+  await playSound(successBuffer, SUCCESS_SOUND_URL);
 }
 
 // Request notification permission

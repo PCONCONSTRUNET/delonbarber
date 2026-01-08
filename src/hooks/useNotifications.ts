@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { playNotificationSound, showBrowserNotification, requestNotificationPermission } from '@/lib/notifications';
+import { playNotificationSound, playSuccessSound, showBrowserNotification, requestNotificationPermission } from '@/lib/notifications';
 import { toast } from 'sonner';
 
 interface UseAdminNotificationsOptions {
@@ -110,25 +110,39 @@ export function useClientNotifications() {
           
           // Check if status changed
           if (updated.status !== old.status) {
-            const statusMessages: Record<string, string> = {
-              confirmed: '✅ Seu agendamento foi confirmado!',
-              completed: '🎉 Seu atendimento foi concluído!',
-              cancelled: '❌ Seu agendamento foi cancelado.',
+            const statusConfig: Record<string, { message: string; sound: 'success' | 'notification' }> = {
+              confirmed: { message: '✅ Seu agendamento foi confirmado!', sound: 'success' },
+              completed: { message: '🎉 Seu atendimento foi concluído!', sound: 'success' },
+              cancelled: { message: '❌ Seu agendamento foi cancelado.', sound: 'notification' },
             };
 
-            const message = statusMessages[updated.status];
-            if (message) {
-              playNotificationSound();
-              toast.info(message, {
+            const config = statusConfig[updated.status];
+            if (config) {
+              // Play appropriate sound
+              if (config.sound === 'success') {
+                playSuccessSound();
+              } else {
+                playNotificationSound();
+              }
+              
+              toast.info(config.message, {
                 description: `${updated.appointment_date} às ${updated.appointment_time?.slice(0, 5)}`,
                 duration: 8000,
               });
+              
+              // Show browser notification for confirmed status
+              if (updated.status === 'confirmed') {
+                showBrowserNotification(
+                  '✅ Agendamento Confirmado!',
+                  `Seu horário para ${updated.appointment_date} às ${updated.appointment_time?.slice(0, 5)} foi confirmado.`
+                );
+              }
             }
           }
 
           // Check if payment status changed
           if (updated.payment_status === 'paid' && old.payment_status !== 'paid') {
-            playNotificationSound();
+            playSuccessSound();
             toast.success('💳 Pagamento confirmado!', {
               description: 'Obrigado pelo seu pagamento.',
               duration: 6000,
