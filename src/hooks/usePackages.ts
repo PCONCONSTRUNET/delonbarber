@@ -305,6 +305,22 @@ export function useClientPackages() {
     return true;
   }
 
+  async function confirmSubscription(id: string) {
+    const { error } = await supabase
+      .from('client_packages')
+      .update({ status: 'active' })
+      .eq('id', id);
+
+    if (error) {
+      toast({ title: 'Erro', description: 'Não foi possível confirmar.', variant: 'destructive' });
+      return false;
+    }
+
+    toast({ title: 'Assinatura confirmada!' });
+    fetchSubscriptions();
+    return true;
+  }
+
   async function deleteSubscription(id: string) {
     // First delete usage records
     await supabase
@@ -344,5 +360,5 @@ export function useClientPackages() {
     return true;
   }
 
-  return { subscriptions, loading, fetchSubscriptions, addSubscription, cancelSubscription, deleteSubscription, registerUsage };
+  return { subscriptions, loading, fetchSubscriptions, addSubscription, confirmSubscription, cancelSubscription, deleteSubscription, registerUsage };
 }

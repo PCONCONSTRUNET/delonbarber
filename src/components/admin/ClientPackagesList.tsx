@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Calendar, XCircle, Plus, Search, Scissors, Check, Trash2 } from 'lucide-react';
+import { Calendar, XCircle, Plus, Search, Scissors, Check, Trash2, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ClientPackage } from '@/hooks/usePackages';
@@ -31,6 +31,7 @@ interface ClientPackagesListProps {
   clients: Client[];
   selectedPackageId?: string;
   onAddSubscription: (userId: string, packageId: string, startDate: string) => Promise<boolean>;
+  onConfirmSubscription?: (id: string) => Promise<boolean>;
   onCancelSubscription: (id: string) => Promise<boolean>;
   onDeleteSubscription?: (id: string) => Promise<boolean>;
   onRegisterUsage?: (clientPackageId: string, serviceId: string) => Promise<boolean>;
@@ -42,6 +43,7 @@ export function ClientPackagesList({
   clients,
   selectedPackageId,
   onAddSubscription,
+  onConfirmSubscription,
   onCancelSubscription,
   onDeleteSubscription,
   onRegisterUsage,
@@ -181,6 +183,17 @@ export function ClientPackagesList({
                       {format(new Date(sub.end_date), 'dd/MM/yyyy', { locale: ptBR })}
                     </div>
                     <div className="flex gap-2 flex-wrap">
+                      {sub.status === 'pending' && onConfirmSubscription && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-green-600 border-green-600/30 hover:bg-green-600/10"
+                          onClick={() => onConfirmSubscription(sub.id)}
+                        >
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Confirmar
+                        </Button>
+                      )}
                       {sub.status === 'active' && availableServices.length > 0 && onRegisterUsage && (
                         <Button
                           size="sm"
