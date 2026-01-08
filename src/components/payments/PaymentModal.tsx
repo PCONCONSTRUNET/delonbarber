@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Loader2 } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { PaymentMethodSelector, PaymentMethod } from './PaymentMethodSelector';
-import { PixQRCode } from './PixQRCode';
 
 interface PaymentModalProps {
   open: boolean;
@@ -51,7 +49,7 @@ export function PaymentModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Pagamento</span>
+            <span>Registrar Pagamento</span>
             <span className="text-2xl font-bold text-primary">
               R$ {amount.toFixed(0)}
             </span>
@@ -59,27 +57,17 @@ export function PaymentModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {clientName && (
+            <p className="text-sm text-muted-foreground">
+              Cliente: <span className="text-foreground font-medium">{clientName}</span>
+            </p>
+          )}
+
           <PaymentMethodSelector
             selected={selectedMethod}
             onSelect={setSelectedMethod}
             disabled={isProcessing}
           />
-
-          <AnimatePresence mode="wait">
-            {selectedMethod === 'pix' && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-              >
-                <PixQRCode
-                  amount={amount}
-                  transactionId={appointmentId}
-                  clientName={clientName}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           <Button
             onClick={handleConfirm}
@@ -89,7 +77,7 @@ export function PaymentModal({
             {isProcessing ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processando...
+                Registrando...
               </>
             ) : (
               <>
