@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone } from 'lucide-react';
+import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ const paymentMethodConfig: Record<string, { label: string; color: string }> = {
   debit: { label: 'Débito', color: 'text-purple-400' },
   cash: { label: 'Dinheiro', color: 'text-green-400' },
   card: { label: 'Cartão', color: 'text-blue-400' },
+  subscriber: { label: 'Assinante', color: 'text-yellow-500' },
 };
 
 const PaymentIcon = ({ method, size = 14 }: { method: string; size?: number }) => {
@@ -51,6 +52,8 @@ const PaymentIcon = ({ method, size = 14 }: { method: string; size?: number }) =
       return <Smartphone className={`text-purple-400`} style={{ width: size, height: size }} />;
     case 'cash':
       return <Banknote className={`text-green-400`} style={{ width: size, height: size }} />;
+    case 'subscriber':
+      return <Crown className={`text-yellow-500`} style={{ width: size, height: size }} />;
     default:
       return null;
   }
@@ -123,6 +126,7 @@ Qualquer dúvida, estamos à disposição! 💈`;
         {sortedAppts.map((apt, index) => {
           const paymentMethod = apt.payment_method;
           const methodConfig = paymentMethod ? paymentMethodConfig[paymentMethod] : null;
+          const isSubscriber = paymentMethod === 'subscriber';
           
           return (
             <motion.div
@@ -140,6 +144,12 @@ Qualquer dúvida, estamos à disposição! 💈`;
                     <Badge className={cn("text-xs", statusColors[apt.status])}>
                       {statusLabels[apt.status]}
                     </Badge>
+                    {isSubscriber && (
+                      <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-xs gap-1 font-semibold">
+                        <Crown className="h-3 w-3" />
+                        VIP
+                      </Badge>
+                    )}
                   </div>
                   
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
@@ -169,8 +179,11 @@ Qualquer dúvida, estamos à disposição! 💈`;
                   </p>
                   
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <p className="text-primary font-semibold">
-                      R$ {Number(apt.total_price).toFixed(0)}
+                    <p className={cn(
+                      "font-semibold",
+                      isSubscriber ? "text-yellow-500" : "text-primary"
+                    )}>
+                      {isSubscriber ? 'GRÁTIS (Pacote)' : `R$ ${Number(apt.total_price).toFixed(0)}`}
                     </p>
                     
                     {/* Payment method badge */}

@@ -204,6 +204,9 @@ export function useAppointments() {
     }, 0);
     const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
 
+    // If using subscriber payment, mark as paid automatically
+    const isSubscriberPayment = paymentMethod === 'subscriber';
+
     // Create appointment
     const { data: appointment, error: aptError } = await supabase
       .from('appointments')
@@ -212,10 +215,12 @@ export function useAppointments() {
         appointment_date: date.toISOString().split('T')[0],
         appointment_time: time,
         notes: notes || null,
-        total_price: totalPrice,
+        total_price: isSubscriberPayment ? 0 : totalPrice,
         total_duration: totalDuration,
         status: 'pending',
-        payment_method: paymentMethod || null
+        payment_method: paymentMethod || null,
+        payment_status: isSubscriberPayment ? 'paid' : 'pending',
+        payment_date: isSubscriberPayment ? new Date().toISOString() : null,
       })
       .select()
       .single();
