@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Crown, User, LogOut, ArrowLeft, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
+import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useIsAdmin } from '@/hooks/useAdmin';
@@ -173,12 +174,22 @@ const Cliente = () => {
           </motion.div>
         </div>
 
-        {/* Quick stats */}
+        {/* My Package Benefits */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-10 p-4 rounded-2xl glass-effect"
+          className="mt-8"
+        >
+          <MyPackagesBenefits />
+        </motion.div>
+
+        {/* Quick stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-6 p-4 rounded-2xl glass-effect"
         >
           <p className="text-center text-sm text-muted-foreground">
             📍 Terça a Sexta: 08:00 - 15:00 | Sábado: 07:30 - 18:00
