@@ -26,36 +26,36 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
 
   return (
     <>
-      <div className="space-y-3">
+      <div className="space-y-2 md:space-y-3">
         {clients.map((client, index) => (
           <motion.div
             key={client.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="p-4 rounded-2xl glass-effect hover:bg-muted/30 transition-colors"
+            className="p-3 md:p-4 rounded-2xl glass-effect hover:bg-muted/30 transition-colors"
           >
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-2">
               <div 
-                className="flex-1 cursor-pointer"
+                className="flex-1 min-w-0 cursor-pointer"
                 onClick={() => setSelectedClient(client)}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <User className="h-4 w-4 text-primary" />
-                  <span className="font-semibold">{client.name || 'Sem nome'}</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <User className="h-4 w-4 text-primary shrink-0" />
+                  <span className="font-semibold text-sm md:text-base truncate">{client.name || 'Sem nome'}</span>
                 </div>
                 
                 {client.phone && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                    <Phone className="h-3 w-3" />
-                    <span>{client.phone}</span>
+                  <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mb-1">
+                    <Phone className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{client.phone}</span>
                   </div>
                 )}
 
-                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2 text-[10px] md:text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    {client.total_appointments} agendamentos
+                    {client.total_appointments} agend.
                   </span>
                   <span className="flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
@@ -64,24 +64,24 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
                 </div>
 
                 {client.last_appointment && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Última visita: {format(new Date(client.last_appointment), "dd 'de' MMMM", { locale: ptBR })}
+                  <p className="text-[10px] md:text-xs text-muted-foreground mt-1 hidden sm:block">
+                    Última: {format(new Date(client.last_appointment), "dd/MM/yy", { locale: ptBR })}
                   </p>
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-1 md:gap-2 shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1"
+                  className="h-8 px-2 md:px-3 text-xs"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedClient(client);
                   }}
                 >
-                  <Eye className="h-4 w-4" />
-                  Detalhes
+                  <Eye className="h-3 w-3 md:mr-1" />
+                  <span className="hidden md:inline">Ver</span>
                 </Button>
 
                 {onDeleteClient && (
