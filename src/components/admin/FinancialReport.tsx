@@ -18,6 +18,7 @@ const paymentMethodIcons: Record<string, typeof QrCode> = {
   credit: CreditCard,
   debit: CreditCard,
   cash: Banknote,
+  card: CreditCard,
 };
 
 const paymentMethodLabels: Record<string, string> = {
@@ -25,6 +26,15 @@ const paymentMethodLabels: Record<string, string> = {
   credit: 'Crédito',
   debit: 'Débito',
   cash: 'Dinheiro',
+  card: 'Cartão',
+};
+
+const paymentMethodColors: Record<string, string> = {
+  pix: 'text-cyan-500 bg-cyan-500/20',
+  credit: 'text-purple-500 bg-purple-500/20',
+  debit: 'text-blue-500 bg-blue-500/20',
+  cash: 'text-green-500 bg-green-500/20',
+  card: 'text-purple-500 bg-purple-500/20',
 };
 
 export function FinancialReport({ appointments }: FinancialReportProps) {
@@ -49,14 +59,26 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
   const pendingRevenue = pendingAppointments.reduce((sum, a) => sum + Number(a.total_price || 0), 0);
   const completedCount = monthAppointments.filter(a => a.status === 'completed').length;
 
-  // Payment method breakdown
+  // Payment method breakdown with count
   const paymentBreakdown = paidAppointments.reduce((acc, apt) => {
     const method = apt.payment_method || 'other';
-    acc[method] = (acc[method] || 0) + Number(apt.total_price || 0);
+    if (!acc[method]) {
+      acc[method] = { amount: 0, count: 0 };
+    }
+    acc[method].amount += Number(apt.total_price || 0);
+    acc[method].count += 1;
     return acc;
-  }, {} as Record<string, number>);
+  }, {} as Record<string, { amount: number; count: number }>);
 
-  // Daily breakdown
+  // Group paid appointments by payment method
+  const appointmentsByMethod = paidAppointments.reduce((acc, apt) => {
+    const method = apt.payment_method || 'other';
+    if (!acc[method]) {
+      acc[method] = [];
+    }
+    acc[method].push(apt);
+    return acc;
+  }, {} as Record<string, AdminAppointment[]>);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const dailyRevenue = days.map(day => {
     const dayStr = format(day, 'yyyy-MM-dd');
@@ -172,24 +194,54 @@ Status: PAGO
         </motion.div>
       </div>
 
-      {/* Payment Methods Breakdown */}
+      {/* Payment Methods Breakdown Cards */}
       {Object.keys(paymentBreakdown).length > 0 && (
-        <div className="rounded-2xl glass-effect p-4">
-          <h3 className="font-semibold mb-4">Formas de Pagamento</h3>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {Object.entries(paymentBreakdown).map(([method, amount]) => {
-              const Icon = paymentMethodIcons[method] || DollarSign;
-              return (
-                <div key={method} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <Icon className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium">{paymentMethodLabels[method] || method}</p>
-                    <p className="text-lg font-bold">R$ {amount.toFixed(0)}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {['pix', 'cash', 'card'].map((method) => {
+            const data = paymentBreakdown[method];
+            if (!data) return null;
+            
+            const Icon = paymentMethodIcons[method] || DollarSign;
+            const colorClasses = paymentMethodColors[method] || 'text-gray-500 bg-gray-500/20';
+            const [textColor, bgColor] = colorClasses.split(' ');
+            
+            return (
+              <motion.div
+                key={method}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl glass-effect p-4"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-2 rounded-lg ${bgColor}`}>
+                      <Icon className={`h-5 w-5 ${textColor}`} />
+                    </div>
+                    <h4 className="font-semibold">{paymentMethodLabels[method]}</h4>
                   </div>
+                  <Badge variant="secondary">{data.count} pedido(s)</Badge>
                 </div>
-              );
-            })}
-          </div>
+                <p className={`text-2xl font-bold ${textColor}`}>
+                  R$ {data.amount.toFixed(0)}
+                </p>
+                
+                {/* List appointments for this method */}
+                <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+                  {appointmentsByMethod[method]?.map(apt => (
+                    <div key={apt.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-muted/30">
+                      <div>
+                        <p className="font-medium">{apt.profile?.name || 'Cliente'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(apt.appointment_date), 'dd/MM')} • {apt.appointment_time.slice(0, 5)}
+                        </p>
+                      </div>
+                      <span className="font-semibold">R$ {Number(apt.total_price).toFixed(0)}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
