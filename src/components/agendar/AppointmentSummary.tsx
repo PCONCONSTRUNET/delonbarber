@@ -6,7 +6,7 @@ import { Calendar, Clock, FileText, Check, QrCode, Banknote, CreditCard } from '
 import { Service } from '@/hooks/useAppointments';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { PixQRCode } from '@/components/payments/PixQRCode';
+import { PixIcon } from '@/components/icons/PixIcon';
 import { cn } from '@/lib/utils';
 
 type PaymentMethod = 'pix' | 'cash' | 'card';
@@ -21,10 +21,18 @@ interface AppointmentSummaryProps {
   isSubmitting: boolean;
 }
 
-const paymentMethods: { id: PaymentMethod; label: string; description: string; icon: typeof QrCode }[] = [
-  { id: 'pix', label: 'PIX', description: 'Pague agora e garanta seu horário', icon: QrCode },
-  { id: 'cash', label: 'Dinheiro', description: 'Pagar no local', icon: Banknote },
-  { id: 'card', label: 'Cartão', description: 'Pagar no local', icon: CreditCard },
+interface PaymentMethodConfig {
+  id: PaymentMethod;
+  label: string;
+  description: string;
+  iconColor: string;
+  isPix?: boolean;
+}
+
+const paymentMethods: PaymentMethodConfig[] = [
+  { id: 'pix', label: 'PIX', description: 'Pague agora e garanta seu horário', iconColor: '', isPix: true },
+  { id: 'cash', label: 'Dinheiro', description: 'Pagar no local', iconColor: 'text-green-500' },
+  { id: 'card', label: 'Cartão', description: 'Pagar no local', iconColor: 'text-blue-500' },
 ];
 
 export function AppointmentSummary({
@@ -43,8 +51,22 @@ export function AppointmentSummary({
 
   const formatTime = (time: string) => time.slice(0, 5);
 
-  // Generate a temporary ID for PIX preview
-  const tempTransactionId = `preview-${Date.now()}`;
+  const renderPaymentIcon = (method: PaymentMethodConfig, isSelected: boolean) => {
+    if (method.isPix) {
+      return <PixIcon size={22} />;
+    }
+    
+    const iconClass = cn("h-5 w-5", method.iconColor);
+    
+    switch (method.id) {
+      case 'cash':
+        return <Banknote className={iconClass} />;
+      case 'card':
+        return <CreditCard className={iconClass} />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <motion.div
@@ -125,7 +147,6 @@ export function AppointmentSummary({
         </h3>
         <div className="grid grid-cols-3 gap-2">
           {paymentMethods.map((method) => {
-            const Icon = method.icon;
             const isSelected = selectedPayment === method.id;
             
             return (
@@ -140,10 +161,7 @@ export function AppointmentSummary({
                     : "border-border bg-card/50 hover:bg-muted/50"
                 )}
               >
-                <Icon className={cn(
-                  "h-5 w-5",
-                  isSelected ? "text-primary" : "text-muted-foreground"
-                )} />
+                {renderPaymentIcon(method, isSelected)}
                 <span className={cn(
                   "text-xs font-medium",
                   isSelected ? "text-primary" : "text-foreground"
@@ -179,7 +197,7 @@ export function AppointmentSummary({
               </div>
               <div className="flex justify-center">
                 <div className="w-32 h-32 bg-muted/50 rounded-xl flex items-center justify-center border-2 border-dashed border-primary/30">
-                  <QrCode className="h-12 w-12 text-primary/50" />
+                  <PixIcon size={48} />
                 </div>
               </div>
             </div>
