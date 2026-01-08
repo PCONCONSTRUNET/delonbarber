@@ -126,7 +126,8 @@ Qualquer dúvida, estamos à disposição! 💈`;
         {sortedAppts.map((apt, index) => {
           const paymentMethod = apt.payment_method;
           const methodConfig = paymentMethod ? paymentMethodConfig[paymentMethod] : null;
-          const isSubscriber = paymentMethod === 'subscriber';
+          // Show as subscriber if payment method is 'subscriber' OR if price is 0 (benefits were used)
+          const isSubscriber = paymentMethod === 'subscriber' || Number(apt.total_price) === 0;
           
           return (
             <motion.div
