@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Footer } from "@/components/layout/Footer";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Instagram, Smartphone, MessageSquare } from "lucide-react";
 import barberPhoto from "@/assets/barber-photo.png";
 
 const Index = () => {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-background">
       <AnimatedBackground />
@@ -82,11 +83,20 @@ const Index = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button asChild size="lg" className="min-w-[180px] text-lg font-semibold">
-              <Link to="/login">Criar Conta</Link>
+            <Button 
+              size="lg" 
+              className="min-w-[180px] text-lg font-semibold"
+              onClick={() => navigate("/login")}
+            >
+              Criar Conta
             </Button>
-            <Button asChild variant="outline" size="lg" className="min-w-[180px] text-lg border-foreground/20 hover:bg-foreground/5">
-              <Link to="/login">Já tenho conta</Link>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="min-w-[180px] text-lg border-foreground/20 hover:bg-foreground/5"
+              onClick={() => navigate("/login")}
+            >
+              Já tenho conta
             </Button>
           </div>
         </section>
