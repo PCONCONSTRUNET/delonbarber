@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Servicos from "./pages/Servicos";
 import Agendar from "./pages/Agendar";
 import Login from "./pages/Login";
+import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/servicos" element={<Servicos />} />
           <Route path="/agendar" element={<Agendar />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/perfil" element={<Perfil />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
