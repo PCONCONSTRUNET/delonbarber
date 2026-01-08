@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, Pencil, Trash2, Bell, Crown } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Bell, Crown, Download } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -150,9 +150,48 @@ export function AdminClientes() {
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!isAdmin) return <Navigate to="/login" replace />;
 
+  const exportToCSV = () => {
+    if (clients.length === 0) return;
+
+    const headers = ['Nome', 'Telefone', 'Agendamentos', 'Total Gasto (R$)', 'Última Visita', 'Data Cadastro'];
+    
+    const rows = clients.map(client => [
+      client.name || 'Sem nome',
+      client.phone || 'Sem telefone',
+      client.total_appointments.toString(),
+      client.total_spent.toFixed(2).replace('.', ','),
+      client.last_appointment || 'Nunca',
+      new Date(client.created_at).toLocaleDateString('pt-BR')
+    ]);
+
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
+    ].join('\n');
+
+    // Add BOM for Excel to recognize UTF-8
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `clientes_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <AdminLayout>
-      <h1 className="font-display text-3xl font-bold mb-6">Clientes</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-display text-3xl font-bold">Clientes</h1>
+        <Button onClick={exportToCSV} variant="outline" disabled={loading || clients.length === 0}>
+          <Download className="h-4 w-4 mr-2" />
+          Exportar CSV
+        </Button>
+      </div>
       {loading ? <Loader2 className="animate-spin" /> : <ClientList clients={clients} onDeleteClient={deleteClient} />}
     </AdminLayout>
   );
