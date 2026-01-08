@@ -12,11 +12,11 @@ interface PixQRCodeProps {
   compact?: boolean;
 }
 
-// Configure your PIX details here
+// PIX configuration
 const PIX_CONFIG = {
-  pixKey: '11999999999', // Replace with actual PIX key
+  pixKey: '+5548999520220',
   merchantName: 'BARBEARIA ALAN DELON',
-  merchantCity: 'SAO PAULO',
+  merchantCity: 'FLORIANOPOLIS',
 };
 
 export function PixQRCode({ amount, transactionId, clientName, compact = false }: PixQRCodeProps) {
