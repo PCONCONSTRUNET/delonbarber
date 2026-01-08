@@ -5,7 +5,8 @@ import {
   Scissors, 
   DollarSign,
   Crown,
-  MoreHorizontal
+  MoreHorizontal,
+  Star
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ const mainItems = [
 const moreItems = [
   { icon: Scissors, label: 'Serviços', path: '/admin/servicos' },
   { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
+  { icon: Star, label: 'Avaliações', path: '/admin/avaliacoes' },
 ];
 
 export function MobileAdminNav() {

@@ -15,6 +15,7 @@ import { PackageForm } from '@/components/admin/PackageForm';
 import { PackageList } from '@/components/admin/PackageList';
 import { ClientPackagesList } from '@/components/admin/ClientPackagesList';
 import { BlockedSlotsManager } from '@/components/admin/BlockedSlotsManager';
+import { RatingsManager } from '@/components/admin/RatingsManager';
 import { useIsAdmin, useAdminAppointments, useAdminClients, useAdminServices, useBusinessStatus } from '@/hooks/useAdmin';
 import { useAdminPackages, useClientPackages } from '@/hooks/usePackages';
 import { useAdminNotifications } from '@/hooks/useNotifications';
@@ -383,6 +384,20 @@ export function AdminPacotes() {
           <PackageForm onSubmit={handleSubmit} onCancel={() => setShowForm(false)} />
         </DialogContent>
       </Dialog>
+    </AdminLayout>
+  );
+}
+
+export function AdminAvaliacoes() {
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
+
+  if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
+  if (!isAdmin) return <Navigate to="/login" replace />;
+
+  return (
+    <AdminLayout>
+      <h1 className="font-display text-2xl md:text-3xl font-bold mb-4 md:mb-6">Avaliações</h1>
+      <RatingsManager />
     </AdminLayout>
   );
 }
