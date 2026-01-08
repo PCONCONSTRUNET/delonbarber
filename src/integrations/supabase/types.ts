@@ -357,6 +357,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           price: number
+          subscribers_only: boolean
         }
         Insert: {
           category?: string | null
@@ -368,6 +369,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           price: number
+          subscribers_only?: boolean
         }
         Update: {
           category?: string | null
@@ -379,6 +381,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           price?: number
+          subscribers_only?: boolean
         }
         Relationships: []
       }

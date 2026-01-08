@@ -15,6 +15,7 @@ interface Service {
   category: string;
   is_active: boolean;
   image_url?: string;
+  subscribers_only: boolean;
 }
 
 interface ServiceFormProps {
@@ -40,6 +41,7 @@ export function ServiceForm({ service, onSubmit, onCancel }: ServiceFormProps) {
     category: 'corte',
     is_active: true,
     image_url: '',
+    subscribers_only: false,
   });
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export function ServiceForm({ service, onSubmit, onCancel }: ServiceFormProps) {
         category: service.category,
         is_active: service.is_active,
         image_url: service.image_url || '',
+        subscribers_only: service.subscribers_only || false,
       });
     }
   }, [service]);
@@ -148,6 +151,20 @@ export function ServiceForm({ service, onSubmit, onCancel }: ServiceFormProps) {
           id="active"
           checked={formData.is_active}
           onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+        />
+      </div>
+
+      <div className="flex items-center justify-between p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+        <div>
+          <Label htmlFor="subscribers" className="text-yellow-600 font-medium">👑 Exclusivo para Assinantes</Label>
+          <p className="text-xs text-muted-foreground mt-1">
+            Este serviço só aparecerá para clientes com pacote ativo
+          </p>
+        </div>
+        <Switch
+          id="subscribers"
+          checked={formData.subscribers_only}
+          onCheckedChange={(checked) => setFormData({ ...formData, subscribers_only: checked })}
         />
       </div>
 

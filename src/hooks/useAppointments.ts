@@ -10,6 +10,7 @@ export interface Service {
   duration_minutes: number;
   image_url: string | null;
   category: string;
+  subscribers_only?: boolean;
 }
 
 export interface BusinessHours {
