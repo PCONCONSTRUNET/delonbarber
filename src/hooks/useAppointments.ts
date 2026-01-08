@@ -141,7 +141,65 @@ export function useAppointments() {
       return null;
     }
 
-    const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
+    // Check for active package benefits
+    const { data: activePackages } = await supabase
+      .from('client_packages')
+      .select('id, package_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .gte('end_date', new Date().toISOString().split('T')[0]);
+
+    // Get benefits and usage for active packages
+    const benefitsToUse: { clientPackageId: string; serviceId: string }[] = [];
+    const servicesWithBenefits: string[] = [];
+
+    if (activePackages && activePackages.length > 0) {
+      for (const pkg of activePackages) {
+        // Get benefits for this package
+        const { data: benefits } = await supabase
+          .from('package_benefits')
+          .select('service_id, quantity')
+          .eq('package_id', pkg.package_id);
+
+        // Get current usage for this client package
+        const { data: usage } = await supabase
+          .from('client_package_usage')
+          .select('service_id')
+          .eq('client_package_id', pkg.id);
+
+        const usageByService = (usage || []).reduce((acc, u) => {
+          acc[u.service_id] = (acc[u.service_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        // Check which selected services have available benefits
+        for (const service of selectedServices) {
+          // Skip if we already found a benefit for this service
+          if (servicesWithBenefits.includes(service.id)) continue;
+
+          const benefit = benefits?.find(b => b.service_id === service.id);
+          if (benefit) {
+            const used = usageByService[service.id] || 0;
+            const remaining = benefit.quantity - used;
+            if (remaining > 0) {
+              benefitsToUse.push({
+                clientPackageId: pkg.id,
+                serviceId: service.id,
+              });
+              servicesWithBenefits.push(service.id);
+            }
+          }
+        }
+      }
+    }
+
+    // Calculate price (services with benefits are free)
+    const totalPrice = selectedServices.reduce((sum, s) => {
+      if (servicesWithBenefits.includes(s.id)) {
+        return sum; // Free - covered by package
+      }
+      return sum + Number(s.price);
+    }, 0);
     const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
 
     // Create appointment
@@ -173,7 +231,7 @@ export function useAppointments() {
     const appointmentServices = selectedServices.map(service => ({
       appointment_id: appointment.id,
       service_id: service.id,
-      price_at_booking: service.price
+      price_at_booking: servicesWithBenefits.includes(service.id) ? 0 : service.price
     }));
 
     const { error: servicesError } = await supabase
@@ -184,13 +242,38 @@ export function useAppointments() {
       console.error('Error adding services:', servicesError);
     }
 
-    toast({
-      title: "Agendamento criado!",
-      description: "Seu agendamento foi realizado com sucesso.",
-    });
+    // Register benefit usage for services covered by packages
+    if (benefitsToUse.length > 0) {
+      const usageRecords = benefitsToUse.map(b => ({
+        client_package_id: b.clientPackageId,
+        service_id: b.serviceId,
+        appointment_id: appointment.id,
+      }));
+
+      const { error: usageError } = await supabase
+        .from('client_package_usage')
+        .insert(usageRecords);
+
+      if (usageError) {
+        console.error('Error registering usage:', usageError);
+      }
+    }
+
+    // Show appropriate toast message
+    if (benefitsToUse.length > 0) {
+      toast({
+        title: "Agendamento criado! 🎉",
+        description: `${benefitsToUse.length} serviço(s) utilizando benefício do pacote VIP.`,
+      });
+    } else {
+      toast({
+        title: "Agendamento criado!",
+        description: "Seu agendamento foi realizado com sucesso.",
+      });
+    }
 
     fetchAppointments();
-    return appointment;
+    return { ...appointment, benefitsUsed: benefitsToUse.length };
   }
 
   async function cancelAppointment(appointmentId: string) {
