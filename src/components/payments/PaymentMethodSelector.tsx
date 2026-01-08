@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { QrCode, CreditCard, Banknote, Smartphone } from 'lucide-react';
+import { CreditCard, Banknote, Smartphone } from 'lucide-react';
+import { PixIcon } from '@/components/icons/PixIcon';
 import { cn } from '@/lib/utils';
 
 export type PaymentMethod = 'pix' | 'credit' | 'debit' | 'cash';
@@ -10,12 +11,39 @@ interface PaymentMethodSelectorProps {
   disabled?: boolean;
 }
 
-const paymentMethods: { id: PaymentMethod; label: string; icon: typeof QrCode; description: string }[] = [
-  { id: 'pix', label: 'PIX', icon: QrCode, description: 'Pagamento instantâneo' },
-  { id: 'credit', label: 'Crédito', icon: CreditCard, description: 'Cartão de crédito' },
-  { id: 'debit', label: 'Débito', icon: Smartphone, description: 'Cartão de débito' },
-  { id: 'cash', label: 'Dinheiro', icon: Banknote, description: 'Pagamento em espécie' },
+interface PaymentMethodConfig {
+  id: PaymentMethod;
+  label: string;
+  description: string;
+  iconColor: string;
+  isPix?: boolean;
+}
+
+const paymentMethods: PaymentMethodConfig[] = [
+  { id: 'pix', label: 'PIX', description: 'Pagamento instantâneo', iconColor: '', isPix: true },
+  { id: 'credit', label: 'Crédito', description: 'Cartão de crédito', iconColor: 'text-blue-500' },
+  { id: 'debit', label: 'Débito', description: 'Cartão de débito', iconColor: 'text-purple-500' },
+  { id: 'cash', label: 'Dinheiro', description: 'Pagamento em espécie', iconColor: 'text-green-500' },
 ];
+
+const getIcon = (method: PaymentMethodConfig, isSelected: boolean) => {
+  if (method.isPix) {
+    return <PixIcon size={28} />;
+  }
+
+  const iconClass = cn("h-7 w-7", method.iconColor);
+  
+  switch (method.id) {
+    case 'credit':
+      return <CreditCard className={iconClass} />;
+    case 'debit':
+      return <Smartphone className={iconClass} />;
+    case 'cash':
+      return <Banknote className={iconClass} />;
+    default:
+      return null;
+  }
+};
 
 export function PaymentMethodSelector({ selected, onSelect, disabled }: PaymentMethodSelectorProps) {
   return (
@@ -25,7 +53,6 @@ export function PaymentMethodSelector({ selected, onSelect, disabled }: PaymentM
       </label>
       <div className="grid grid-cols-2 gap-3">
         {paymentMethods.map((method) => {
-          const Icon = method.icon;
           const isSelected = selected === method.id;
 
           return (
@@ -38,14 +65,11 @@ export function PaymentMethodSelector({ selected, onSelect, disabled }: PaymentM
                 "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
                 "hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed",
                 isSelected
-                  ? "border-primary bg-primary/10"
+                  ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
                   : "border-border bg-card"
               )}
             >
-              <Icon className={cn(
-                "h-6 w-6",
-                isSelected ? "text-primary" : "text-muted-foreground"
-              )} />
+              {getIcon(method, isSelected)}
               <div className="text-center">
                 <p className={cn(
                   "font-medium text-sm",
