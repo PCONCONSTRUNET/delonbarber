@@ -12,6 +12,7 @@ import { User, Phone, Mail, Camera, Loader2, Save, Bell, Calendar, Clock } from 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useClientNotifications } from "@/hooks/useNotifications";
+import { NotificationHistory } from "@/components/client/NotificationHistory";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -257,11 +258,14 @@ const Perfil = () => {
               </CardContent>
             </Card>
 
-            {/* Notifications & Recent Appointments */}
+            {/* Notification History */}
+            {userId && <NotificationHistory userId={userId} />}
+
+            {/* Recent Appointments */}
             <Card className="glass-effect border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="font-display text-lg flex items-center gap-2">
-                  <Bell className="h-5 w-5 text-primary" />
+                  <Calendar className="h-5 w-5 text-primary" />
                   Meus Agendamentos
                 </CardTitle>
               </CardHeader>
@@ -309,10 +313,6 @@ const Perfil = () => {
                     })}
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground text-center mt-4 flex items-center justify-center gap-1">
-                  <Bell className="h-3 w-3" />
-                  Você receberá notificações sobre seus agendamentos
-                </p>
               </CardContent>
             </Card>
           </div>
