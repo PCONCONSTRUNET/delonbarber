@@ -12,6 +12,7 @@ import { DateTimeSelection } from '@/components/agendar/DateTimeSelection';
 import { AppointmentSummary } from '@/components/agendar/AppointmentSummary';
 import { AppointmentHistory } from '@/components/agendar/AppointmentHistory';
 import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
+import { PaymentConfirmationDialog } from '@/components/payments/PaymentConfirmationDialog';
 import { 
   useServices, 
   useBusinessHours, 
@@ -39,6 +40,14 @@ const Agendar = () => {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('agendar');
+  const [paymentDialog, setPaymentDialog] = useState<{
+    open: boolean;
+    appointmentId: string;
+    amount: number;
+    date: Date;
+    time: string;
+    services: string[];
+  } | null>(null);
 
   const { services, loading: servicesLoading } = useServices();
   const { businessHours, loading: hoursLoading } = useBusinessHours();
@@ -94,12 +103,28 @@ const Agendar = () => {
     setIsSubmitting(false);
 
     if (result) {
+      // Show payment dialog with PIX QR code
+      setPaymentDialog({
+        open: true,
+        appointmentId: result.id,
+        amount: Number(result.total_price),
+        date: selectedDate,
+        time: selectedTime,
+        services: selectedServices.map(s => s.name),
+      });
+
       // Reset form
       setSelectedServices([]);
       setSelectedDate(undefined);
       setSelectedTime(undefined);
       setNotes('');
       setCurrentStep(1);
+    }
+  };
+
+  const handlePaymentDialogClose = (open: boolean) => {
+    if (!open) {
+      setPaymentDialog(null);
       setActiveTab('historico');
     }
   };
@@ -385,6 +410,19 @@ const Agendar = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Payment Confirmation Dialog */}
+      {paymentDialog && (
+        <PaymentConfirmationDialog
+          open={paymentDialog.open}
+          onOpenChange={handlePaymentDialogClose}
+          appointmentId={paymentDialog.appointmentId}
+          amount={paymentDialog.amount}
+          date={paymentDialog.date}
+          time={paymentDialog.time}
+          services={paymentDialog.services}
+        />
+      )}
     </div>
   );
 };
