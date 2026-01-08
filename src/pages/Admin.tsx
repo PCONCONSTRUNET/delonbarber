@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, Pencil, Trash2, Bell } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Bell, Crown } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -184,7 +184,15 @@ export function AdminServicos() {
       {loading ? <Loader2 className="animate-spin" /> : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {services.map(service => (
-            <div key={service.id} className={`p-4 rounded-2xl glass-effect ${!service.is_active ? 'opacity-50' : ''}`}>
+            <div key={service.id} className={`p-4 rounded-2xl glass-effect relative ${!service.is_active ? 'opacity-50' : ''}`}>
+              {service.subscribers_only && (
+                <div className="absolute -top-2 -right-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-medium">
+                    <Crown className="h-3 w-3" />
+                    Exclusivo
+                  </span>
+                </div>
+              )}
               <h3 className="font-semibold">{service.name}</h3>
               <p className="text-sm text-muted-foreground">{service.description}</p>
               <p className="text-primary font-bold mt-2">R$ {Number(service.price).toFixed(0)}</p>
