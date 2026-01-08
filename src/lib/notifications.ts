@@ -7,10 +7,16 @@ let notificationBuffer: AudioBuffer | null = null;
 let successBuffer: AudioBuffer | null = null;
 
 async function initAudio() {
-  if (audioContext) return;
+  if (audioContext && audioContext.state !== 'closed') return;
   
   try {
     audioContext = new AudioContext();
+    
+    // Resume if suspended (browser autoplay policy)
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+    
     const [notifResponse, successResponse] = await Promise.all([
       fetch(NOTIFICATION_SOUND_URL),
       fetch(SUCCESS_SOUND_URL)
@@ -28,14 +34,17 @@ async function initAudio() {
 
 async function playSound(buffer: AudioBuffer | null, fallbackUrl: string) {
   try {
-    if (!audioContext) {
+    // Always try to init/resume audio context
+    if (!audioContext || audioContext.state === 'closed') {
       await initAudio();
     }
     
+    if (audioContext && audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+    
+    // Try to use pre-loaded buffer
     if (audioContext && buffer) {
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
       source.connect(audioContext.destination);
@@ -43,12 +52,25 @@ async function playSound(buffer: AudioBuffer | null, fallbackUrl: string) {
       return;
     }
     
-    // Fallback to simple Audio
+    // Fallback to simple Audio element
     const audio = new Audio(fallbackUrl);
-    audio.volume = 0.5;
-    await audio.play();
+    audio.volume = 0.6;
+    
+    // Add user interaction bypass for mobile
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      await playPromise;
+    }
   } catch (error) {
     console.error('Failed to play sound:', error);
+    // Last resort: try simple Audio without promise handling
+    try {
+      const fallbackAudio = new Audio(fallbackUrl);
+      fallbackAudio.volume = 0.5;
+      fallbackAudio.play();
+    } catch (e) {
+      console.error('Fallback audio also failed:', e);
+    }
   }
 }
 
