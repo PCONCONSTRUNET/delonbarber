@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Scissors, LogOut, User } from "lucide-react";
+import { Menu, X, Scissors, LogOut, User, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
+import { InstallAppDialog } from "@/components/pwa/InstallAppDialog";
 
 const publicNavItems = [
   { label: "Home", path: "/" },
@@ -20,6 +21,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [installDialogOpen, setInstallDialogOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -110,6 +112,15 @@ export function Navbar() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-2"
+                onClick={() => setInstallDialogOpen(true)}
+              >
+                <Download className="h-4 w-4" />
+                Instalar App
+              </Button>
               <Button asChild variant="ghost" size="sm">
                 <Link to="/login">Entrar</Link>
               </Button>
@@ -173,6 +184,17 @@ export function Navbar() {
             </>
           ) : (
             <div className="flex flex-col gap-2">
+              <Button 
+                variant="ghost" 
+                className="w-full gap-2"
+                onClick={() => {
+                  setIsOpen(false);
+                  setInstallDialogOpen(true);
+                }}
+              >
+                <Download className="h-4 w-4" />
+                Instalar App
+              </Button>
               <Button asChild variant="ghost" className="w-full">
                 <Link to="/login" onClick={() => setIsOpen(false)}>Entrar</Link>
               </Button>
@@ -183,6 +205,11 @@ export function Navbar() {
           )}
         </div>
       </div>
+
+      <InstallAppDialog 
+        open={installDialogOpen} 
+        onOpenChange={setInstallDialogOpen} 
+      />
     </header>
   );
 }
