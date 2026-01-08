@@ -7,13 +7,16 @@ import {
   MessageSquare,
   Crown,
   LogOut,
-  ChevronLeft
+  ChevronLeft,
+  CalendarPlus,
+  ExternalLink
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { Separator } from '@/components/ui/separator';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -23,6 +26,11 @@ const menuItems = [
   { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
   { icon: DollarSign, label: 'Financeiro', path: '/admin/financeiro' },
   { icon: MessageSquare, label: 'IA WhatsApp', path: '/admin/ia' },
+];
+
+const clientLinks = [
+  { icon: CalendarPlus, label: 'Agendar', path: '/agendar' },
+  { icon: Crown, label: 'Pacotes VIP', path: '/pacotes' },
 ];
 
 export function AdminSidebar() {
@@ -57,7 +65,7 @@ export function AdminSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-1">
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
         {menuItems.map((item) => (
           <NavLink
             key={item.path}
@@ -72,6 +80,31 @@ export function AdminSidebar() {
           >
             <item.icon className="h-5 w-5 flex-shrink-0" />
             {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
+          </NavLink>
+        ))}
+
+        {/* Separator */}
+        <Separator className="my-3 bg-sidebar-border" />
+        
+        {/* Client Area Links */}
+        {!collapsed && (
+          <p className="px-3 py-1 text-xs font-medium text-sidebar-foreground/50 uppercase">
+            Área do Cliente
+          </p>
+        )}
+        {clientLinks.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sidebar-foreground hover:bg-sidebar-accent group"
+          >
+            <item.icon className="h-5 w-5 flex-shrink-0" />
+            {!collapsed && (
+              <>
+                <span className="text-sm font-medium flex-1">{item.label}</span>
+                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
