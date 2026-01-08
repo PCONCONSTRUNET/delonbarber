@@ -90,7 +90,7 @@ const Agendar = () => {
     }
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (paymentMethod: 'pix' | 'cash' | 'card') => {
     if (!user) {
       navigate('/login');
       return;
@@ -99,19 +99,24 @@ const Agendar = () => {
     if (!selectedDate || !selectedTime) return;
 
     setIsSubmitting(true);
-    const result = await createAppointment(selectedServices, selectedDate, selectedTime, notes);
+    const result = await createAppointment(selectedServices, selectedDate, selectedTime, notes, paymentMethod);
     setIsSubmitting(false);
 
     if (result) {
-      // Show payment dialog with PIX QR code
-      setPaymentDialog({
-        open: true,
-        appointmentId: result.id,
-        amount: Number(result.total_price),
-        date: selectedDate,
-        time: selectedTime,
-        services: selectedServices.map(s => s.name),
-      });
+      // Only show payment dialog for PIX
+      if (paymentMethod === 'pix') {
+        setPaymentDialog({
+          open: true,
+          appointmentId: result.id,
+          amount: Number(result.total_price),
+          date: selectedDate,
+          time: selectedTime,
+          services: selectedServices.map(s => s.name),
+        });
+      } else {
+        // For cash/card, just go to history
+        setActiveTab('historico');
+      }
 
       // Reset form
       setSelectedServices([]);
@@ -128,6 +133,7 @@ const Agendar = () => {
       setActiveTab('historico');
     }
   };
+
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);

@@ -128,7 +128,8 @@ export function useAppointments() {
     selectedServices: Service[],
     date: Date,
     time: string,
-    notes: string
+    notes: string,
+    paymentMethod?: string
   ) {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -212,7 +213,8 @@ export function useAppointments() {
         notes: notes || null,
         total_price: totalPrice,
         total_duration: totalDuration,
-        status: 'pending'
+        status: 'pending',
+        payment_method: paymentMethod || null
       })
       .select()
       .single();
