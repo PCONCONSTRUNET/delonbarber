@@ -1,5 +1,4 @@
-import { Scissors, Instagram, MapPin } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Scissors, Instagram } from "lucide-react";
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">

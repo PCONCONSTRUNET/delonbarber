@@ -1,24 +1,34 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "@/components/layout/Footer";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { PublicRatings } from "@/components/ratings/PublicRatings";
+import { InstallAppDialog } from "@/components/pwa/InstallAppDialog";
 import { Button } from "@/components/ui/button";
 import { Instagram, Smartphone } from "lucide-react";
 import barberPhoto from "@/assets/barber-photo.png";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [installDialogOpen, setInstallDialogOpen] = useState(false);
   return (
     <div className="min-h-screen bg-background">
       <AnimatedBackground />
       
       {/* Install App Button */}
       <div className="fixed top-4 right-4 z-50">
-        <Button variant="outline" size="sm" className="gap-2 glass-effect border-border/50">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-2 glass-effect border-border/50"
+          onClick={() => setInstallDialogOpen(true)}
+        >
           <Smartphone className="h-4 w-4" />
           Instalar App
         </Button>
       </div>
+
+      <InstallAppDialog open={installDialogOpen} onOpenChange={setInstallDialogOpen} />
 
       <main className="relative z-10">
         {/* Hero Section */}
