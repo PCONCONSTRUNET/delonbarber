@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, History, ArrowLeft, LogOut, User as UserIcon } from 'lucide-react';
+import { ChevronRight, ChevronLeft, History, ArrowLeft, LogOut, User as UserIcon, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Footer } from '@/components/layout/Footer';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
@@ -20,6 +20,7 @@ import {
 } from '@/hooks/useAppointments';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { useIsAdmin } from '@/hooks/useAdmin';
 
 const steps = [
   { id: 1, title: 'Serviços' },
@@ -42,7 +43,7 @@ const Agendar = () => {
   const { businessHours, loading: hoursLoading } = useBusinessHours();
   const { appointments, loading: appointmentsLoading, createAppointment, cancelAppointment } = useAppointments();
   const bookedSlots = useBookedSlots(selectedDate);
-
+  const { isAdmin } = useIsAdmin();
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -132,6 +133,16 @@ const Agendar = () => {
           <div className="flex gap-1">
             {user && (
               <>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate('/admin')}
+                    className="rounded-full text-primary"
+                  >
+                    <Shield className="h-5 w-5" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
