@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { User, Phone, Calendar, DollarSign, MessageSquare } from 'lucide-react';
+import { User, Phone, Calendar, DollarSign, Eye, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Client, useClientNotes } from '@/hooks/useAdmin';
+import { Client } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { ClientDetailsModal } from './ClientDetailsModal';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -14,14 +14,6 @@ interface ClientListProps {
 
 export function ClientList({ clients }: ClientListProps) {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [newNote, setNewNote] = useState('');
-  const { notes, addNote, loading: notesLoading } = useClientNotes(selectedClient?.user_id || null);
-
-  const handleAddNote = async () => {
-    if (!newNote.trim()) return;
-    await addNote(newNote);
-    setNewNote('');
-  };
 
   return (
     <>
@@ -32,7 +24,8 @@ export function ClientList({ clients }: ClientListProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="p-4 rounded-2xl glass-effect"
+            className="p-4 rounded-2xl glass-effect hover:bg-muted/30 transition-colors cursor-pointer"
+            onClick={() => setSelectedClient(client)}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -69,54 +62,26 @@ export function ClientList({ clients }: ClientListProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSelectedClient(client)}
+                className="gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedClient(client);
+                }}
               >
-                <MessageSquare className="h-4 w-4" />
+                <Eye className="h-4 w-4" />
+                Detalhes
               </Button>
             </div>
           </motion.div>
         ))}
       </div>
 
-      {/* Notes Dialog */}
-      <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Notas - {selectedClient?.name}</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Adicionar nota..."
-                onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-              />
-              <Button onClick={handleAddNote} disabled={notesLoading}>
-                Adicionar
-              </Button>
-            </div>
-
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {notes.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma nota ainda
-                </p>
-              ) : (
-                notes.map(note => (
-                  <div key={note.id} className="p-3 rounded-lg bg-muted">
-                    <p className="text-sm">{note.note}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(note.created_at), "dd/MM/yyyy 'às' HH:mm")}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Client Details Modal */}
+      <ClientDetailsModal
+        client={selectedClient}
+        open={!!selectedClient}
+        onClose={() => setSelectedClient(null)}
+      />
     </>
   );
 }
