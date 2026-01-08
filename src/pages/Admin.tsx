@@ -14,11 +14,12 @@ import { ClientPackagesList } from '@/components/admin/ClientPackagesList';
 import { BlockedSlotsManager } from '@/components/admin/BlockedSlotsManager';
 import { useIsAdmin, useAdminAppointments, useAdminClients, useAdminServices, useBusinessStatus } from '@/hooks/useAdmin';
 import { useAdminPackages, useClientPackages } from '@/hooks/usePackages';
+import { useAdminNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Bell } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -37,9 +38,18 @@ function AdminLayout({ children }: AdminLayoutProps) {
 
 export function AdminDashboard() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment } = useAdminAppointments();
+  const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment, fetchAppointments } = useAdminAppointments();
   const { isOpen, toggleStatus } = useBusinessStatus();
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Enable real-time notifications for new appointments
+  useAdminNotifications({
+    enabled: isAdmin,
+    onNewAppointment: () => {
+      // Refresh appointments list when new one arrives
+      fetchAppointments();
+    }
+  });
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!isAdmin) return <Navigate to="/login" replace />;
@@ -48,7 +58,12 @@ export function AdminDashboard() {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="font-display text-3xl font-bold">Dashboard</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-3xl font-bold">Dashboard</h1>
+            <span title="Notificações ativas">
+              <Bell className="h-5 w-5 text-green-500 animate-pulse" />
+            </span>
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">{isOpen ? 'Aberta' : 'Fechada'}</span>
             <Switch checked={isOpen} onCheckedChange={toggleStatus} />
