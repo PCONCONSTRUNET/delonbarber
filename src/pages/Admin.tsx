@@ -11,6 +11,7 @@ import { WhatsAppAI } from '@/components/admin/WhatsAppAI';
 import { PackageForm } from '@/components/admin/PackageForm';
 import { PackageList } from '@/components/admin/PackageList';
 import { ClientPackagesList } from '@/components/admin/ClientPackagesList';
+import { BlockedSlotsManager } from '@/components/admin/BlockedSlotsManager';
 import { useIsAdmin, useAdminAppointments, useAdminClients, useAdminServices, useBusinessStatus } from '@/hooks/useAdmin';
 import { useAdminPackages, useClientPackages } from '@/hooks/usePackages';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,7 @@ export function AdminAgenda() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment } = useAdminAppointments();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [activeTab, setActiveTab] = useState('agendamentos');
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!isAdmin) return <Navigate to="/login" replace />;
@@ -89,20 +91,34 @@ export function AdminAgenda() {
   return (
     <AdminLayout>
       <h1 className="font-display text-3xl font-bold mb-6">Agenda</h1>
-      <div className="grid lg:grid-cols-2 gap-6">
-        <CalendarView appointments={appointments} view="month" onSelectDate={setSelectedDate} selectedDate={selectedDate} />
-        <div>
-          <h2 className="font-semibold mb-4">{selectedDate.toLocaleDateString('pt-BR', { dateStyle: 'long' })}</h2>
-          {loading ? <Loader2 className="animate-spin" /> : (
-            <TodayAppointments 
-              appointments={dayAppointments.length ? dayAppointments.map(a => ({ ...a, appointment_date: dateStr })) : []}
-              onUpdateStatus={(id, status) => updateAppointmentStatus(id, status as any)}
-              onUpdatePayment={updatePaymentStatus}
-              onDelete={deleteAppointment}
-            />
-          )}
-        </div>
-      </div>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+          <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
+          <TabsTrigger value="horarios">Bloquear Horários</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="agendamentos">
+          <div className="grid lg:grid-cols-2 gap-6">
+            <CalendarView appointments={appointments} view="month" onSelectDate={setSelectedDate} selectedDate={selectedDate} />
+            <div>
+              <h2 className="font-semibold mb-4">{selectedDate.toLocaleDateString('pt-BR', { dateStyle: 'long' })}</h2>
+              {loading ? <Loader2 className="animate-spin" /> : (
+                <TodayAppointments 
+                  appointments={dayAppointments.length ? dayAppointments.map(a => ({ ...a, appointment_date: dateStr })) : []}
+                  onUpdateStatus={(id, status) => updateAppointmentStatus(id, status as any)}
+                  onUpdatePayment={updatePaymentStatus}
+                  onDelete={deleteAppointment}
+                />
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="horarios">
+          <BlockedSlotsManager />
+        </TabsContent>
+      </Tabs>
     </AdminLayout>
   );
 }
