@@ -6,7 +6,8 @@ import {
   DollarSign,
   Crown,
   MoreHorizontal,
-  Star
+  Star,
+  Gift
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ const moreItems = [
   { icon: Scissors, label: 'Serviços', path: '/admin/servicos' },
   { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
   { icon: Star, label: 'Avaliações', path: '/admin/avaliacoes' },
+  { icon: Gift, label: 'Fidelidade', path: '/admin/fidelidade' },
 ];
 
 export function MobileAdminNav() {
