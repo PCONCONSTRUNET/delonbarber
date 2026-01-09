@@ -257,6 +257,8 @@ function FullView({ packages }: { packages: MyPackage[] }) {
                 {pkg.benefits.map((benefit) => {
                   const percentage = (benefit.used / benefit.quantity) * 100;
                   const isExhausted = benefit.remaining === 0;
+                  const hasWeeklyLimit = benefit.weekly_limit !== null;
+                  const weeklyBlocked = hasWeeklyLimit && benefit.remaining_this_week !== null && benefit.remaining_this_week <= 0 && benefit.remaining > 0;
 
                   return (
                     <div key={benefit.id} className="space-y-1.5">
@@ -267,13 +269,27 @@ function FullView({ packages }: { packages: MyPackage[] }) {
                             {benefit.service.name}
                           </span>
                         </div>
-                        <span className={`text-sm font-medium ${
-                          benefit.remaining > 0 ? 'text-primary' : 'text-muted-foreground'
-                        }`}>
-                          {benefit.remaining} de {benefit.quantity} restantes
-                        </span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className={`text-sm font-medium ${
+                            benefit.remaining > 0 ? 'text-primary' : 'text-muted-foreground'
+                          }`}>
+                            {benefit.remaining} de {benefit.quantity} restantes
+                          </span>
+                          {hasWeeklyLimit && (
+                            <span className={`text-xs ${
+                              weeklyBlocked ? 'text-orange-500' : 'text-muted-foreground'
+                            }`}>
+                              📅 {benefit.remaining_this_week}/{benefit.weekly_limit} esta semana
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <Progress value={percentage} className="h-2" />
+                      {weeklyBlocked && (
+                        <p className="text-xs text-orange-500 bg-orange-500/10 rounded-lg px-2 py-1 mt-1">
+                          ⏳ Limite semanal atingido. Disponível novamente na próxima semana.
+                        </p>
+                      )}
                     </div>
                   );
                 })}
