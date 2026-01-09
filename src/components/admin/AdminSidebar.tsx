@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   CalendarPlus,
   ExternalLink,
-  Star
+  Star,
+  Gift
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ const menuItems = [
   { icon: Users, label: 'Clientes', path: '/admin/clientes' },
   { icon: Scissors, label: 'Serviços', path: '/admin/servicos' },
   { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
+  { icon: Gift, label: 'Fidelidade', path: '/admin/fidelidade' },
   { icon: Star, label: 'Avaliações', path: '/admin/avaliacoes' },
   { icon: DollarSign, label: 'Financeiro', path: '/admin/financeiro' },
   { icon: MessageSquare, label: 'IA WhatsApp', path: '/admin/ia' },
