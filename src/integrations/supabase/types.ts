@@ -328,6 +328,7 @@ export type Database = {
           package_id: string
           quantity: number
           service_id: string
+          weekly_limit: number | null
         }
         Insert: {
           created_at?: string | null
@@ -335,6 +336,7 @@ export type Database = {
           package_id: string
           quantity?: number
           service_id: string
+          weekly_limit?: number | null
         }
         Update: {
           created_at?: string | null
@@ -342,6 +344,7 @@ export type Database = {
           package_id?: string
           quantity?: number
           service_id?: string
+          weekly_limit?: number | null
         }
         Relationships: [
           {

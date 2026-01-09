@@ -20,6 +20,7 @@ export interface PackageBenefit {
   package_id: string;
   service_id: string;
   quantity: number;
+  weekly_limit: number | null;
   service?: {
     id: string;
     name: string;
@@ -144,6 +145,7 @@ export function usePackageBenefits(packageId: string | null) {
         package_id: b.package_id,
         service_id: b.service_id,
         quantity: b.quantity,
+        weekly_limit: b.weekly_limit,
         service: b.services,
       }));
       setBenefits(formattedBenefits);
@@ -155,7 +157,7 @@ export function usePackageBenefits(packageId: string | null) {
     fetchBenefits();
   }, [packageId]);
 
-  async function saveBenefits(newBenefits: { service_id: string; quantity: number }[]) {
+  async function saveBenefits(newBenefits: { service_id: string; quantity: number; weekly_limit: number | null }[]) {
     if (!packageId) return false;
 
     // Delete existing benefits
@@ -168,6 +170,7 @@ export function usePackageBenefits(packageId: string | null) {
           package_id: packageId,
           service_id: b.service_id,
           quantity: b.quantity,
+          weekly_limit: b.weekly_limit,
         }))
       );
 
@@ -236,6 +239,7 @@ export function useClientPackages() {
         package_id: b.package_id,
         service_id: b.service_id,
         quantity: b.quantity,
+        weekly_limit: b.weekly_limit,
         service: b.services,
       }));
 
