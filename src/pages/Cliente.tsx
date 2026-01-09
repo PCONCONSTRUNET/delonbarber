@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Crown, User, LogOut, ArrowLeft, Shield } from 'lucide-react';
+import { Calendar, Crown, User, LogOut, ArrowLeft, Shield, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
+import { MyLoyaltyProgress } from '@/components/client/MyLoyaltyProgress';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useIsAdmin } from '@/hooks/useAdmin';
@@ -221,6 +222,20 @@ const Cliente = () => {
           className="mt-8"
         >
           <MyPackagesBenefits />
+        </motion.div>
+
+        {/* My Loyalty Progress */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="mt-6"
+        >
+          <h3 className="font-display text-lg font-semibold mb-3 flex items-center gap-2">
+            <Gift className="h-5 w-5 text-amber-500" />
+            Programa Fidelidade
+          </h3>
+          <MyLoyaltyProgress />
         </motion.div>
 
         {/* Quick stats */}

@@ -288,6 +288,125 @@ export type Database = {
           },
         ]
       }
+      loyalty_program: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          reward_description: string
+          reward_type: string
+          reward_value: number | null
+          visits_required: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          reward_description: string
+          reward_type?: string
+          reward_value?: number | null
+          visits_required?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          reward_description?: string
+          reward_type?: string
+          reward_value?: number | null
+          visits_required?: number
+        }
+        Relationships: []
+      }
+      loyalty_progress: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_visit_at: string | null
+          program_id: string
+          rewards_claimed: number
+          updated_at: string | null
+          user_id: string
+          visits_count: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_visit_at?: string | null
+          program_id: string
+          rewards_claimed?: number
+          updated_at?: string | null
+          user_id: string
+          visits_count?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_visit_at?: string | null
+          program_id?: string
+          rewards_claimed?: number
+          updated_at?: string | null
+          user_id?: string
+          visits_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_progress_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_program"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_rewards: {
+        Row: {
+          appointment_id: string | null
+          claimed_at: string | null
+          id: string
+          program_id: string
+          status: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          claimed_at?: string | null
+          id?: string
+          program_id: string
+          status?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          appointment_id?: string | null
+          claimed_at?: string | null
+          id?: string
+          program_id?: string
+          status?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_rewards_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_program"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           appointment_id: string | null
