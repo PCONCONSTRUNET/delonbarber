@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { DollarSign, TrendingUp, Calendar, Download, QrCode, CreditCard, Banknote, Eye } from 'lucide-react';
+import { DollarSign, TrendingUp, Calendar, Download, QrCode, CreditCard, Banknote } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PixQRCode } from '@/components/payments/PixQRCode';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+type FilterType = 'today' | 'weekly' | 'monthly';
 
 interface FinancialReportProps {
   appointments: AdminAppointment[];
@@ -37,27 +39,45 @@ const paymentMethodColors: Record<string, string> = {
   card: 'text-purple-500 bg-purple-500/20',
 };
 
+const filterLabels: Record<FilterType, string> = {
+  today: 'Hoje',
+  weekly: 'Semanal',
+  monthly: 'Mensal',
+};
+
 export function FinancialReport({ appointments }: FinancialReportProps) {
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [filter, setFilter] = useState<FilterType>('today');
   const [pixModal, setPixModal] = useState<{ open: boolean; appointment: AdminAppointment | null }>({
     open: false,
     appointment: null,
   });
 
-  const monthStart = startOfMonth(selectedMonth);
-  const monthEnd = endOfMonth(selectedMonth);
+  const now = new Date();
 
-  const monthAppointments = appointments.filter(a => {
+  const getDateRange = () => {
+    switch (filter) {
+      case 'today':
+        return { start: startOfDay(now), end: endOfDay(now) };
+      case 'weekly':
+        return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+      case 'monthly':
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+    }
+  };
+
+  const { start: periodStart, end: periodEnd } = getDateRange();
+
+  const filteredAppointments = appointments.filter(a => {
     const date = new Date(a.appointment_date);
-    return date >= monthStart && date <= monthEnd;
+    return date >= periodStart && date <= periodEnd;
   });
 
-  const paidAppointments = monthAppointments.filter(a => a.payment_status === 'paid');
-  const pendingAppointments = monthAppointments.filter(a => a.payment_status === 'pending' && a.status === 'completed');
+  const paidAppointments = filteredAppointments.filter(a => a.payment_status === 'paid');
+  const pendingAppointments = filteredAppointments.filter(a => a.payment_status === 'pending' && a.status === 'completed');
 
   const totalRevenue = paidAppointments.reduce((sum, a) => sum + Number(a.total_price || 0), 0);
   const pendingRevenue = pendingAppointments.reduce((sum, a) => sum + Number(a.total_price || 0), 0);
-  const completedCount = monthAppointments.filter(a => a.status === 'completed').length;
+  const completedCount = filteredAppointments.filter(a => a.status === 'completed').length;
 
   // Payment method breakdown with count
   const paymentBreakdown = paidAppointments.reduce((acc, apt) => {
@@ -79,14 +99,17 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
     acc[method].push(apt);
     return acc;
   }, {} as Record<string, AdminAppointment[]>);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const dailyRevenue = days.map(day => {
-    const dayStr = format(day, 'yyyy-MM-dd');
-    const dayPaid = paidAppointments
-      .filter(a => a.appointment_date === dayStr)
-      .reduce((sum, a) => sum + Number(a.total_price || 0), 0);
-    return { date: day, revenue: dayPaid };
-  });
+
+  const getPeriodLabel = () => {
+    switch (filter) {
+      case 'today':
+        return format(now, "dd 'de' MMMM", { locale: ptBR });
+      case 'weekly':
+        return `${format(periodStart, 'dd/MM')} - ${format(periodEnd, 'dd/MM')}`;
+      case 'monthly':
+        return format(now, 'MMMM yyyy', { locale: ptBR });
+    }
+  };
 
   const generateReceipt = (apt: AdminAppointment) => {
     const receipt = `
@@ -125,16 +148,23 @@ Status: PAGO
 
   return (
     <div className="space-y-6">
-      {/* Month selector */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}
-        >
-          Mês Anterior
-        </Button>
-        <h2 className="font-display text-xl font-semibold capitalize">
-          {format(selectedMonth, 'MMMM yyyy', { locale: ptBR })}
+      {/* Filter selector */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="flex gap-2 w-full sm:w-auto">
+          {(['today', 'weekly', 'monthly'] as FilterType[]).map((type) => (
+            <Button
+              key={type}
+              variant={filter === type ? 'default' : 'outline'}
+              onClick={() => setFilter(type)}
+              className="flex-1 sm:flex-none"
+              size="sm"
+            >
+              {filterLabels[type]}
+            </Button>
+          ))}
+        </div>
+        <h2 className="font-display text-lg sm:text-xl font-semibold capitalize text-muted-foreground">
+          {getPeriodLabel()}
         </h2>
       </div>
 
