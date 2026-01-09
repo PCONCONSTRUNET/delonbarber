@@ -9,37 +9,37 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 export function Footer() {
   return (
     <footer className="border-t border-border bg-card/50">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="container mx-auto px-3 xs:px-4 py-8 sm:py-12">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8">
           {/* Brand */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Scissors className="h-6 w-6 text-primary" />
-              <span className="font-display text-lg font-semibold tracking-wider">
+          <div className="space-y-3 text-center sm:text-left">
+            <div className="flex items-center gap-2 justify-center sm:justify-start">
+              <Scissors className="h-5 w-5 xs:h-6 xs:w-6 text-primary" />
+              <span className="font-display text-base xs:text-lg font-semibold tracking-wider">
                 ALAN DELON
               </span>
             </div>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Tradição e estilo em cada corte. Sua barbearia premium para o homem moderno.
+            <p className="text-muted-foreground text-xs xs:text-sm leading-relaxed max-w-xs mx-auto sm:mx-0">
+              Tradição e estilo em cada corte. Sua barbearia premium.
             </p>
           </div>
 
           {/* Contact */}
-          <div className="space-y-4">
-            <h4 className="font-display text-sm font-semibold tracking-wider uppercase">
+          <div className="space-y-3 text-center sm:text-left">
+            <h4 className="font-display text-xs xs:text-sm font-semibold tracking-wider uppercase">
               Contato
             </h4>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <a 
                 href="https://wa.me/5548999520220" 
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-muted-foreground hover:text-green-500 text-sm transition-colors"
+                className="flex items-center gap-2 justify-center sm:justify-start text-muted-foreground hover:text-green-500 text-xs xs:text-sm transition-colors"
               >
                 <WhatsAppIcon className="h-4 w-4" />
                 (48) 9952-0220
               </a>
-              <div className="flex items-center gap-4 pt-2">
+              <div className="flex items-center gap-4 pt-1 justify-center sm:justify-start">
                 <a 
                   href="https://instagram.com/delon_barber_" 
                   target="_blank"
@@ -62,8 +62,8 @@ export function Footer() {
         </div>
 
         {/* Copyright */}
-        <div className="mt-12 pt-6 border-t border-border">
-          <p className="text-center text-muted-foreground text-sm">
+        <div className="mt-6 sm:mt-10 pt-4 sm:pt-6 border-t border-border">
+          <p className="text-center text-muted-foreground text-[10px] xs:text-xs sm:text-sm">
             © 2026 Barbearia Alan Delon. Todos os direitos reservados.
           </p>
         </div>
