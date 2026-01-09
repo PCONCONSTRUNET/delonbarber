@@ -8,11 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Phone, Mail, Camera, Loader2, Save, Bell, Calendar, Clock, ArrowLeft } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { User, Phone, Mail, Camera, Loader2, Save, Bell, Calendar, Clock, ArrowLeft, Gift, DollarSign, Star, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useClientNotifications } from "@/hooks/useNotifications";
 import { NotificationHistory } from "@/components/client/NotificationHistory";
+import { MyLoyaltyProgress } from "@/components/client/MyLoyaltyProgress";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -23,6 +25,12 @@ interface Appointment {
   status: string;
   payment_status: string;
   total_price: number;
+}
+
+interface ClientStats {
+  totalVisits: number;
+  totalSpent: number;
+  completedVisits: number;
 }
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -43,6 +51,7 @@ const Perfil = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [stats, setStats] = useState<ClientStats>({ totalVisits: 0, totalSpent: 0, completedVisits: 0 });
 
   const { subscribeToAppointments } = useClientNotifications();
 
@@ -70,15 +79,26 @@ const Perfil = () => {
         setAvatarUrl(profile.avatar_url);
       }
 
-      // Fetch recent appointments
-      const { data: appts } = await supabase
+      // Fetch all appointments for stats
+      const { data: allAppts } = await supabase
         .from("appointments")
         .select("id, appointment_date, appointment_time, status, payment_status, total_price")
         .eq("user_id", session.user.id)
-        .order("appointment_date", { ascending: false })
-        .limit(5);
+        .order("appointment_date", { ascending: false });
 
-      setAppointments(appts || []);
+      const appts = allAppts || [];
+      setAppointments(appts.slice(0, 5)); // Últimos 5 para exibição
+      
+      // Calculate stats
+      const completedAppts = appts.filter(a => a.status === 'completed');
+      const totalSpent = completedAppts.reduce((sum, a) => sum + (Number(a.total_price) || 0), 0);
+      
+      setStats({
+        totalVisits: appts.length,
+        completedVisits: completedAppts.length,
+        totalSpent,
+      });
+      
       setLoadingAppointments(false);
     };
 
@@ -181,6 +201,7 @@ const Perfil = () => {
           
           <div className="max-w-lg mx-auto space-y-4 sm:space-y-6">
 
+            {/* Profile Card with Avatar */}
             <Card className="glass-effect border-border">
               <CardHeader className="text-center pb-2">
                 {/* Avatar */}
@@ -271,63 +292,123 @@ const Perfil = () => {
               </CardContent>
             </Card>
 
-            {/* Notification History */}
-            {userId && <NotificationHistory userId={userId} />}
+            {/* Stats Cards */}
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="glass-effect border-border">
+                <CardContent className="p-4 text-center">
+                  <div className="p-2 rounded-full bg-primary/10 w-fit mx-auto mb-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="text-2xl font-bold">{stats.completedVisits}</p>
+                  <p className="text-xs text-muted-foreground">Visitas</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="glass-effect border-border">
+                <CardContent className="p-4 text-center">
+                  <div className="p-2 rounded-full bg-green-500/10 w-fit mx-auto mb-2">
+                    <DollarSign className="h-5 w-5 text-green-500" />
+                  </div>
+                  <p className="text-2xl font-bold">R${stats.totalSpent.toFixed(0)}</p>
+                  <p className="text-xs text-muted-foreground">Total Gasto</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="glass-effect border-border">
+                <CardContent className="p-4 text-center">
+                  <div className="p-2 rounded-full bg-amber-500/10 w-fit mx-auto mb-2">
+                    <Star className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <p className="text-2xl font-bold">{stats.totalVisits}</p>
+                  <p className="text-xs text-muted-foreground">Agendamentos</p>
+                </CardContent>
+              </Card>
+            </div>
 
-            {/* Recent Appointments */}
-            <Card className="glass-effect border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="font-display text-lg flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  Meus Agendamentos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loadingAppointments ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : appointments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Nenhum agendamento encontrado
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {appointments.map((apt) => {
-                      const config = statusConfig[apt.status] || statusConfig.pending;
-                      return (
-                        <div 
-                          key={apt.id} 
-                          className="p-3 rounded-lg bg-muted/50 border border-border"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Calendar className="h-4 w-4 text-primary" />
-                              <span>
-                                {format(new Date(apt.appointment_date + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR })}
-                              </span>
-                              <Clock className="h-4 w-4 text-muted-foreground ml-2" />
-                              <span>{apt.appointment_time.slice(0, 5)}</span>
+            {/* Tabs for different sections */}
+            <Tabs defaultValue="fidelidade" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 h-11">
+                <TabsTrigger value="fidelidade" className="text-xs flex items-center gap-1">
+                  <Gift className="h-3.5 w-3.5" />
+                  Fidelidade
+                </TabsTrigger>
+                <TabsTrigger value="agendamentos" className="text-xs flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Histórico
+                </TabsTrigger>
+                <TabsTrigger value="notificacoes" className="text-xs flex items-center gap-1">
+                  <Bell className="h-3.5 w-3.5" />
+                  Avisos
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Fidelidade Tab */}
+              <TabsContent value="fidelidade" className="mt-4">
+                <MyLoyaltyProgress />
+              </TabsContent>
+
+              {/* Agendamentos Tab */}
+              <TabsContent value="agendamentos" className="mt-4">
+                <Card className="glass-effect border-border">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="font-display text-lg flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      Meus Agendamentos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingAppointments ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : appointments.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhum agendamento encontrado
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {appointments.map((apt) => {
+                          const config = statusConfig[apt.status] || statusConfig.pending;
+                          return (
+                            <div 
+                              key={apt.id} 
+                              className="p-3 rounded-lg bg-muted/50 border border-border"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Calendar className="h-4 w-4 text-primary" />
+                                  <span>
+                                    {format(new Date(apt.appointment_date + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR })}
+                                  </span>
+                                  <Clock className="h-4 w-4 text-muted-foreground ml-2" />
+                                  <span>{apt.appointment_time.slice(0, 5)}</span>
+                                </div>
+                                <Badge className={config.color}>
+                                  {config.label}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                  R$ {Number(apt.total_price).toFixed(0)}
+                                </span>
+                                <span className={apt.payment_status === 'paid' ? 'text-green-500' : 'text-yellow-500'}>
+                                  {apt.payment_status === 'paid' ? '✓ Pago' : 'Aguardando'}
+                                </span>
+                              </div>
                             </div>
-                            <Badge className={config.color}>
-                              {config.label}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              R$ {Number(apt.total_price).toFixed(0)}
-                            </span>
-                            <span className={apt.payment_status === 'paid' ? 'text-green-500' : 'text-yellow-500'}>
-                              {apt.payment_status === 'paid' ? '✓ Pago' : 'Aguardando'}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Notificações Tab */}
+              <TabsContent value="notificacoes" className="mt-4">
+                {userId && <NotificationHistory userId={userId} />}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </main>
