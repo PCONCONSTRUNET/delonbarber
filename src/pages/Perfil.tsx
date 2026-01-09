@@ -293,52 +293,52 @@ const Perfil = () => {
             </Card>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 xs:gap-3">
               <Card className="glass-effect border-border">
-                <CardContent className="p-4 text-center">
-                  <div className="p-2 rounded-full bg-primary/10 w-fit mx-auto mb-2">
-                    <Calendar className="h-5 w-5 text-primary" />
+                <CardContent className="p-2.5 xs:p-3 sm:p-4 text-center">
+                  <div className="p-1.5 xs:p-2 rounded-full bg-primary/10 w-fit mx-auto mb-1.5 xs:mb-2">
+                    <Calendar className="h-4 w-4 xs:h-5 xs:w-5 text-primary" />
                   </div>
-                  <p className="text-2xl font-bold">{stats.completedVisits}</p>
-                  <p className="text-xs text-muted-foreground">Visitas</p>
+                  <p className="text-lg xs:text-xl sm:text-2xl font-bold">{stats.completedVisits}</p>
+                  <p className="text-[10px] xs:text-xs text-muted-foreground">Visitas</p>
                 </CardContent>
               </Card>
               
               <Card className="glass-effect border-border">
-                <CardContent className="p-4 text-center">
-                  <div className="p-2 rounded-full bg-green-500/10 w-fit mx-auto mb-2">
-                    <DollarSign className="h-5 w-5 text-green-500" />
+                <CardContent className="p-2.5 xs:p-3 sm:p-4 text-center">
+                  <div className="p-1.5 xs:p-2 rounded-full bg-green-500/10 w-fit mx-auto mb-1.5 xs:mb-2">
+                    <DollarSign className="h-4 w-4 xs:h-5 xs:w-5 text-green-500" />
                   </div>
-                  <p className="text-2xl font-bold">R${stats.totalSpent.toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">Total Gasto</p>
+                  <p className="text-lg xs:text-xl sm:text-2xl font-bold">R${stats.totalSpent.toFixed(0)}</p>
+                  <p className="text-[10px] xs:text-xs text-muted-foreground">Total</p>
                 </CardContent>
               </Card>
               
               <Card className="glass-effect border-border">
-                <CardContent className="p-4 text-center">
-                  <div className="p-2 rounded-full bg-amber-500/10 w-fit mx-auto mb-2">
-                    <Star className="h-5 w-5 text-amber-500" />
+                <CardContent className="p-2.5 xs:p-3 sm:p-4 text-center">
+                  <div className="p-1.5 xs:p-2 rounded-full bg-amber-500/10 w-fit mx-auto mb-1.5 xs:mb-2">
+                    <Star className="h-4 w-4 xs:h-5 xs:w-5 text-amber-500" />
                   </div>
-                  <p className="text-2xl font-bold">{stats.totalVisits}</p>
-                  <p className="text-xs text-muted-foreground">Agendamentos</p>
+                  <p className="text-lg xs:text-xl sm:text-2xl font-bold">{stats.totalVisits}</p>
+                  <p className="text-[10px] xs:text-xs text-muted-foreground">Agend.</p>
                 </CardContent>
               </Card>
             </div>
 
             {/* Tabs for different sections */}
             <Tabs defaultValue="fidelidade" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 h-11">
-                <TabsTrigger value="fidelidade" className="text-xs flex items-center gap-1">
-                  <Gift className="h-3.5 w-3.5" />
-                  Fidelidade
+              <TabsList className="grid w-full grid-cols-3 h-10 xs:h-11 p-1">
+                <TabsTrigger value="fidelidade" className="text-[10px] xs:text-xs flex items-center gap-0.5 xs:gap-1 px-1 xs:px-2">
+                  <Gift className="h-3 w-3 xs:h-3.5 xs:w-3.5" />
+                  <span className="truncate">Fidelidade</span>
                 </TabsTrigger>
-                <TabsTrigger value="agendamentos" className="text-xs flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Histórico
+                <TabsTrigger value="agendamentos" className="text-[10px] xs:text-xs flex items-center gap-0.5 xs:gap-1 px-1 xs:px-2">
+                  <Calendar className="h-3 w-3 xs:h-3.5 xs:w-3.5" />
+                  <span className="truncate">Histórico</span>
                 </TabsTrigger>
-                <TabsTrigger value="notificacoes" className="text-xs flex items-center gap-1">
-                  <Bell className="h-3.5 w-3.5" />
-                  Avisos
+                <TabsTrigger value="notificacoes" className="text-[10px] xs:text-xs flex items-center gap-0.5 xs:gap-1 px-1 xs:px-2">
+                  <Bell className="h-3 w-3 xs:h-3.5 xs:w-3.5" />
+                  <span className="truncate">Avisos</span>
                 </TabsTrigger>
               </TabsList>
 
