@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Crown, Check, ArrowLeft, Star, Clock, Loader2, Gift, MessageCircle } from 'lucide-react';
+import { Crown, Check, ArrowLeft, Star, Clock, Loader2, Gift, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
-import { PixQRCode } from '@/components/payments/PixQRCode';
-import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { User } from '@supabase/supabase-js';
@@ -44,8 +42,6 @@ const Pacotes = () => {
     package: PackageWithBenefits | null;
     subscriptionId: string | null;
   }>({ open: false, package: null, subscriptionId: null });
-
-  const WHATSAPP_NUMBER = '5548999520220';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -108,13 +104,13 @@ const Pacotes = () => {
       const startDate = format(new Date(), 'yyyy-MM-dd');
       const endDate = format(addDays(new Date(), pkg.duration_days), 'yyyy-MM-dd');
 
-      const { data, error } = await supabase.from('client_packages').insert({
+      const { error } = await supabase.from('client_packages').insert({
         user_id: user.id,
         package_id: pkg.id,
         start_date: startDate,
         end_date: endDate,
-        status: 'pending', // Status pending until payment confirmed
-      }).select().single();
+        status: 'pending', // Status pending until admin confirms
+      });
 
       if (error) {
         console.error('Error subscribing:', error);
@@ -124,11 +120,11 @@ const Pacotes = () => {
           variant: "destructive",
         });
       } else {
-        // Open payment modal with QR code
+        // Show success modal without QR code
         setPaymentModal({
           open: true,
           package: pkg,
-          subscriptionId: data?.id || null,
+          subscriptionId: null,
         });
       }
     } finally {
@@ -136,28 +132,8 @@ const Pacotes = () => {
     }
   };
 
-  const handleWhatsAppClick = () => {
-    const pkg = paymentModal.package;
-    if (!pkg) return;
-
-    const message = `Olá! 👋
-
-Acabei de assinar o pacote *${pkg.name}* no valor de *R$ ${pkg.price}*.
-
-Segue o comprovante de pagamento: 📎
-
-Aguardo a confirmação! 🙏`;
-
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
   const handleClosePayment = () => {
     setPaymentModal({ open: false, package: null, subscriptionId: null });
-    toast({
-      title: "Assinatura registrada! 📝",
-      description: "Após confirmar o pagamento, seu pacote será ativado.",
-    });
     navigate('/cliente');
   };
 
@@ -360,87 +336,70 @@ Aguardo a confirmação! 🙏`;
         </motion.p>
       </main>
 
-      {/* Payment Modal */}
+      {/* Success Modal - No QR Code */}
       <Dialog open={paymentModal.open} onOpenChange={(open) => !open && handleClosePayment()}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="bg-primary/10 p-4 sm:p-6 text-center border-b border-border flex-shrink-0">
+          <div className="bg-primary/10 p-6 sm:p-8 text-center flex-shrink-0">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', delay: 0.1 }}
-              className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary/20 flex items-center justify-center"
+              className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center"
             >
-              <Crown className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
+              <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 text-green-500" />
             </motion.div>
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-lg sm:text-xl font-bold text-foreground"
+              className="text-xl sm:text-2xl font-bold text-foreground"
             >
-              Pacote {paymentModal.package?.name}
+              Solicitação Enviada! 🎉
             </motion.h2>
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
+              className="text-muted-foreground mt-2 text-sm sm:text-base"
+            >
+              Pacote {paymentModal.package?.name}
+            </motion.p>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.35 }}
               className="text-2xl sm:text-3xl font-bold text-primary mt-2"
             >
               R$ {paymentModal.package?.price}
             </motion.p>
           </div>
 
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {/* Warning */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="p-3 sm:p-4 bg-yellow-500/10 border-b border-border"
-            >
-              <p className="text-center text-xs sm:text-sm font-medium text-yellow-600">
-                ⚠️ Pague o valor total via PIX e envie o comprovante no WhatsApp para ativar seu pacote
+          {/* Info */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="p-4 sm:p-6 text-center"
+          >
+            <div className="bg-muted/50 rounded-xl p-4">
+              <p className="text-sm text-muted-foreground">
+                Sua solicitação foi registrada com sucesso! 
               </p>
-            </motion.div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Aguarde a confirmação do administrador para ativar seu pacote VIP.
+              </p>
+            </div>
+          </motion.div>
 
-            {/* PIX QR Code */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="p-4 sm:p-6"
-            >
-              {paymentModal.package && (
-                <PixQRCode
-                  amount={paymentModal.package.price}
-                  transactionId={paymentModal.subscriptionId || paymentModal.package.id}
-                />
-              )}
-            </motion.div>
-          </div>
-
-          {/* WhatsApp Button */}
-          <div className="p-3 sm:p-4 border-t border-border bg-muted/30 space-y-2 sm:space-y-3 flex-shrink-0">
-            <Button
-              onClick={handleWhatsAppClick}
-              className="w-full h-11 sm:h-12 bg-green-600 hover:bg-green-700 gap-2"
-            >
-              <WhatsAppIcon size={20} />
-              Enviar Comprovante no WhatsApp
-            </Button>
-            
+          {/* Button */}
+          <div className="p-4 sm:p-6 pt-0 flex-shrink-0">
             <Button
               onClick={handleClosePayment}
-              variant="outline"
-              className="w-full h-10"
+              className="w-full h-11 sm:h-12"
             >
-              Fechar
+              Entendi
             </Button>
-            
-            <p className="text-xs text-center text-muted-foreground">
-              Seu pacote será ativado após a confirmação do pagamento
-            </p>
           </div>
         </DialogContent>
       </Dialog>
