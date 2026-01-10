@@ -65,114 +65,116 @@ export function ServiceForm({ service, onSubmit, onCancel }: ServiceFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Nome do Serviço</Label>
-        <Input
-          id="name"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder="Ex: Corte Degradê"
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Descrição</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Descreva o serviço..."
-          rows={3}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[calc(85vh-80px)] overflow-hidden">
+      <div className="flex-1 overflow-y-auto space-y-4 pb-2 min-h-0">
         <div className="space-y-2">
-          <Label htmlFor="price">Preço (R$)</Label>
+          <Label htmlFor="name">Nome do Serviço</Label>
           <Input
-            id="price"
-            type="number"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-            min={0}
-            step={1}
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Ex: Corte Degradê"
             required
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="duration">Duração (min)</Label>
+          <Label htmlFor="description">Descrição</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="Descreva o serviço..."
+            rows={2}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="price">Preço (R$)</Label>
+            <Input
+              id="price"
+              type="number"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+              min={0}
+              step={1}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="duration">Duração (min)</Label>
+            <Input
+              id="duration"
+              type="number"
+              value={formData.duration_minutes}
+              onChange={(e) => setFormData({ ...formData, duration_minutes: Number(e.target.value) })}
+              min={5}
+              step={5}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Categoria</Label>
+          <Select
+            value={formData.category}
+            onValueChange={(value) => setFormData({ ...formData, category: value })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(cat => (
+                <SelectItem key={cat.value} value={cat.value}>
+                  {cat.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="image">URL da Imagem (opcional)</Label>
           <Input
-            id="duration"
-            type="number"
-            value={formData.duration_minutes}
-            onChange={(e) => setFormData({ ...formData, duration_minutes: Number(e.target.value) })}
-            min={5}
-            step={5}
-            required
+            id="image"
+            value={formData.image_url}
+            onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+            placeholder="https://..."
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Label htmlFor="active">Serviço Ativo</Label>
+          <Switch
+            id="active"
+            checked={formData.is_active}
+            onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+          <div>
+            <Label htmlFor="subscribers" className="text-yellow-600 font-medium">👑 Exclusivo para Assinantes</Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Este serviço só aparecerá para clientes com pacote ativo
+            </p>
+          </div>
+          <Switch
+            id="subscribers"
+            checked={formData.subscribers_only}
+            onCheckedChange={(checked) => setFormData({ ...formData, subscribers_only: checked })}
           />
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label>Categoria</Label>
-        <Select
-          value={formData.category}
-          onValueChange={(value) => setFormData({ ...formData, category: value })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map(cat => (
-              <SelectItem key={cat.value} value={cat.value}>
-                {cat.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="image">URL da Imagem (opcional)</Label>
-        <Input
-          id="image"
-          value={formData.image_url}
-          onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-          placeholder="https://..."
-        />
-      </div>
-
-      <div className="flex items-center justify-between">
-        <Label htmlFor="active">Serviço Ativo</Label>
-        <Switch
-          id="active"
-          checked={formData.is_active}
-          onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-        />
-      </div>
-
-      <div className="flex items-center justify-between p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
-        <div>
-          <Label htmlFor="subscribers" className="text-yellow-600 font-medium">👑 Exclusivo para Assinantes</Label>
-          <p className="text-xs text-muted-foreground mt-1">
-            Este serviço só aparecerá para clientes com pacote ativo
-          </p>
-        </div>
-        <Switch
-          id="subscribers"
-          checked={formData.subscribers_only}
-          onCheckedChange={(checked) => setFormData({ ...formData, subscribers_only: checked })}
-        />
-      </div>
-
-      <div className="flex gap-3 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+      <div className="flex gap-2 sm:gap-3 pt-4 border-t flex-shrink-0">
+        <Button type="button" variant="outline" onClick={onCancel} className="flex-1 h-11">
           Cancelar
         </Button>
-        <Button type="submit" className="flex-1">
+        <Button type="submit" className="flex-1 h-11">
           {service ? 'Atualizar' : 'Criar'}
         </Button>
       </div>

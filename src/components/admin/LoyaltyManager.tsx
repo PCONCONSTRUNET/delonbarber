@@ -193,13 +193,13 @@ export function LoyaltyManager() {
 
           {/* Dialog para criar/editar programa */}
           <Dialog open={showForm} onOpenChange={setShowForm}>
-            <DialogContent>
-              <DialogHeader>
+            <DialogContent className="flex flex-col">
+              <DialogHeader className="flex-shrink-0">
                 <DialogTitle>
                   {editingProgram ? 'Editar Programa' : 'Novo Programa de Fidelidade'}
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 min-h-0 pb-2">
                 <div className="space-y-2">
                   <Label>Nome do Programa</Label>
                   <Input
@@ -258,8 +258,10 @@ export function LoyaltyManager() {
                   <Switch checked={isActive} onCheckedChange={setIsActive} />
                   <Label>Programa Ativo</Label>
                 </div>
+              </div>
 
-                <Button onClick={handleSubmit} className="w-full">
+              <div className="flex-shrink-0 pt-4 border-t">
+                <Button onClick={handleSubmit} className="w-full h-11">
                   {editingProgram ? 'Salvar Alterações' : 'Criar Programa'}
                 </Button>
               </div>

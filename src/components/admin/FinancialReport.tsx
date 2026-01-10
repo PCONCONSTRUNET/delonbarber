@@ -359,17 +359,19 @@ Status: PAGO
 
       {/* PIX Modal */}
       <Dialog open={pixModal.open} onOpenChange={(open) => setPixModal({ open, appointment: open ? pixModal.appointment : null })}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Gerar PIX para Pagamento</DialogTitle>
           </DialogHeader>
-          {pixModal.appointment && (
-            <PixQRCode
-              amount={Number(pixModal.appointment.total_price)}
-              transactionId={pixModal.appointment.id}
-              clientName={pixModal.appointment.profile?.name || undefined}
-            />
-          )}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {pixModal.appointment && (
+              <PixQRCode
+                amount={Number(pixModal.appointment.total_price)}
+                transactionId={pixModal.appointment.id}
+                clientName={pixModal.appointment.profile?.name || undefined}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

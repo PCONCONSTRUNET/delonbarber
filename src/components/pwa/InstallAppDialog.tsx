@@ -84,8 +84,8 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Download className="h-5 w-5 text-primary" />
             Instalar Aplicativo
@@ -95,7 +95,7 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="flex-1 overflow-y-auto space-y-4 py-4 min-h-0">
           {/* Direct Install Button (Android/Desktop with Chrome) */}
           {deferredPrompt && (
             <div className="space-y-3">
@@ -111,43 +111,43 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
 
           {/* iOS Instructions */}
           {isIOS && !deferredPrompt && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium text-primary">
                 <span className="text-lg">🍎</span> 
                 Instruções para iPhone/iPad
               </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs shrink-0">
                     1
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">Toque no botão Compartilhar</p>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Share className="h-5 w-5" />
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-sm">Toque no botão Compartilhar</p>
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                      <Share className="h-4 w-4" />
                       <span>Na barra inferior do Safari</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0">
+                <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs shrink-0">
                     2
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">Role e selecione</p>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Plus className="h-5 w-5 border rounded" />
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-sm">Role e selecione</p>
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                      <Plus className="h-4 w-4 border rounded" />
                       <span>"Adicionar à Tela de Início"</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0">
+                <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs shrink-0">
                     3
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">Confirme tocando em "Adicionar"</p>
-                    <p className="text-muted-foreground">O app aparecerá na sua tela inicial</p>
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-sm">Confirme tocando em "Adicionar"</p>
+                    <p className="text-muted-foreground text-xs">O app aparecerá na sua tela inicial</p>
                   </div>
                 </div>
               </div>
@@ -156,40 +156,40 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
 
           {/* Android Instructions (fallback if prompt not available) */}
           {isAndroid && !deferredPrompt && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium text-primary">
                 <span className="text-lg">🤖</span>
                 Instruções para Android
               </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs shrink-0">
                     1
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">Toque no menu do navegador</p>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MoreVertical className="h-5 w-5" />
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-sm">Toque no menu do navegador</p>
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                      <MoreVertical className="h-4 w-4" />
                       <span>3 pontinhos no canto superior</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0">
+                <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs shrink-0">
                     2
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">Selecione "Instalar aplicativo"</p>
-                    <p className="text-muted-foreground">Ou "Adicionar à tela inicial"</p>
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-sm">Selecione "Instalar aplicativo"</p>
+                    <p className="text-muted-foreground text-xs">Ou "Adicionar à tela inicial"</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0">
+                <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs shrink-0">
                     3
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">Confirme a instalação</p>
-                    <p className="text-muted-foreground">O app aparecerá na sua tela inicial</p>
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-sm">Confirme a instalação</p>
+                    <p className="text-muted-foreground text-xs">O app aparecerá na sua tela inicial</p>
                   </div>
                 </div>
               </div>
@@ -198,28 +198,28 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
 
           {/* Desktop Instructions */}
           {!isIOS && !isAndroid && !deferredPrompt && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium text-primary">
                 <span className="text-lg">💻</span>
                 Instruções para Desktop
               </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs shrink-0">
                     1
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">Procure o ícone de instalação</p>
-                    <p className="text-muted-foreground">Na barra de endereços do navegador</p>
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-sm">Procure o ícone de instalação</p>
+                    <p className="text-muted-foreground text-xs">Na barra de endereços do navegador</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm shrink-0">
+                <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-primary-foreground font-bold text-xs shrink-0">
                     2
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">Clique em "Instalar"</p>
-                    <p className="text-muted-foreground">O app será adicionado ao seu sistema</p>
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-sm">Clique em "Instalar"</p>
+                    <p className="text-muted-foreground text-xs">O app será adicionado ao seu sistema</p>
                   </div>
                 </div>
               </div>
@@ -227,11 +227,11 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
           )}
 
           {/* Benefits */}
-          <div className="pt-4 border-t border-border">
+          <div className="pt-3 border-t border-border">
             <p className="text-xs font-medium text-muted-foreground mb-2">
               Benefícios do App:
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
                 ⚡ Mais rápido
               </span>

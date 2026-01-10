@@ -109,11 +109,11 @@ export function ClientPackageUsage({ subscription, onRegisterUsage }: ClientPack
       )}
 
       <Dialog open={showAddUsage} onOpenChange={setShowAddUsage}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Registrar Uso de Benefício</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
             <p className="text-sm text-muted-foreground">
               Selecione o serviço utilizado pelo cliente:
             </p>
@@ -134,20 +134,20 @@ export function ClientPackageUsage({ subscription, onRegisterUsage }: ClientPack
                 })}
               </SelectContent>
             </Select>
+          </div>
 
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowAddUsage(false)} className="flex-1">
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleRegisterUsage} 
-                disabled={!selectedService || loading}
-                className="flex-1"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                {loading ? 'Registrando...' : 'Confirmar'}
-              </Button>
-            </div>
+          <div className="flex gap-2 sm:gap-3 pt-4 border-t flex-shrink-0">
+            <Button variant="outline" onClick={() => setShowAddUsage(false)} className="flex-1 h-11">
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleRegisterUsage} 
+              disabled={!selectedService || loading}
+              className="flex-1 h-11"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              {loading ? 'Registrando...' : 'Confirmar'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
