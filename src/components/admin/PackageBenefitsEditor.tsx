@@ -82,22 +82,22 @@ export function PackageBenefitsEditor({ packageId, onClose }: PackageBenefitsEdi
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
+    <div className="flex flex-col h-full max-h-[calc(85vh-80px)] overflow-hidden">
+      <p className="text-sm text-muted-foreground mb-4 flex-shrink-0">
         Configure quantos de cada serviço estão incluídos neste pacote e o limite semanal.
       </p>
 
-      <div className="space-y-4 max-h-[50vh] overflow-y-auto">
+      <div className="flex-1 overflow-y-auto space-y-3 pb-2 min-h-0">
         {localBenefits.map((benefit, index) => (
-          <div key={index} className="p-4 rounded-xl bg-muted/50 space-y-3">
-            <div className="flex items-center gap-3">
+          <div key={index} className="p-3 sm:p-4 rounded-xl bg-muted/50 space-y-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Scissors className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               
               <Select
                 value={benefit.service_id}
                 onValueChange={(value) => updateBenefit(index, 'service_id', value)}
               >
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1 min-w-[120px] max-w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -115,14 +115,14 @@ export function PackageBenefitsEditor({ packageId, onClose }: PackageBenefitsEdi
                 </SelectContent>
               </Select>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Label className="text-xs text-muted-foreground whitespace-nowrap">Total:</Label>
                 <Input
                   type="number"
                   min="1"
                   value={benefit.quantity}
                   onChange={(e) => updateBenefit(index, 'quantity', e.target.value)}
-                  className="w-16"
+                  className="w-14 sm:w-16"
                 />
               </div>
 
@@ -131,16 +131,16 @@ export function PackageBenefitsEditor({ packageId, onClose }: PackageBenefitsEdi
                 variant="ghost"
                 size="icon"
                 onClick={() => removeBenefit(index)}
-                className="text-destructive flex-shrink-0"
+                className="text-destructive flex-shrink-0 h-8 w-8"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Weekly Limit Section */}
-            <div className="flex items-center gap-3 pt-2 border-t border-border/50">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2 border-t border-border/50">
               <CalendarDays className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2">
                 <Switch
                   checked={benefit.weekly_limit !== null}
                   onCheckedChange={(checked) => toggleWeeklyLimit(index, checked)}
@@ -149,7 +149,7 @@ export function PackageBenefitsEditor({ packageId, onClose }: PackageBenefitsEdi
               </div>
               
               {benefit.weekly_limit !== null && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
                   <Label className="text-xs text-muted-foreground whitespace-nowrap">Máx/semana:</Label>
                   <Input
                     type="number"
@@ -157,41 +157,42 @@ export function PackageBenefitsEditor({ packageId, onClose }: PackageBenefitsEdi
                     max={benefit.quantity}
                     value={benefit.weekly_limit}
                     onChange={(e) => updateBenefit(index, 'weekly_limit', e.target.value)}
-                    className="w-16"
+                    className="w-14 sm:w-16"
                   />
                 </div>
               )}
             </div>
 
             {benefit.weekly_limit !== null && (
-              <p className="text-xs text-muted-foreground bg-primary/10 rounded-lg px-3 py-2">
+              <p className="text-xs text-muted-foreground bg-primary/10 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2">
                 📅 Cliente pode usar no máximo {benefit.weekly_limit}x por semana 
                 ({benefit.quantity} total no período)
               </p>
             )}
           </div>
         ))}
+
+        {localBenefits.length < services.length && (
+          <Button type="button" variant="outline" onClick={addBenefit} className="w-full">
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Serviço
+          </Button>
+        )}
+
+        {localBenefits.length === 0 && (
+          <div className="text-center py-6 text-muted-foreground">
+            <Scissors className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Nenhum benefício configurado</p>
+          </div>
+        )}
       </div>
 
-      {localBenefits.length < services.length && (
-        <Button type="button" variant="outline" onClick={addBenefit} className="w-full">
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Serviço
-        </Button>
-      )}
-
-      {localBenefits.length === 0 && (
-        <div className="text-center py-6 text-muted-foreground">
-          <Scissors className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Nenhum benefício configurado</p>
-        </div>
-      )}
-
-      <div className="flex gap-3 pt-4 border-t">
-        <Button variant="outline" onClick={onClose} className="flex-1">
+      {/* Fixed bottom buttons */}
+      <div className="flex gap-2 sm:gap-3 pt-4 border-t mt-auto flex-shrink-0 bg-background">
+        <Button variant="outline" onClick={onClose} className="flex-1 h-11">
           Cancelar
         </Button>
-        <Button onClick={handleSave} disabled={saving} className="flex-1">
+        <Button onClick={handleSave} disabled={saving} className="flex-1 h-11">
           {saving ? 'Salvando...' : 'Salvar Benefícios'}
         </Button>
       </div>
