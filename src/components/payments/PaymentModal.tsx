@@ -46,9 +46,9 @@ export function PaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
+      <DialogContent className="sm:max-w-md flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="flex items-center justify-between pr-6">
             <span>Registrar Pagamento</span>
             <span className="text-2xl font-bold text-primary">
               R$ {amount.toFixed(0)}
@@ -56,7 +56,7 @@ export function PaymentModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="flex-1 overflow-y-auto space-y-4 py-4 min-h-0">
           {clientName && (
             <p className="text-sm text-muted-foreground">
               Cliente: <span className="text-foreground font-medium">{clientName}</span>
@@ -68,7 +68,9 @@ export function PaymentModal({
             onSelect={setSelectedMethod}
             disabled={isProcessing}
           />
+        </div>
 
+        <div className="flex-shrink-0 pt-4 border-t">
           <Button
             onClick={handleConfirm}
             disabled={!selectedMethod || isProcessing}

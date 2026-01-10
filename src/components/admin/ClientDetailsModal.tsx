@@ -157,14 +157,14 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-              <User className="h-6 w-6 text-primary" />
+      <DialogContent className="max-w-2xl p-0 overflow-hidden flex flex-col">
+        <DialogHeader className="p-4 sm:p-6 pb-0 flex-shrink-0">
+          <DialogTitle className="flex items-center gap-3 pr-6">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold">{client.name || 'Sem nome'}</h2>
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold truncate">{client.name || 'Sem nome'}</h2>
               {client.phone && (
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <Phone className="h-3 w-3" />
@@ -176,44 +176,44 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
         </DialogHeader>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-3 px-6 py-4">
-          <div className="p-3 rounded-xl bg-muted/50 text-center">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+          <div className="p-2 sm:p-3 rounded-xl bg-muted/50 text-center">
             <Calendar className="h-4 w-4 mx-auto mb-1 text-primary" />
-            <p className="text-lg font-bold">{appointments.length}</p>
-            <p className="text-xs text-muted-foreground">Agendamentos</p>
+            <p className="text-base sm:text-lg font-bold">{appointments.length}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Agendamentos</p>
           </div>
-          <div className="p-3 rounded-xl bg-muted/50 text-center">
+          <div className="p-2 sm:p-3 rounded-xl bg-muted/50 text-center">
             <CheckCircle className="h-4 w-4 mx-auto mb-1 text-green-500" />
-            <p className="text-lg font-bold">{completedCount}</p>
-            <p className="text-xs text-muted-foreground">Concluídos</p>
+            <p className="text-base sm:text-lg font-bold">{completedCount}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Concluídos</p>
           </div>
-          <div className="p-3 rounded-xl bg-muted/50 text-center">
+          <div className="p-2 sm:p-3 rounded-xl bg-muted/50 text-center">
             <DollarSign className="h-4 w-4 mx-auto mb-1 text-green-500" />
-            <p className="text-lg font-bold">R$ {totalSpent.toFixed(0)}</p>
-            <p className="text-xs text-muted-foreground">Total Gasto</p>
+            <p className="text-base sm:text-lg font-bold">R$ {totalSpent.toFixed(0)}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Total Gasto</p>
           </div>
-          <div className="p-3 rounded-xl bg-muted/50 text-center">
+          <div className="p-2 sm:p-3 rounded-xl bg-muted/50 text-center">
             <Crown className="h-4 w-4 mx-auto mb-1 text-yellow-500" />
-            <p className="text-lg font-bold">{activePackages.length}</p>
-            <p className="text-xs text-muted-foreground">Pacotes Ativos</p>
+            <p className="text-base sm:text-lg font-bold">{activePackages.length}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Pacotes Ativos</p>
           </div>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="appointments" className="flex-1">
-          <TabsList className="w-full justify-start px-6 bg-transparent border-b rounded-none">
-            <TabsTrigger value="appointments" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+        <Tabs defaultValue="appointments" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="w-full justify-start px-4 sm:px-6 bg-transparent border-b rounded-none flex-shrink-0 overflow-x-auto">
+            <TabsTrigger value="appointments" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary text-xs sm:text-sm whitespace-nowrap">
               📅 Agendamentos
             </TabsTrigger>
-            <TabsTrigger value="packages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+            <TabsTrigger value="packages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary text-xs sm:text-sm whitespace-nowrap">
               👑 Pacotes
             </TabsTrigger>
-            <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+            <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary text-xs sm:text-sm whitespace-nowrap">
               📝 Notas
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="h-[300px]">
+          <ScrollArea className="flex-1 min-h-0 max-h-[40vh] sm:max-h-[300px]">
             <TabsContent value="appointments" className="p-6 pt-4 m-0">
               {loading ? (
                 <div className="flex justify-center py-8">

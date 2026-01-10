@@ -362,22 +362,22 @@ Aguardo a confirmação! 🙏`;
 
       {/* Payment Modal */}
       <Dialog open={paymentModal.open} onOpenChange={(open) => !open && handleClosePayment()}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="bg-primary/10 p-6 text-center border-b border-border">
+          <div className="bg-primary/10 p-4 sm:p-6 text-center border-b border-border flex-shrink-0">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', delay: 0.1 }}
-              className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center"
+              className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary/20 flex items-center justify-center"
             >
-              <Crown className="h-8 w-8 text-primary" />
+              <Crown className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
             </motion.div>
             <motion.h2
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-xl font-bold text-foreground"
+              className="text-lg sm:text-xl font-bold text-foreground"
             >
               Pacote {paymentModal.package?.name}
             </motion.h2>
@@ -385,44 +385,46 @@ Aguardo a confirmação! 🙏`;
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="text-3xl font-bold text-primary mt-2"
+              className="text-2xl sm:text-3xl font-bold text-primary mt-2"
             >
               R$ {paymentModal.package?.price}
             </motion.p>
           </div>
 
-          {/* Warning */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="p-4 bg-yellow-500/10 border-b border-border"
-          >
-            <p className="text-center text-sm font-medium text-yellow-600">
-              ⚠️ Pague o valor total via PIX e envie o comprovante no WhatsApp para ativar seu pacote
-            </p>
-          </motion.div>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {/* Warning */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="p-3 sm:p-4 bg-yellow-500/10 border-b border-border"
+            >
+              <p className="text-center text-xs sm:text-sm font-medium text-yellow-600">
+                ⚠️ Pague o valor total via PIX e envie o comprovante no WhatsApp para ativar seu pacote
+              </p>
+            </motion.div>
 
-          {/* PIX QR Code */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="p-6"
-          >
-            {paymentModal.package && (
-              <PixQRCode
-                amount={paymentModal.package.price}
-                transactionId={paymentModal.subscriptionId || paymentModal.package.id}
-              />
-            )}
-          </motion.div>
+            {/* PIX QR Code */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="p-4 sm:p-6"
+            >
+              {paymentModal.package && (
+                <PixQRCode
+                  amount={paymentModal.package.price}
+                  transactionId={paymentModal.subscriptionId || paymentModal.package.id}
+                />
+              )}
+            </motion.div>
+          </div>
 
           {/* WhatsApp Button */}
-          <div className="p-4 border-t border-border bg-muted/30 space-y-3">
+          <div className="p-3 sm:p-4 border-t border-border bg-muted/30 space-y-2 sm:space-y-3 flex-shrink-0">
             <Button
               onClick={handleWhatsAppClick}
-              className="w-full h-12 bg-green-600 hover:bg-green-700 gap-2"
+              className="w-full h-11 sm:h-12 bg-green-600 hover:bg-green-700 gap-2"
             >
               <WhatsAppIcon size={20} />
               Enviar Comprovante no WhatsApp
@@ -431,7 +433,7 @@ Aguardo a confirmação! 🙏`;
             <Button
               onClick={handleClosePayment}
               variant="outline"
-              className="w-full"
+              className="w-full h-10"
             >
               Fechar
             </Button>

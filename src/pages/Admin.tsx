@@ -265,7 +265,10 @@ export function AdminServicos() {
       )}
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent><DialogHeader><DialogTitle>{editingService ? 'Editar' : 'Novo'} Serviço</DialogTitle></DialogHeader>
+        <DialogContent className="flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>{editingService ? 'Editar' : 'Novo'} Serviço</DialogTitle>
+          </DialogHeader>
           <ServiceForm service={editingService} onSubmit={handleSubmit} onCancel={() => setShowForm(false)} />
         </DialogContent>
       </Dialog>
@@ -378,8 +381,8 @@ export function AdminPacotes() {
       </Tabs>
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Novo Pacote</DialogTitle>
           </DialogHeader>
           <PackageForm onSubmit={handleSubmit} onCancel={() => setShowForm(false)} />

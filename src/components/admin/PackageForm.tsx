@@ -59,104 +59,106 @@ export function PackageForm({ pkg, onSubmit, onCancel }: PackageFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="name">Nome do Pacote</Label>
-        <Input
-          id="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Ex: Pacote Mensal VIP"
-          required
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="description">Descrição</Label>
-        <Textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Descreva os benefícios do pacote..."
-          rows={3}
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[calc(85vh-80px)] overflow-hidden">
+      <div className="flex-1 overflow-y-auto space-y-4 pb-2 min-h-0">
         <div>
-          <Label htmlFor="price">Preço (R$)</Label>
+          <Label htmlFor="name">Nome do Pacote</Label>
           <Input
-            id="price"
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="100"
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex: Pacote Mensal VIP"
             required
           />
         </div>
+
         <div>
-          <Label htmlFor="duration">Duração (dias)</Label>
-          <Input
-            id="duration"
-            type="number"
-            value={durationDays}
-            onChange={(e) => setDurationDays(e.target.value)}
-            placeholder="30"
-            required
+          <Label htmlFor="description">Descrição</Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Descreva os benefícios do pacote..."
+            rows={2}
           />
         </div>
+
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          <div>
+            <Label htmlFor="price">Preço (R$)</Label>
+            <Input
+              id="price"
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="100"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="duration">Dias</Label>
+            <Input
+              id="duration"
+              type="number"
+              value={durationDays}
+              onChange={(e) => setDurationDays(e.target.value)}
+              placeholder="30"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="discount">Desc (%)</Label>
+            <Input
+              id="discount"
+              type="number"
+              value={discountPercent}
+              onChange={(e) => setDiscountPercent(e.target.value)}
+              placeholder="10"
+              min="0"
+              max="100"
+            />
+          </div>
+        </div>
+
         <div>
-          <Label htmlFor="discount">Desconto (%)</Label>
-          <Input
-            id="discount"
-            type="number"
-            value={discountPercent}
-            onChange={(e) => setDiscountPercent(e.target.value)}
-            placeholder="10"
-            min="0"
-            max="100"
-          />
+          <Label>Benefícios</Label>
+          <div className="flex gap-2 mt-2">
+            <Input
+              value={newBenefit}
+              onChange={(e) => setNewBenefit(e.target.value)}
+              placeholder="Adicionar benefício..."
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addBenefit())}
+            />
+            <Button type="button" variant="outline" onClick={addBenefit}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {benefits.map((benefit, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm"
+              >
+                {benefit}
+                <button type="button" onClick={() => removeBenefit(i)}>
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Switch checked={isActive} onCheckedChange={setIsActive} />
+          <Label>Pacote ativo</Label>
         </div>
       </div>
 
-      <div>
-        <Label>Benefícios</Label>
-        <div className="flex gap-2 mt-2">
-          <Input
-            value={newBenefit}
-            onChange={(e) => setNewBenefit(e.target.value)}
-            placeholder="Adicionar benefício..."
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addBenefit())}
-          />
-          <Button type="button" variant="outline" onClick={addBenefit}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-2 mt-3">
-          {benefits.map((benefit, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm"
-            >
-              {benefit}
-              <button type="button" onClick={() => removeBenefit(i)}>
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <Switch checked={isActive} onCheckedChange={setIsActive} />
-        <Label>Pacote ativo</Label>
-      </div>
-
-      <div className="flex gap-3 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
+      <div className="flex gap-2 sm:gap-3 pt-4 border-t flex-shrink-0">
+        <Button type="button" variant="outline" onClick={onCancel} className="flex-1 h-11">
           Cancelar
         </Button>
-        <Button type="submit" disabled={loading} className="flex-1">
+        <Button type="submit" disabled={loading} className="flex-1 h-11">
           {loading ? 'Salvando...' : pkg ? 'Atualizar' : 'Criar'}
         </Button>
       </div>
