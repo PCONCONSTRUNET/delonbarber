@@ -98,12 +98,39 @@ export function WhatsAppAI() {
           .eq('is_active', true);
 
         if (servicesData) {
+          // Track already matched service IDs to avoid duplicates
+          const matchedIds = new Set<string>();
+          
           for (const serviceName of serviceNames) {
-            const found = servicesData.find(s => 
-              s.name.toLowerCase().includes(serviceName.toLowerCase()) ||
-              serviceName.toLowerCase().includes(s.name.toLowerCase())
+            const normalizedSearch = serviceName.toLowerCase().trim();
+            
+            // Try exact match first
+            let found = servicesData.find(s => 
+              s.name.toLowerCase().trim() === normalizedSearch
             );
-            if (found) {
+            
+            // If no exact match, try partial matching
+            if (!found) {
+              found = servicesData.find(s => {
+                const normalizedName = s.name.toLowerCase().trim();
+                return normalizedName.includes(normalizedSearch) ||
+                       normalizedSearch.includes(normalizedName);
+              });
+            }
+            
+            // If still no match, try word-based matching
+            if (!found) {
+              const searchWords = normalizedSearch.split(/\s+/);
+              found = servicesData.find(s => {
+                const nameWords = s.name.toLowerCase().split(/\s+/);
+                return searchWords.some(word => 
+                  nameWords.some(nWord => nWord.includes(word) || word.includes(nWord))
+                );
+              });
+            }
+            
+            if (found && !matchedIds.has(found.id)) {
+              matchedIds.add(found.id);
               matchedServices.push({
                 id: found.id,
                 price: Number(found.price),
