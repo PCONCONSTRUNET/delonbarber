@@ -7,7 +7,8 @@ import {
   Crown,
   MoreHorizontal,
   Star,
-  Gift
+  Gift,
+  MessageSquare
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,7 @@ const moreItems = [
   { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
   { icon: Star, label: 'Avaliações', path: '/admin/avaliacoes' },
   { icon: Gift, label: 'Fidelidade', path: '/admin/fidelidade' },
+  { icon: MessageSquare, label: 'IA WhatsApp', path: '/admin/ia' },
 ];
 
 export function MobileAdminNav() {
