@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { CheckCircle, Calendar, Clock } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { PixQRCode } from './PixQRCode';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -75,26 +74,23 @@ export function PaymentConfirmationDialog({
           </div>
         </motion.div>
 
-        {/* PIX Payment */}
+        {/* Payment Info - sem QR Code */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
           className="p-6"
         >
-          <div className="text-center mb-4">
-            <p className="text-sm font-medium text-foreground">
-              💰 Pague o valor total para garantir seu horário
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              O pagamento antecipado evita cancelamentos
-            </p>
+          <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary mb-1">
+                R$ {amount.toFixed(0)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Pagamento a ser realizado no local
+              </p>
+            </div>
           </div>
-
-          <PixQRCode
-            amount={amount}
-            transactionId={appointmentId}
-          />
         </motion.div>
 
         {/* Footer */}

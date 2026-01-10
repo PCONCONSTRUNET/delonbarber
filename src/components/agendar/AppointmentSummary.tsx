@@ -293,7 +293,7 @@ export function AppointmentSummary({
         )}
       </AnimatePresence>
 
-      {/* PIX QR Code Preview */}
+      {/* PIX Info - sem QR Code */}
       <AnimatePresence>
         {selectedPayment === 'pix' && originalTotal > 0 && (
           <motion.div
@@ -302,18 +302,18 @@ export function AppointmentSummary({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-card/80 rounded-2xl p-4">
-              <div className="text-center mb-3">
-                <p className="text-sm font-medium text-primary">
-                  💰 Pague agora para garantir seu horário
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  O QR Code será gerado após a confirmação
-                </p>
-              </div>
-              <div className="flex justify-center">
-                <div className="w-32 h-32 bg-muted/50 rounded-xl flex items-center justify-center border-2 border-dashed border-primary/30">
-                  <PixIcon size={48} />
+            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <PixIcon size={24} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Pagamento via PIX
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Pague no local no dia do atendimento
+                  </p>
                 </div>
               </div>
             </div>
