@@ -90,7 +90,16 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
           <div className="space-y-3">
             {visibleServices
               .filter(s => s.category === category)
-              .sort((a, b) => category === 'corte' ? Number(b.price) - Number(a.price) : 0)
+              .sort((a, b) => {
+                const aHasBenefit = getRemainingForService(a.id) > 0;
+                const bHasBenefit = getRemainingForService(b.id) > 0;
+                // VIP benefits first
+                if (aHasBenefit && !bHasBenefit) return -1;
+                if (!aHasBenefit && bHasBenefit) return 1;
+                // Then by price (highest first for corte category)
+                if (category === 'corte') return Number(b.price) - Number(a.price);
+                return 0;
+              })
               .map((service, index) => {
                 const remaining = getRemainingForService(service.id);
                 const hasBenefit = remaining > 0;
