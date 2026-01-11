@@ -196,9 +196,14 @@ export function useClientPackages() {
   async function fetchSubscriptions() {
     setLoading(true);
 
+    // Single optimized query with JOINs
     const { data, error } = await supabase
       .from('client_packages')
-      .select('*')
+      .select(`
+        *,
+        profiles!client_packages_user_id_fkey(name, phone),
+        packages(name, price, discount_percent)
+      `)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -207,51 +212,62 @@ export function useClientPackages() {
       return;
     }
 
-    const subscriptionsWithDetails: ClientPackage[] = [];
+    if (!data || data.length === 0) {
+      setSubscriptions([]);
+      setLoading(false);
+      return;
+    }
 
-    for (const sub of data || []) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('name, phone')
-        .eq('user_id', sub.user_id)
-        .maybeSingle();
+    // Get unique package IDs and subscription IDs for batch queries
+    const packageIds = [...new Set(data.map(sub => sub.package_id))];
+    const subscriptionIds = data.map(sub => sub.id);
 
-      const { data: packageData } = await supabase
-        .from('packages')
-        .select('name, price, discount_percent')
-        .eq('id', sub.package_id)
-        .maybeSingle();
-
-      // Fetch benefits for this package
-      const { data: benefitsData } = await supabase
+    // Fetch all benefits and usage in parallel (2 queries instead of N*2)
+    const [benefitsResult, usageResult] = await Promise.all([
+      supabase
         .from('package_benefits')
         .select('*, services(id, name, price)')
-        .eq('package_id', sub.package_id);
-
-      // Fetch usage for this subscription
-      const { data: usageData } = await supabase
+        .in('package_id', packageIds),
+      supabase
         .from('client_package_usage')
         .select('*')
-        .eq('client_package_id', sub.id);
+        .in('client_package_id', subscriptionIds)
+    ]);
 
-      const formattedBenefits = (benefitsData || []).map((b: any) => ({
+    // Create lookup maps for O(1) access
+    const benefitsByPackage: Record<string, PackageBenefit[]> = {};
+    (benefitsResult.data || []).forEach((b: any) => {
+      const formatted = {
         id: b.id,
         package_id: b.package_id,
         service_id: b.service_id,
         quantity: b.quantity,
         weekly_limit: b.weekly_limit,
         service: b.services,
-      }));
+      };
+      if (!benefitsByPackage[b.package_id]) {
+        benefitsByPackage[b.package_id] = [];
+      }
+      benefitsByPackage[b.package_id].push(formatted);
+    });
 
-      subscriptionsWithDetails.push({
-        ...sub,
-        status: sub.status as 'active' | 'expired' | 'cancelled',
-        profile: profileData || { name: null, phone: null },
-        package: packageData || { name: 'Pacote', price: 0, discount_percent: 0 },
-        benefits: formattedBenefits,
-        usage: usageData || [],
-      });
-    }
+    const usageBySubscription: Record<string, ClientPackageUsage[]> = {};
+    (usageResult.data || []).forEach((u: any) => {
+      if (!usageBySubscription[u.client_package_id]) {
+        usageBySubscription[u.client_package_id] = [];
+      }
+      usageBySubscription[u.client_package_id].push(u);
+    });
+
+    // Map subscriptions with all data
+    const subscriptionsWithDetails: ClientPackage[] = data.map((sub: any) => ({
+      ...sub,
+      status: sub.status as 'active' | 'expired' | 'cancelled' | 'pending',
+      profile: sub.profiles || { name: null, phone: null },
+      package: sub.packages || { name: 'Pacote', price: 0, discount_percent: 0 },
+      benefits: benefitsByPackage[sub.package_id] || [],
+      usage: usageBySubscription[sub.id] || [],
+    }));
 
     setSubscriptions(subscriptionsWithDetails);
     setLoading(false);
