@@ -239,38 +239,39 @@ const Pacotes = () => {
             const isPopular = index === Math.floor(packages.length / 2); // Middle one is popular
 
             return (
-              <motion.div
-                key={pkg.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + index * 0.1 }}
-                whileHover={{ scale: 1.02, y: -4 }}
-                className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl glass-effect relative overflow-hidden group ${
-                  isPopular ? 'border-2 border-primary' : ''
-                }`}
-              >
-                {/* Reflective red glow effect - top */}
-                <div className="absolute -top-20 -left-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                
-                {/* Reflective red glow effect - bottom right */}
-                <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-primary/15 rounded-full blur-2xl opacity-50 group-hover:opacity-80 transition-opacity duration-500" />
-                
-                {/* Moving shine effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute top-0 -left-full h-full w-1/2 bg-gradient-to-r from-transparent via-primary/10 to-transparent skew-x-12 group-hover:animate-shine" />
-                </div>
-                
-                {/* Subtle red border glow on hover */}
-                <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                  style={{ boxShadow: '0 0 30px hsl(4 77% 50% / 0.3), inset 0 0 20px hsl(4 77% 50% / 0.05)' }}
-                />
-                {/* Popular badge */}
+              <div key={pkg.id} className={`relative ${isPopular ? 'mt-4' : ''}`}>
+                {/* Popular badge - outside the card to avoid overflow issues */}
                 {isPopular && (
-                  <div className="absolute -top-3 sm:-top-3.5 left-1/2 -translate-x-1/2 px-3 sm:px-4 py-1 rounded-full bg-primary text-primary-foreground text-[10px] sm:text-xs font-bold flex items-center gap-1 shadow-lg z-30">
-                    <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1.5 shadow-lg z-40 whitespace-nowrap">
+                    <Star className="h-3 w-3 fill-current" />
                     Mais Popular
                   </div>
                 )}
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + index * 0.1 }}
+                  whileHover={{ scale: 1.02, y: -4 }}
+                  className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl glass-effect relative overflow-hidden group ${
+                    isPopular ? 'border-2 border-primary pt-6' : ''
+                  }`}
+                >
+                  {/* Reflective red glow effect - top */}
+                  <div className="absolute -top-20 -left-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  
+                  {/* Reflective red glow effect - bottom right */}
+                  <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-primary/15 rounded-full blur-2xl opacity-50 group-hover:opacity-80 transition-opacity duration-500" />
+                  
+                  {/* Moving shine effect */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute top-0 -left-full h-full w-1/2 bg-gradient-to-r from-transparent via-primary/10 to-transparent skew-x-12 group-hover:animate-shine" />
+                  </div>
+                  
+                  {/* Subtle red border glow on hover */}
+                  <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                    style={{ boxShadow: '0 0 30px hsl(4 77% 50% / 0.3), inset 0 0 20px hsl(4 77% 50% / 0.05)' }}
+                  />
 
                 <div className="flex items-start justify-between mb-3 sm:mb-4 relative z-10">
                   <div>
@@ -377,6 +378,7 @@ const Pacotes = () => {
                   )}
                 </Button>
               </motion.div>
+              </div>
             );
           })}
         </div>
