@@ -159,6 +159,8 @@ export type Database = {
           day_of_week: number
           id: string
           is_open: boolean | null
+          lunch_end: string | null
+          lunch_start: string | null
           open_time: string
         }
         Insert: {
@@ -166,6 +168,8 @@ export type Database = {
           day_of_week: number
           id?: string
           is_open?: boolean | null
+          lunch_end?: string | null
+          lunch_start?: string | null
           open_time: string
         }
         Update: {
@@ -173,6 +177,8 @@ export type Database = {
           day_of_week?: number
           id?: string
           is_open?: boolean | null
+          lunch_end?: string | null
+          lunch_start?: string | null
           open_time?: string
         }
         Relationships: []

@@ -27,6 +27,8 @@ interface BusinessHours {
   open_time: string;
   close_time: string;
   is_open: boolean;
+  lunch_start: string | null;
+  lunch_end: string | null;
 }
 
 export function BlockedSlotsManager() {
@@ -78,12 +80,28 @@ export function BlockedSlotsManager() {
     const slots: string[] = [];
     const [openHour, openMin] = hours.open_time.split(':').map(Number);
     const [closeHour, closeMin] = hours.close_time.split(':').map(Number);
+
+    // Parse lunch break times if they exist
+    let lunchStartHour = -1, lunchStartMin = -1, lunchEndHour = -1, lunchEndMin = -1;
+    if (hours.lunch_start && hours.lunch_end) {
+      [lunchStartHour, lunchStartMin] = hours.lunch_start.split(':').map(Number);
+      [lunchEndHour, lunchEndMin] = hours.lunch_end.split(':').map(Number);
+    }
     
     let currentHour = openHour;
     let currentMin = openMin;
 
     while (currentHour < closeHour || (currentHour === closeHour && currentMin < closeMin)) {
-      slots.push(`${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`);
+      // Check if current time is during lunch break
+      const isLunchBreak = lunchStartHour >= 0 && (
+        (currentHour > lunchStartHour || (currentHour === lunchStartHour && currentMin >= lunchStartMin)) &&
+        (currentHour < lunchEndHour || (currentHour === lunchEndHour && currentMin < lunchEndMin))
+      );
+
+      if (!isLunchBreak) {
+        slots.push(`${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`);
+      }
+      
       currentMin += 30;
       if (currentMin >= 60) {
         currentMin = 0;
