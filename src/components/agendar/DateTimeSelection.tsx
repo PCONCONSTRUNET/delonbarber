@@ -25,7 +25,7 @@ export function DateTimeSelection({
   onSelectTime
 }: DateTimeSelectionProps) {
 
-  // Generate available time slots based on business hours
+  // Generate available time slots based on business hours (excluding lunch break)
   const availableSlots = useMemo(() => {
     if (!selectedDate) return [];
 
@@ -38,12 +38,27 @@ export function DateTimeSelection({
     const [openHour, openMin] = dayHours.open_time.split(':').map(Number);
     const [closeHour, closeMin] = dayHours.close_time.split(':').map(Number);
 
+    // Parse lunch break times if they exist
+    let lunchStartHour = -1, lunchStartMin = -1, lunchEndHour = -1, lunchEndMin = -1;
+    if (dayHours.lunch_start && dayHours.lunch_end) {
+      [lunchStartHour, lunchStartMin] = dayHours.lunch_start.split(':').map(Number);
+      [lunchEndHour, lunchEndMin] = dayHours.lunch_end.split(':').map(Number);
+    }
+
     let currentHour = openHour;
     let currentMin = openMin;
 
     while (currentHour < closeHour || (currentHour === closeHour && currentMin < closeMin)) {
-      const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}:00`;
-      slots.push(timeStr);
+      // Check if current time is during lunch break
+      const isLunchBreak = lunchStartHour >= 0 && (
+        (currentHour > lunchStartHour || (currentHour === lunchStartHour && currentMin >= lunchStartMin)) &&
+        (currentHour < lunchEndHour || (currentHour === lunchEndHour && currentMin < lunchEndMin))
+      );
+
+      if (!isLunchBreak) {
+        const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}:00`;
+        slots.push(timeStr);
+      }
       
       currentMin += 30;
       if (currentMin >= 60) {

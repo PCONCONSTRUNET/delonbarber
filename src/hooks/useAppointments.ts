@@ -18,6 +18,8 @@ export interface BusinessHours {
   open_time: string;
   close_time: string;
   is_open: boolean;
+  lunch_start: string | null;
+  lunch_end: string | null;
 }
 
 export interface Appointment {
