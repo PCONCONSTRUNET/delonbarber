@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 export interface Service {
   id: string;
@@ -214,7 +215,7 @@ export function useAppointments() {
       .from('appointments')
       .insert({
         user_id: user.id,
-        appointment_date: date.toISOString().split('T')[0],
+        appointment_date: format(date, 'yyyy-MM-dd'),
         appointment_time: time,
         notes: notes || null,
         total_price: isSubscriberPayment ? 0 : totalPrice,
@@ -344,7 +345,7 @@ export function useBookedSlots(date: Date | undefined) {
     async function fetchBookedSlots() {
       if (!date) return;
 
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = format(date, 'yyyy-MM-dd');
 
       // Fetch booked appointments
       const { data: appointments, error: aptError } = await supabase
