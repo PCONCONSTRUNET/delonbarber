@@ -101,14 +101,31 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 // Show browser notification
-export function showBrowserNotification(title: string, body: string, onClick?: () => void) {
+export async function showBrowserNotification(title: string, body: string, onClick?: () => void) {
   if (!('Notification' in window) || Notification.permission !== 'granted') {
     return;
   }
   
+  // Try to send via service worker first (works better in background)
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    try {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SHOW_NOTIFICATION',
+        title,
+        body,
+        url: '/admin/agenda',
+        tag: 'appointment-notification',
+      });
+      return;
+    } catch (e) {
+      console.log('Service worker notification failed, falling back to Notification API');
+    }
+  }
+  
+  // Fallback to regular Notification API
   const notification = new Notification(title, {
     body,
-    icon: '/favicon.ico',
+    icon: '/icons/icon-192.png',
     tag: 'appointment-notification',
   });
   

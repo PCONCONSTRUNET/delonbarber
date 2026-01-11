@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { sendPushToAdmins } from '@/lib/pushNotifications';
 
 export interface Service {
   id: string;
@@ -331,6 +332,12 @@ export function useAppointments() {
       }));
 
       await supabase.from('notifications').insert(notifications);
+
+      // Send push notification to admins (for background alerts)
+      sendPushToAdmins(
+        '📅 Novo Agendamento',
+        `${selectedServices.map(s => s.name).join(', ')} para ${date.toLocaleDateString('pt-BR')} às ${time.slice(0, 5)}`
+      );
     }
 
     // Show appropriate toast message
