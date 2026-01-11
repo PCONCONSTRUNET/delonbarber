@@ -121,7 +121,7 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Você já usou {weeklyInfo?.used}/{weeklyInfo?.limit} esta semana</p>
-                              <p className="text-xs text-muted-foreground">Aguarde a próxima semana</p>
+                              <p className="text-xs text-muted-foreground">Renova na próxima segunda-feira</p>
                             </TooltipContent>
                           </Tooltip>
                         )}

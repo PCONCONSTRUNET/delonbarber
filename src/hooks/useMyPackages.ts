@@ -64,10 +64,10 @@ export function useMyPackages() {
 
     const packagesWithBenefits: MyPackage[] = [];
 
-    // Calculate current week boundaries
+    // Calculate current week boundaries (Monday to Sunday)
     const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 0 }); // Sunday
-    const weekEnd = endOfWeek(now, { weekStartsOn: 0 }); // Saturday
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 }); // Sunday
 
     for (const cp of clientPackages || []) {
       // Fetch package details
