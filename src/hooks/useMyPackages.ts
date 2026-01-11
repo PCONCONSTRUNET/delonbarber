@@ -80,16 +80,27 @@ export function useMyPackages() {
       if (!packageData) continue;
 
       // Fetch benefits for this package with weekly_limit
-      const { data: benefitsData } = await supabase
+      const { data: benefitsData, error: benefitsError } = await supabase
         .from('package_benefits')
         .select('id, service_id, quantity, weekly_limit, services(id, name, price)')
         .eq('package_id', cp.package_id);
 
+      if (benefitsError) {
+        console.error('Error fetching benefits for package:', benefitsError);
+        continue;
+      }
+
       // Fetch all usage for this client package
-      const { data: usageData } = await supabase
+      const { data: usageData, error: usageError } = await supabase
         .from('client_package_usage')
         .select('service_id, used_at')
         .eq('client_package_id', cp.id);
+
+      if (usageError) {
+        console.error('Error fetching usage for package:', usageError);
+      }
+
+      console.log('Package usage data for', cp.id, ':', usageData);
 
       // Count total usage per service
       const usageByService = (usageData || []).reduce((acc, u) => {
@@ -105,6 +116,9 @@ export function useMyPackages() {
         }
         return acc;
       }, {} as Record<string, number>);
+
+      console.log('Usage by service:', usageByService);
+      console.log('Usage this week:', usageThisWeekByService);
 
       // Build benefits with usage info
       const benefits: MyPackageBenefit[] = (benefitsData || []).map((b: any) => {

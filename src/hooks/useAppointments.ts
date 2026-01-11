@@ -148,12 +148,18 @@ export function useAppointments() {
     }
 
     // Check for active package benefits
-    const { data: activePackages } = await supabase
+    const { data: activePackages, error: pkgError } = await supabase
       .from('client_packages')
       .select('id, package_id')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .gte('end_date', new Date().toISOString().split('T')[0]);
+
+    if (pkgError) {
+      console.error('Error fetching active packages:', pkgError);
+    }
+
+    console.log('Active packages for user:', activePackages);
 
     // Get benefits and usage for active packages
     const benefitsToUse: { clientPackageId: string; serviceId: string }[] = [];
@@ -165,19 +171,34 @@ export function useAppointments() {
     const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
     const weekEnd = endOfWeek(now, { weekStartsOn: 1 }); // Sunday
 
+    console.log('Week boundaries:', { weekStart, weekEnd });
+
     if (activePackages && activePackages.length > 0) {
       for (const pkg of activePackages) {
         // Get benefits for this package with weekly_limit
-        const { data: benefits } = await supabase
+        const { data: benefits, error: benefitsError } = await supabase
           .from('package_benefits')
           .select('service_id, quantity, weekly_limit')
           .eq('package_id', pkg.package_id);
 
+        if (benefitsError) {
+          console.error('Error fetching benefits:', benefitsError);
+          continue;
+        }
+
+        console.log('Benefits for package', pkg.id, ':', benefits);
+
         // Get current usage for this client package
-        const { data: usage } = await supabase
+        const { data: usage, error: usageError } = await supabase
           .from('client_package_usage')
           .select('service_id, used_at')
           .eq('client_package_id', pkg.id);
+
+        if (usageError) {
+          console.error('Error fetching usage:', usageError);
+        }
+
+        console.log('Current usage for package', pkg.id, ':', usage);
 
         // Count total usage per service
         const usageByService = (usage || []).reduce((acc, u) => {
@@ -194,6 +215,9 @@ export function useAppointments() {
           return acc;
         }, {} as Record<string, number>);
 
+        console.log('Usage by service:', usageByService);
+        console.log('Usage this week by service:', usageThisWeekByService);
+
         // Check which selected services have available benefits
         for (const service of selectedServices) {
           // Skip if we already found a benefit for this service
@@ -201,23 +225,31 @@ export function useAppointments() {
           if (weeklyBlockedServices.includes(service.id)) continue;
 
           const benefit = benefits?.find(b => b.service_id === service.id);
+          console.log('Checking service', service.name, ':', { benefit, serviceId: service.id });
+          
           if (benefit) {
             const used = usageByService[service.id] || 0;
             const remaining = benefit.quantity - used;
             
+            console.log('Benefit found:', { used, remaining, quantity: benefit.quantity, weeklyLimit: benefit.weekly_limit });
+            
             // Check weekly limit if applicable
-            if (benefit.weekly_limit !== null) {
+            if (benefit.weekly_limit !== null && benefit.weekly_limit > 0) {
               const usedThisWeek = usageThisWeekByService[service.id] || 0;
               const remainingThisWeek = benefit.weekly_limit - usedThisWeek;
               
+              console.log('Weekly limit check:', { usedThisWeek, remainingThisWeek, weeklyLimit: benefit.weekly_limit });
+              
               if (remainingThisWeek <= 0) {
                 // Weekly limit reached - block this service
+                console.log('Weekly limit reached for service:', service.name);
                 weeklyBlockedServices.push(service.id);
                 continue;
               }
             }
             
             if (remaining > 0) {
+              console.log('Adding benefit to use:', { clientPackageId: pkg.id, serviceId: service.id });
               benefitsToUse.push({
                 clientPackageId: pkg.id,
                 serviceId: service.id,
@@ -228,6 +260,10 @@ export function useAppointments() {
         }
       }
     }
+
+    console.log('Final benefits to use:', benefitsToUse);
+    console.log('Services with benefits:', servicesWithBenefits);
+    console.log('Weekly blocked services:', weeklyBlockedServices);
 
     // If any services are blocked by weekly limit and user is trying to use as subscriber
     if (weeklyBlockedServices.length > 0 && paymentMethod === 'subscriber') {
@@ -242,6 +278,21 @@ export function useAppointments() {
         variant: "destructive"
       });
       return null;
+    }
+
+    // IMPORTANT: If user selected subscriber payment but there are services without benefits
+    // we should block this - they can't use subscriber payment for services not in package
+    if (paymentMethod === 'subscriber') {
+      const servicesWithoutBenefits = selectedServices.filter(s => !servicesWithBenefits.includes(s.id));
+      if (servicesWithoutBenefits.length > 0) {
+        const names = servicesWithoutBenefits.map(s => s.name).join(', ');
+        toast({
+          title: "Serviço não incluído no pacote",
+          description: `Os seguintes serviços não estão no seu pacote: ${names}. Escolha outro método de pagamento.`,
+          variant: "destructive"
+        });
+        return null;
+      }
     }
 
     // Calculate price (services with benefits are free)
@@ -300,19 +351,38 @@ export function useAppointments() {
     }
 
     // Register benefit usage for services covered by packages
-    if (benefitsToUse.length > 0) {
-      const usageRecords = benefitsToUse.map(b => ({
-        client_package_id: b.clientPackageId,
-        service_id: b.serviceId,
-        appointment_id: appointment.id,
-      }));
+    // CRITICAL: This must be done when using subscriber payment method
+    if (benefitsToUse.length > 0 || (isSubscriberPayment && servicesWithBenefits.length > 0)) {
+      // Use benefitsToUse if available, otherwise build from servicesWithBenefits for subscriber payments
+      const recordsToInsert = benefitsToUse.length > 0 ? benefitsToUse : [];
+      
+      console.log('Registering usage records:', recordsToInsert);
+      
+      if (recordsToInsert.length > 0) {
+        const usageRecords = recordsToInsert.map(b => ({
+          client_package_id: b.clientPackageId,
+          service_id: b.serviceId,
+          appointment_id: appointment.id,
+        }));
 
-      const { error: usageError } = await supabase
-        .from('client_package_usage')
-        .insert(usageRecords);
+        console.log('Inserting usage records:', usageRecords);
 
-      if (usageError) {
-        console.error('Error registering usage:', usageError);
+        const { data: insertedUsage, error: usageError } = await supabase
+          .from('client_package_usage')
+          .insert(usageRecords)
+          .select();
+
+        if (usageError) {
+          console.error('Error registering usage:', usageError);
+          // Still show error to user but don't fail the appointment
+          toast({
+            title: "Atenção",
+            description: "O agendamento foi criado, mas houve um erro ao registrar o uso do benefício.",
+            variant: "destructive"
+          });
+        } else {
+          console.log('Usage records inserted successfully:', insertedUsage);
+        }
       }
     }
 
