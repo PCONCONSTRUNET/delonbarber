@@ -244,10 +244,26 @@ const Pacotes = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 + index * 0.1 }}
-                className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl glass-effect relative ${
+                whileHover={{ scale: 1.02, y: -4 }}
+                className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl glass-effect relative overflow-hidden group ${
                   isPopular ? 'border-2 border-primary' : ''
                 }`}
               >
+                {/* Reflective red glow effect - top */}
+                <div className="absolute -top-20 -left-20 w-40 h-40 bg-primary/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                {/* Reflective red glow effect - bottom right */}
+                <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-primary/15 rounded-full blur-2xl opacity-50 group-hover:opacity-80 transition-opacity duration-500" />
+                
+                {/* Moving shine effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="absolute top-0 -left-full h-full w-1/2 bg-gradient-to-r from-transparent via-primary/10 to-transparent skew-x-12 group-hover:animate-shine" />
+                </div>
+                
+                {/* Subtle red border glow on hover */}
+                <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{ boxShadow: '0 0 30px hsl(4 77% 50% / 0.3), inset 0 0 20px hsl(4 77% 50% / 0.05)' }}
+                />
                 {/* Popular badge */}
                 {isPopular && (
                   <div className="absolute -top-2.5 sm:-top-3 left-1/2 -translate-x-1/2 px-3 sm:px-4 py-0.5 sm:py-1 rounded-full bg-primary text-primary-foreground text-[10px] sm:text-xs font-bold flex items-center gap-1">
@@ -256,11 +272,18 @@ const Pacotes = () => {
                   </div>
                 )}
 
-                <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="flex items-start justify-between mb-3 sm:mb-4 relative z-10">
                   <div>
                     <h3 className="font-display text-lg sm:text-xl font-semibold">{pkg.name}</h3>
                     <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-2xl sm:text-3xl font-bold text-primary">R$ {pkg.price}</span>
+                      <motion.span 
+                        className="text-2xl sm:text-3xl font-bold text-primary"
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", delay: 0.2 + index * 0.1 }}
+                      >
+                        R$ {pkg.price}
+                      </motion.span>
                       <span className="text-xs sm:text-sm text-muted-foreground">/{pkg.duration_days} dias</span>
                     </div>
                     {totalValue > 0 && (
@@ -274,30 +297,41 @@ const Pacotes = () => {
                       </Badge>
                     )}
                   </div>
-                  <Crown className={`h-6 w-6 sm:h-8 sm:w-8 ${isPopular ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <motion.div
+                    whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Crown className={`h-6 w-6 sm:h-8 sm:w-8 ${isPopular ? 'text-primary drop-shadow-[0_0_8px_hsl(4,77%,50%)]' : 'text-muted-foreground'}`} />
+                  </motion.div>
                 </div>
 
                 {/* Description */}
                 {pkg.description && (
-                  <p className="text-sm text-muted-foreground mb-4">{pkg.description}</p>
+                  <p className="text-sm text-muted-foreground mb-4 relative z-10">{pkg.description}</p>
                 )}
 
                 {/* Benefits from package_benefits */}
                 {pkg.packageBenefits.length > 0 && (
-                  <div className="mb-4">
+                  <div className="mb-4 relative z-10">
                     <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
                       <Gift className="h-3 w-3" />
                       Serviços incluídos:
                     </p>
                     <ul className="space-y-2">
                       {pkg.packageBenefits.map((benefit, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm">
+                        <motion.li 
+                          key={i} 
+                          className="flex items-center gap-2 text-sm"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.3 + index * 0.1 + i * 0.05 }}
+                        >
                           <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
                           <span>{benefit.quantity}x {benefit.service?.name}</span>
                           <span className="text-xs text-muted-foreground">
                             (R$ {(benefit.service?.price || 0) * benefit.quantity})
                           </span>
-                        </li>
+                        </motion.li>
                       ))}
                     </ul>
                   </div>
