@@ -5,6 +5,7 @@ import { useMyPackages } from '@/hooks/useMyPackages';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { nextMonday, differenceInDays, isMonday } from 'date-fns';
 
 interface ServiceSelectionProps {
   services: Service[];
@@ -24,6 +25,16 @@ const categoryOrder = ['corte', 'barba', 'sobrancelha', 'combo', 'adicional'];
 
 export function ServiceSelection({ services, selectedServices, onToggleService }: ServiceSelectionProps) {
   const { packages, getRemainingForService, isBlockedByWeeklyLimit, getWeeklyLimitInfo } = useMyPackages();
+  
+  // Calculate days until next Monday (renewal day)
+  const getDaysUntilRenewal = (): number => {
+    const today = new Date();
+    if (isMonday(today)) return 7; // If today is Monday, next renewal is in 7 days
+    const next = nextMonday(today);
+    return differenceInDays(next, today);
+  };
+  
+  const daysUntilRenewal = getDaysUntilRenewal();
   
   // Check if user has any active package
   const hasActivePackage = packages.some(p => p.status === 'active');
@@ -120,8 +131,10 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Você já usou {weeklyInfo?.used}/{weeklyInfo?.limit} esta semana</p>
-                              <p className="text-xs text-muted-foreground">Renova na próxima segunda-feira</p>
+                              <p className="font-medium">Você já usou {weeklyInfo?.used}/{weeklyInfo?.limit} esta semana</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                🔄 Renova em {daysUntilRenewal} {daysUntilRenewal === 1 ? 'dia' : 'dias'} (segunda-feira)
+                              </p>
                             </TooltipContent>
                           </Tooltip>
                         )}
