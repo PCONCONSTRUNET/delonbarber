@@ -5,6 +5,16 @@ import { Crown, Check, ArrowLeft, Star, Clock, Loader2, Gift, CheckCircle } from
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +47,10 @@ const Pacotes = () => {
   const [packages, setPackages] = useState<PackageWithBenefits[]>([]);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    package: PackageWithBenefits | null;
+  }>({ open: false, package: null });
   const [paymentModal, setPaymentModal] = useState<{
     open: boolean;
     package: PackageWithBenefits | null;
@@ -92,12 +106,20 @@ const Pacotes = () => {
     setLoading(false);
   }
 
-  const handleSubscribe = async (pkg: PackageWithBenefits) => {
+  const handleSubscribeClick = (pkg: PackageWithBenefits) => {
     if (!user) {
       navigate('/login');
       return;
     }
+    // Show confirmation dialog
+    setConfirmDialog({ open: true, package: pkg });
+  };
 
+  const handleConfirmSubscribe = async () => {
+    const pkg = confirmDialog.package;
+    if (!pkg || !user) return;
+
+    setConfirmDialog({ open: false, package: null });
     setSubscribing(pkg.id);
 
     try {
@@ -109,7 +131,7 @@ const Pacotes = () => {
         package_id: pkg.id,
         start_date: startDate,
         end_date: endDate,
-        status: 'pending', // Status pending until admin confirms
+        status: 'active', // Auto-activate subscription
       });
 
       if (error) {
@@ -120,7 +142,7 @@ const Pacotes = () => {
           variant: "destructive",
         });
       } else {
-        // Show success modal without QR code
+        // Show success modal
         setPaymentModal({
           open: true,
           package: pkg,
@@ -306,7 +328,7 @@ const Pacotes = () => {
                 </div>
 
                 <Button
-                  onClick={() => handleSubscribe(pkg)}
+                  onClick={() => handleSubscribeClick(pkg)}
                   className={`w-full ${isPopular ? 'glow-effect' : ''}`}
                   variant={isPopular ? 'default' : 'outline'}
                   disabled={subscribing === pkg.id}
@@ -355,7 +377,7 @@ const Pacotes = () => {
               transition={{ delay: 0.2 }}
               className="text-xl sm:text-2xl font-bold text-foreground"
             >
-              Solicitação Enviada! 🎉
+              Assinatura Ativada! 🎉
             </motion.h2>
             <motion.p
               initial={{ opacity: 0 }}
@@ -384,10 +406,10 @@ const Pacotes = () => {
           >
             <div className="bg-muted/50 rounded-xl p-4">
               <p className="text-sm text-muted-foreground">
-                Sua solicitação foi registrada com sucesso! 
+                Sua assinatura VIP foi ativada com sucesso!
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                Aguarde a confirmação do administrador para ativar seu pacote VIP.
+                Você já pode aproveitar todos os benefícios do seu pacote.
               </p>
             </div>
           </motion.div>
@@ -403,6 +425,29 @@ const Pacotes = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmDialog.open} onOpenChange={(open) => !open && setConfirmDialog({ open: false, package: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Assinatura</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Você está prestes a assinar o pacote:</p>
+              <p className="font-semibold text-foreground text-lg">
+                {confirmDialog.package?.name} - R$ {confirmDialog.package?.price}
+              </p>
+              <p>Válido por {confirmDialog.package?.duration_days} dias.</p>
+              <p className="text-xs mt-2">Deseja confirmar esta assinatura?</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSubscribe}>
+              Confirmar Assinatura
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
