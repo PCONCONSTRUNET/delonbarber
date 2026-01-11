@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { playNotificationSound, showBrowserNotification, requestNotificationPermission } from '@/lib/notifications';
 import { toast } from 'sonner';
@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 interface AdminNotificationContextValue {
   pendingCount: number;
   isAdmin: boolean;
-  subscribeToPush: () => Promise<void>;
 }
 
 const AdminNotificationContext = createContext<AdminNotificationContextValue | null>(null);
@@ -22,7 +21,6 @@ export function useGlobalAdminNotifications() {
 export function AdminNotificationProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const [userId, setUserId] = useState<string | null>(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Check if user is admin
@@ -31,11 +29,8 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         setIsAdmin(false);
-        setUserId(null);
         return;
       }
-
-      setUserId(session.user.id);
 
       const { data: roles } = await supabase
         .from('user_roles')
@@ -130,12 +125,13 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
             '🗓️ Novo Agendamento!',
             `${clientName} agendou para ${date} às ${time}`,
             () => {
+              window.focus();
               window.location.href = '/admin/agenda';
             }
           );
 
           // Update pending count
-          if (newAppointment.status === 'pending') {
+          if (newAppointment.status === 'pending' || newAppointment.status === 'confirmed') {
             setPendingCount(prev => prev + 1);
           }
         }
@@ -153,9 +149,9 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
 
           // Update pending count based on status change
           if (updated.status !== old.status) {
-            if (old.status === 'pending' && updated.status !== 'pending') {
+            if (['pending', 'confirmed'].includes(old.status) && !['pending', 'confirmed'].includes(updated.status)) {
               setPendingCount(prev => Math.max(0, prev - 1));
-            } else if (old.status !== 'pending' && updated.status === 'pending') {
+            } else if (!['pending', 'confirmed'].includes(old.status) && ['pending', 'confirmed'].includes(updated.status)) {
               setPendingCount(prev => prev + 1);
             }
           }
@@ -168,75 +164,9 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
     };
   }, [isAdmin, initialLoadComplete]);
 
-  // Subscribe to push notifications
-  const subscribeToPush = useCallback(async () => {
-    if (!userId || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.log('Push notifications not supported');
-      return;
-    }
-
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      
-      // Check if already subscribed
-      const existingSubscription = await registration.pushManager.getSubscription();
-      if (existingSubscription) {
-        console.log('Already subscribed to push notifications');
-        return;
-      }
-
-      // Get VAPID public key from server
-      const { data: vapidData } = await supabase.functions.invoke('get-vapid-key');
-      
-      if (!vapidData?.publicKey) {
-        console.error('Could not get VAPID public key');
-        return;
-      }
-
-      // Subscribe to push
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidData.publicKey)
-      });
-
-      const subscriptionJSON = subscription.toJSON();
-
-      // Save subscription to database
-      await supabase.from('push_subscriptions').upsert({
-        user_id: userId,
-        endpoint: subscriptionJSON.endpoint!,
-        p256dh: subscriptionJSON.keys!.p256dh,
-        auth: subscriptionJSON.keys!.auth,
-      }, {
-        onConflict: 'user_id,endpoint'
-      });
-
-      console.log('Successfully subscribed to push notifications');
-      toast.success('Notificações push ativadas!');
-    } catch (error) {
-      console.error('Failed to subscribe to push:', error);
-    }
-  }, [userId]);
-
   return (
-    <AdminNotificationContext.Provider value={{ pendingCount, isAdmin, subscribeToPush }}>
+    <AdminNotificationContext.Provider value={{ pendingCount, isAdmin }}>
       {children}
     </AdminNotificationContext.Provider>
   );
-}
-
-// Helper function to convert VAPID key
-function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray.buffer;
 }

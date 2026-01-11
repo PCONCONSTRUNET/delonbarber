@@ -1,11 +1,9 @@
-import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AdminNotificationProvider } from "@/contexts/AdminNotificationContext";
-import { registerPushServiceWorker } from "@/lib/push-notifications";
 import Index from "./pages/Index";
 import Servicos from "./pages/Servicos";
 import Agendar from "./pages/Agendar";
@@ -19,10 +17,6 @@ import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinance
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Register push service worker on app load
-  useEffect(() => {
-    registerPushServiceWorker();
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
