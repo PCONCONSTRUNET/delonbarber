@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Crown, User, LogOut, ArrowLeft, Shield, Gift } from 'lucide-react';
+import { Calendar, Crown, User, LogOut, ArrowLeft, Shield, Gift, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useIsAdmin } from '@/hooks/useAdmin';
 import { useAdminNotifications } from '@/hooks/useNotifications';
+import { useMyPackages } from '@/hooks/useMyPackages';
+import { Badge } from '@/components/ui/badge';
 
 const Cliente = () => {
   const navigate = useNavigate();
@@ -17,6 +19,10 @@ const Cliente = () => {
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const { isAdmin } = useIsAdmin();
+  const { packages } = useMyPackages();
+  
+  // Check if user has any active VIP package
+  const hasActiveVIP = packages.some(p => p.status === 'active');
 
   // Subscribe to admin notifications if admin
   useAdminNotifications({
@@ -150,6 +156,24 @@ const Cliente = () => {
           transition={{ delay: 0.1 }}
           className="text-center mb-8"
         >
+          {/* VIP Active Badge */}
+          <AnimatePresence>
+            {hasActiveVIP && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="flex justify-center mb-3"
+              >
+                <Badge className="bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 text-black px-4 py-1.5 text-sm font-bold shadow-lg">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  VIP ATIVO
+                  <Crown className="w-4 h-4 ml-2" />
+                </Badge>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           <h2 className="font-display text-2xl sm:text-3xl font-bold mb-2">
             Olá, <span className="text-gradient">Cliente</span>!
           </h2>
