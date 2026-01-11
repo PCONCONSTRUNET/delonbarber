@@ -28,10 +28,23 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
   // Check if user has any active package
   const hasActivePackage = packages.some(p => p.status === 'active');
   
-  // Filter services: hide subscribers_only services for non-subscribers
+  // Get all service IDs that are included in the user's active packages benefits
+  const userBenefitServiceIds = new Set<string>();
+  packages.forEach(pkg => {
+    if (pkg.status === 'active') {
+      pkg.benefits.forEach(benefit => {
+        userBenefitServiceIds.add(benefit.service_id);
+      });
+    }
+  });
+  
+  // Filter services based on visibility rules:
+  // - Regular services: show to everyone
+  // - Subscribers_only services: show ONLY if user has an active package that includes this service as a benefit
   const visibleServices = services.filter(service => {
-    if (service.subscribers_only && !hasActivePackage) {
-      return false;
+    if (service.subscribers_only) {
+      // Only show exclusive services if user's package includes it as a benefit
+      return userBenefitServiceIds.has(service.id);
     }
     return true;
   });
