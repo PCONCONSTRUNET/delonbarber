@@ -8,86 +8,12 @@ interface UseAdminNotificationsOptions {
   onNewAppointment?: (appointment: any) => void;
 }
 
+// Admin notifications are now handled by AdminNotificationContext
+// This hook is kept for backward compatibility but does nothing for notifications
+// to avoid duplicate notifications
 export function useAdminNotifications({ enabled = true, onNewAppointment }: UseAdminNotificationsOptions = {}) {
-  const lastNotifiedRef = useRef<Set<string>>(new Set());
-  const initialLoadRef = useRef(true);
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    // Request notification permission on mount
-    requestNotificationPermission();
-
-    const channel = supabase
-      .channel('admin-appointments-notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'appointments'
-        },
-        async (payload) => {
-          // Skip if this is the initial load
-          if (initialLoadRef.current) return;
-          
-          const newAppointment = payload.new as any;
-          
-          // Skip if already notified
-          if (lastNotifiedRef.current.has(newAppointment.id)) return;
-          lastNotifiedRef.current.add(newAppointment.id);
-
-          // Get client info
-          let clientName = 'Novo cliente';
-          
-          if (newAppointment.guest_name) {
-            clientName = newAppointment.guest_name;
-          } else {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('name')
-              .eq('user_id', newAppointment.user_id)
-              .maybeSingle();
-            
-            if (profile?.name) {
-              clientName = profile.name;
-            }
-          }
-
-          const time = newAppointment.appointment_time?.slice(0, 5) || '';
-          const date = newAppointment.appointment_date || '';
-
-          // Play sound
-          playNotificationSound();
-
-          // Show toast
-          toast.success(`Novo agendamento!`, {
-            description: `${clientName} agendou para ${date} às ${time}`,
-            duration: 8000,
-          });
-
-          // Show browser notification
-          showBrowserNotification(
-            '🗓️ Novo Agendamento!',
-            `${clientName} agendou para ${date} às ${time}`
-          );
-
-          // Callback
-          onNewAppointment?.(newAppointment);
-        }
-      )
-      .subscribe();
-
-    // Mark initial load as complete after a short delay
-    const timeout = setTimeout(() => {
-      initialLoadRef.current = false;
-    }, 2000);
-
-    return () => {
-      clearTimeout(timeout);
-      supabase.removeChannel(channel);
-    };
-  }, [enabled, onNewAppointment]);
+  // No-op - notifications are handled globally by AdminNotificationContext
+  // This prevents duplicate notifications
 }
 
 export function useClientNotifications() {
