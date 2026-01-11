@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -77,34 +78,90 @@ export function PackageList({ packages, onUpdate, onDelete, onViewSubscribers }:
 
   if (packages.length === 0) {
     return (
-      <div className="text-center py-12 glass-effect rounded-2xl">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center py-12 glass-effect rounded-2xl"
+      >
         <Crown className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <p className="text-muted-foreground">Nenhum pacote cadastrado</p>
-      </div>
+      </motion.div>
     );
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      scale: 1,
+      transition: {
+        type: "spring" as const,
+        stiffness: 300,
+        damping: 24
+      }
+    }
+  };
+
   return (
     <>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {packages.map((pkg) => {
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid md:grid-cols-2 lg:grid-cols-3 gap-4"
+      >
+        {packages.map((pkg, index) => {
           const benefits = packageBenefits[pkg.id] || [];
           
           return (
-            <div
+            <motion.div
               key={pkg.id}
-              className={`p-5 rounded-2xl glass-effect relative ${!pkg.is_active ? 'opacity-50' : ''}`}
+              variants={cardVariants}
+              whileHover={{ 
+                scale: 1.02, 
+                y: -4,
+                transition: { type: "spring", stiffness: 400, damping: 17 }
+              }}
+              whileTap={{ scale: 0.98 }}
+              className={`p-5 rounded-2xl glass-effect relative cursor-pointer group ${!pkg.is_active ? 'opacity-50' : ''}`}
             >
-              {pkg.discount_percent > 0 && (
-                <Badge className="absolute top-3 right-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-black">
-                  {pkg.discount_percent}% OFF
-                </Badge>
-              )}
+              {/* Glow effect on hover */}
+              <motion.div
+                className="absolute inset-0 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              />
+              
+              <AnimatePresence>
+                {pkg.discount_percent > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0, rotate: -12 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 25, delay: index * 0.1 + 0.2 }}
+                  >
+                    <Badge className="absolute top-3 right-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-black">
+                      {pkg.discount_percent}% OFF
+                    </Badge>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              <div className="flex items-start gap-3 mb-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-yellow-500/20 to-amber-500/20">
+              <div className="flex items-start gap-3 mb-3 relative z-10">
+                <motion.div 
+                  className="p-2 rounded-xl bg-gradient-to-br from-yellow-500/20 to-amber-500/20"
+                  whileHover={{ rotate: [0, -10, 10, 0], transition: { duration: 0.5 } }}
+                >
                   <Crown className="h-6 w-6 text-yellow-500" />
-                </div>
+                </motion.div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{pkg.name}</h3>
                   <p className="text-sm text-muted-foreground">{pkg.duration_days} dias</p>
@@ -112,35 +169,51 @@ export function PackageList({ packages, onUpdate, onDelete, onViewSubscribers }:
               </div>
 
               {pkg.description && (
-                <p className="text-sm text-muted-foreground mb-3">{pkg.description}</p>
+                <p className="text-sm text-muted-foreground mb-3 relative z-10">{pkg.description}</p>
               )}
 
               {/* Show structured benefits */}
               {benefits.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {benefits.slice(0, 3).map((benefit) => (
-                    <span key={benefit.id} className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
+                <motion.div 
+                  className="flex flex-wrap gap-1 mb-4 relative z-10"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index * 0.1 + 0.3 }}
+                >
+                  {benefits.slice(0, 3).map((benefit, benefitIndex) => (
+                    <motion.span 
+                      key={benefit.id} 
+                      className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 + benefitIndex * 0.05 + 0.4 }}
+                    >
                       {benefit.quantity}x {benefit.service?.name}
-                    </span>
+                    </motion.span>
                   ))}
                   {benefits.length > 3 && (
                     <span className="text-xs px-2 py-1 text-muted-foreground">
                       +{benefits.length - 3}
                     </span>
                   )}
-                </div>
+                </motion.div>
               )}
 
               {benefits.length === 0 && (
-                <p className="text-xs text-muted-foreground mb-4 italic">
+                <p className="text-xs text-muted-foreground mb-4 italic relative z-10">
                   Sem benefícios configurados
                 </p>
               )}
 
-              <div className="flex items-center justify-between pt-3 border-t border-border">
-                <span className="text-2xl font-bold text-primary">
+              <div className="flex items-center justify-between pt-3 border-t border-border relative z-10">
+                <motion.span 
+                  className="text-2xl font-bold text-primary"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 400, delay: index * 0.1 + 0.2 }}
+                >
                   R$ {Number(pkg.price).toFixed(0)}
-                </span>
+                </motion.span>
 
                 <div className="flex gap-2">
                   <Button
@@ -148,6 +221,7 @@ export function PackageList({ packages, onUpdate, onDelete, onViewSubscribers }:
                     variant="outline"
                     onClick={() => setEditingBenefits(pkg.id)}
                     title="Configurar benefícios"
+                    className="hover:bg-primary/10 transition-colors"
                   >
                     <Settings className="h-3 w-3" />
                   </Button>
@@ -156,6 +230,7 @@ export function PackageList({ packages, onUpdate, onDelete, onViewSubscribers }:
                     variant="outline"
                     onClick={() => onViewSubscribers(pkg.id)}
                     title="Ver assinantes"
+                    className="hover:bg-primary/10 transition-colors"
                   >
                     <Users className="h-3 w-3" />
                   </Button>
@@ -163,23 +238,24 @@ export function PackageList({ packages, onUpdate, onDelete, onViewSubscribers }:
                     size="sm"
                     variant="outline"
                     onClick={() => setEditingPackage(pkg)}
+                    className="hover:bg-primary/10 transition-colors"
                   >
                     <Pencil className="h-3 w-3" />
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-destructive"
+                    className="text-destructive hover:bg-destructive/10 transition-colors"
                     onClick={() => onDelete(pkg.id)}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
 
       <Dialog open={!!editingPackage} onOpenChange={() => setEditingPackage(null)}>
         <DialogContent>
