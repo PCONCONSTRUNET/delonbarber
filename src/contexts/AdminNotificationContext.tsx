@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { playNotificationSound, showBrowserNotification, requestNotificationPermission } from '@/lib/notifications';
+import { subscribeToPushNotifications } from '@/lib/pushNotifications';
 import { toast } from 'sonner';
 
 interface AdminNotificationContextValue {
@@ -44,6 +45,13 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
       if (hasAdminRole) {
         // Request notification permission for admins
         requestNotificationPermission();
+        
+        // Subscribe to push notifications for background alerts
+        subscribeToPushNotifications().then(success => {
+          if (success) {
+            console.log('Admin subscribed to push notifications');
+          }
+        });
       }
     }
 
