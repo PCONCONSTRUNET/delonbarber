@@ -85,9 +85,13 @@ export function useAdminAppointments() {
   async function fetchAppointments() {
     setLoading(true);
     
+    // Single query with JOINs for profiles
     const { data: appointmentsData, error } = await supabase
       .from('appointments')
-      .select('*')
+      .select(`
+        *,
+        profiles!appointments_user_id_fkey(name, phone)
+      `)
       .order('appointment_date', { ascending: true })
       .order('appointment_time', { ascending: true });
 
@@ -97,32 +101,38 @@ export function useAdminAppointments() {
       return;
     }
 
-    const appointmentsWithServices: AdminAppointment[] = [];
-    
-    for (const apt of appointmentsData || []) {
-      // Fetch profile separately
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('name, phone')
-        .eq('user_id', apt.user_id)
-        .maybeSingle();
-
-      // Fetch services
-      const { data: servicesData } = await supabase
-        .from('appointment_services')
-        .select('service_id, price_at_booking, services(id, name)')
-        .eq('appointment_id', apt.id);
-
-      appointmentsWithServices.push({
-        ...apt,
-        profile: profileData || { name: null, phone: null },
-        services: servicesData?.map((s: any) => ({
-          id: s.services?.id,
-          name: s.services?.name,
-          price: s.price_at_booking
-        })) || []
-      });
+    if (!appointmentsData || appointmentsData.length === 0) {
+      setAppointments([]);
+      setLoading(false);
+      return;
     }
+
+    // Fetch all services in a single batch query
+    const appointmentIds = appointmentsData.map(apt => apt.id);
+    const { data: servicesData } = await supabase
+      .from('appointment_services')
+      .select('appointment_id, service_id, price_at_booking, services(id, name)')
+      .in('appointment_id', appointmentIds);
+
+    // Create lookup map for O(1) access
+    const servicesByAppointment = new Map<string, { id: string; name: string; price: number }[]>();
+    (servicesData || []).forEach((s: any) => {
+      if (!servicesByAppointment.has(s.appointment_id)) {
+        servicesByAppointment.set(s.appointment_id, []);
+      }
+      servicesByAppointment.get(s.appointment_id)!.push({
+        id: s.services?.id,
+        name: s.services?.name,
+        price: s.price_at_booking
+      });
+    });
+
+    // Map appointments with all data
+    const appointmentsWithServices: AdminAppointment[] = appointmentsData.map((apt: any) => ({
+      ...apt,
+      profile: apt.profiles || { name: null, phone: null },
+      services: servicesByAppointment.get(apt.id) || []
+    }));
 
     setAppointments(appointmentsWithServices);
     setLoading(false);
@@ -229,39 +239,71 @@ export function useAdminClients() {
   async function fetchClients() {
     setLoading(true);
 
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // Fetch profiles and appointments in parallel
+    const [profilesResult, appointmentsResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('appointments')
+        .select('user_id, total_price, appointment_date, status')
+        .neq('status', 'cancelled')
+    ]);
 
-    if (error) {
-      console.error('Error fetching clients:', error);
+    if (profilesResult.error) {
+      console.error('Error fetching clients:', profilesResult.error);
       setLoading(false);
       return;
     }
 
-    const clientsWithStats: Client[] = [];
+    const profiles = profilesResult.data || [];
+    const appointments = appointmentsResult.data || [];
 
-    for (const profile of profiles || []) {
-      const { data: appointments } = await supabase
-        .from('appointments')
-        .select('total_price, appointment_date, status')
-        .eq('user_id', profile.user_id)
-        .neq('status', 'cancelled');
+    // Pre-compute stats by user_id using a Map for O(1) lookups
+    const statsByUser = new Map<string, {
+      total_appointments: number;
+      total_spent: number;
+      last_appointment: string | null;
+    }>();
 
-      const completedAppts = appointments?.filter(a => a.status === 'completed') || [];
-      const totalSpent = completedAppts.reduce((sum, a) => sum + Number(a.total_price || 0), 0);
-      const lastAppt = appointments?.sort((a, b) => 
-        new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()
-      )[0];
+    appointments.forEach(apt => {
+      const userId = apt.user_id;
+      if (!statsByUser.has(userId)) {
+        statsByUser.set(userId, {
+          total_appointments: 0,
+          total_spent: 0,
+          last_appointment: null
+        });
+      }
+      
+      const stats = statsByUser.get(userId)!;
+      stats.total_appointments++;
+      
+      if (apt.status === 'completed') {
+        stats.total_spent += Number(apt.total_price || 0);
+      }
+      
+      if (!stats.last_appointment || apt.appointment_date > stats.last_appointment) {
+        stats.last_appointment = apt.appointment_date;
+      }
+    });
 
-      clientsWithStats.push({
+    // Map profiles with pre-computed stats
+    const clientsWithStats: Client[] = profiles.map(profile => {
+      const stats = statsByUser.get(profile.user_id) || {
+        total_appointments: 0,
+        total_spent: 0,
+        last_appointment: null
+      };
+
+      return {
         ...profile,
-        total_appointments: appointments?.length || 0,
-        total_spent: totalSpent,
-        last_appointment: lastAppt?.appointment_date || null
-      });
-    }
+        total_appointments: stats.total_appointments,
+        total_spent: stats.total_spent,
+        last_appointment: stats.last_appointment
+      };
+    });
 
     setClients(clientsWithStats);
     setLoading(false);
