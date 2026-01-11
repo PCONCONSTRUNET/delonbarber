@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
 
 export interface Service {
   id: string;
@@ -157,23 +157,39 @@ export function useAppointments() {
     // Get benefits and usage for active packages
     const benefitsToUse: { clientPackageId: string; serviceId: string }[] = [];
     const servicesWithBenefits: string[] = [];
+    const weeklyBlockedServices: string[] = [];
+
+    // Calculate current week boundaries (Monday to Sunday)
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 }); // Sunday
 
     if (activePackages && activePackages.length > 0) {
       for (const pkg of activePackages) {
-        // Get benefits for this package
+        // Get benefits for this package with weekly_limit
         const { data: benefits } = await supabase
           .from('package_benefits')
-          .select('service_id, quantity')
+          .select('service_id, quantity, weekly_limit')
           .eq('package_id', pkg.package_id);
 
         // Get current usage for this client package
         const { data: usage } = await supabase
           .from('client_package_usage')
-          .select('service_id')
+          .select('service_id, used_at')
           .eq('client_package_id', pkg.id);
 
+        // Count total usage per service
         const usageByService = (usage || []).reduce((acc, u) => {
           acc[u.service_id] = (acc[u.service_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        // Count usage THIS WEEK per service
+        const usageThisWeekByService = (usage || []).reduce((acc, u) => {
+          const usedAt = new Date(u.used_at);
+          if (usedAt >= weekStart && usedAt <= weekEnd) {
+            acc[u.service_id] = (acc[u.service_id] || 0) + 1;
+          }
           return acc;
         }, {} as Record<string, number>);
 
@@ -181,11 +197,25 @@ export function useAppointments() {
         for (const service of selectedServices) {
           // Skip if we already found a benefit for this service
           if (servicesWithBenefits.includes(service.id)) continue;
+          if (weeklyBlockedServices.includes(service.id)) continue;
 
           const benefit = benefits?.find(b => b.service_id === service.id);
           if (benefit) {
             const used = usageByService[service.id] || 0;
             const remaining = benefit.quantity - used;
+            
+            // Check weekly limit if applicable
+            if (benefit.weekly_limit !== null) {
+              const usedThisWeek = usageThisWeekByService[service.id] || 0;
+              const remainingThisWeek = benefit.weekly_limit - usedThisWeek;
+              
+              if (remainingThisWeek <= 0) {
+                // Weekly limit reached - block this service
+                weeklyBlockedServices.push(service.id);
+                continue;
+              }
+            }
+            
             if (remaining > 0) {
               benefitsToUse.push({
                 clientPackageId: pkg.id,
@@ -196,6 +226,21 @@ export function useAppointments() {
           }
         }
       }
+    }
+
+    // If any services are blocked by weekly limit and user is trying to use as subscriber
+    if (weeklyBlockedServices.length > 0 && paymentMethod === 'subscriber') {
+      const blockedServiceNames = selectedServices
+        .filter(s => weeklyBlockedServices.includes(s.id))
+        .map(s => s.name)
+        .join(', ');
+      
+      toast({
+        title: "Limite semanal atingido",
+        description: `Você já usou o limite semanal para: ${blockedServiceNames}. Aguarde a próxima segunda-feira.`,
+        variant: "destructive"
+      });
+      return null;
     }
 
     // Calculate price (services with benefits are free)
