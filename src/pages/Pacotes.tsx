@@ -363,7 +363,7 @@ const Pacotes = () => {
 
                 <Button
                   onClick={() => handleSubscribeClick(pkg)}
-                  className={`w-full ${isPopular ? 'glow-effect' : ''}`}
+                  className={`w-full relative z-20 ${isPopular ? 'glow-effect' : ''}`}
                   variant={isPopular ? 'default' : 'outline'}
                   disabled={subscribing === pkg.id}
                 >
