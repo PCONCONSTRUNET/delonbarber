@@ -196,12 +196,11 @@ export function useClientPackages() {
   async function fetchSubscriptions() {
     setLoading(true);
 
-    // Single optimized query with JOINs
+    // Fetch client_packages with packages join only (no FK to profiles)
     const { data, error } = await supabase
       .from('client_packages')
       .select(`
         *,
-        profiles!client_packages_user_id_fkey(name, phone),
         packages(name, price, discount_percent)
       `)
       .order('created_at', { ascending: false });
@@ -218,12 +217,17 @@ export function useClientPackages() {
       return;
     }
 
-    // Get unique package IDs and subscription IDs for batch queries
+    // Get unique IDs for batch queries
+    const userIds = [...new Set(data.map(sub => sub.user_id))];
     const packageIds = [...new Set(data.map(sub => sub.package_id))];
     const subscriptionIds = data.map(sub => sub.id);
 
-    // Fetch all benefits and usage in parallel (2 queries instead of N*2)
-    const [benefitsResult, usageResult] = await Promise.all([
+    // Fetch profiles, benefits and usage in parallel
+    const [profilesResult, benefitsResult, usageResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('user_id, name, phone')
+        .in('user_id', userIds),
       supabase
         .from('package_benefits')
         .select('*, services(id, name, price)')
@@ -235,6 +239,11 @@ export function useClientPackages() {
     ]);
 
     // Create lookup maps for O(1) access
+    const profilesByUserId: Record<string, { name: string | null; phone: string | null }> = {};
+    (profilesResult.data || []).forEach((p: any) => {
+      profilesByUserId[p.user_id] = { name: p.name, phone: p.phone };
+    });
+
     const benefitsByPackage: Record<string, PackageBenefit[]> = {};
     (benefitsResult.data || []).forEach((b: any) => {
       const formatted = {
@@ -263,7 +272,7 @@ export function useClientPackages() {
     const subscriptionsWithDetails: ClientPackage[] = data.map((sub: any) => ({
       ...sub,
       status: sub.status as 'active' | 'expired' | 'cancelled' | 'pending',
-      profile: sub.profiles || { name: null, phone: null },
+      profile: profilesByUserId[sub.user_id] || { name: null, phone: null },
       package: sub.packages || { name: 'Pacote', price: 0, discount_percent: 0 },
       benefits: benefitsByPackage[sub.package_id] || [],
       usage: usageBySubscription[sub.id] || [],
