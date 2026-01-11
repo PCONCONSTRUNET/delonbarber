@@ -220,7 +220,7 @@ export function useAppointments() {
         notes: notes || null,
         total_price: isSubscriberPayment ? 0 : totalPrice,
         total_duration: totalDuration,
-        status: 'pending',
+        status: 'confirmed',
         payment_method: paymentMethod || null,
         payment_status: isSubscriberPayment ? 'paid' : 'pending',
         payment_date: isSubscriberPayment ? new Date().toISOString() : null,
