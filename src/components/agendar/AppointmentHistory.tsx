@@ -76,10 +76,10 @@ export function AppointmentHistory({ appointments, onCancel }: AppointmentHistor
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex flex-col items-center justify-center">
                   <span className="text-lg font-bold text-primary leading-none">
-                    {format(new Date(appointment.appointment_date), 'dd')}
+                    {format(new Date(appointment.appointment_date + 'T00:00:00'), 'dd')}
                   </span>
                   <span className="text-[10px] text-muted-foreground uppercase">
-                    {format(new Date(appointment.appointment_date), 'MMM', { locale: ptBR })}
+                    {format(new Date(appointment.appointment_date + 'T00:00:00'), 'MMM', { locale: ptBR })}
                   </span>
                 </div>
                 <div>
@@ -87,7 +87,7 @@ export function AppointmentHistory({ appointments, onCancel }: AppointmentHistor
                     {formatTime(appointment.appointment_time)}
                   </p>
                   <p className="text-xs text-muted-foreground capitalize">
-                    {format(new Date(appointment.appointment_date), 'EEEE', { locale: ptBR })}
+                    {format(new Date(appointment.appointment_date + 'T00:00:00'), 'EEEE', { locale: ptBR })}
                   </p>
                 </div>
               </div>
