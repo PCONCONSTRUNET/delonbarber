@@ -266,7 +266,7 @@ const Pacotes = () => {
                 />
                 {/* Popular badge */}
                 {isPopular && (
-                  <div className="absolute -top-2.5 sm:-top-3 left-1/2 -translate-x-1/2 px-3 sm:px-4 py-0.5 sm:py-1 rounded-full bg-primary text-primary-foreground text-[10px] sm:text-xs font-bold flex items-center gap-1">
+                  <div className="absolute -top-3 sm:-top-3.5 left-1/2 -translate-x-1/2 px-3 sm:px-4 py-1 rounded-full bg-primary text-primary-foreground text-[10px] sm:text-xs font-bold flex items-center gap-1 shadow-lg z-30">
                     <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     Mais Popular
                   </div>
