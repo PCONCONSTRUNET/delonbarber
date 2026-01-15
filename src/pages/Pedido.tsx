@@ -264,18 +264,32 @@ const Pedido = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <AnimatedBackground />
-        <motion.div
+      <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           className="bg-card rounded-3xl p-8 text-center max-w-md w-full shadow-xl border border-border"
         >
+          {/* Logo on success */}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.1, type: 'spring' }}
+            className="mb-4"
+          >
+            <img 
+              src="/icons/icon-192.png" 
+              alt="Delon Barber" 
+              className="w-16 h-16 mx-auto rounded-xl shadow-md"
+            />
+          </motion.div>
+          
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring' }}
-            className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6"
+            className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4"
           >
-            <Check className="w-10 h-10 text-green-500" />
+            <Check className="w-8 h-8 text-green-500" />
           </motion.div>
           
           <h1 className="text-2xl font-bold text-foreground mb-2">
@@ -323,17 +337,31 @@ const Pedido = () => {
       <AnimatedBackground />
       
       <main className="pt-6 pb-20 px-4 max-w-lg mx-auto safe-area-top">
-        {/* Header */}
+        {/* Header with Logo */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-6"
         >
+          {/* Logo */}
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="mb-4"
+          >
+            <img 
+              src="/icons/icon-192.png" 
+              alt="Delon Barber" 
+              className="w-20 h-20 mx-auto rounded-2xl shadow-lg"
+            />
+          </motion.div>
+          
           <h1 className="font-display text-2xl font-bold text-foreground mb-1">
-            ✂️ Agendar Horário
+            Delon Barber
           </h1>
           <p className="text-muted-foreground text-sm">
-            Preencha seus dados para fazer seu pedido
+            Preencha seus dados para agendar
           </p>
         </motion.div>
 
