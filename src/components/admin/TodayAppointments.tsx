@@ -114,15 +114,15 @@ Qualquer dúvida, estamos à disposição! 💈`;
 
   if (sortedAppts.length === 0) {
     return (
-      <div className="p-6 rounded-2xl glass-effect text-center">
-        <p className="text-muted-foreground">Nenhum agendamento para este dia</p>
+      <div className="p-4 md:p-6 rounded-xl md:rounded-2xl glass-effect text-center">
+        <p className="text-sm md:text-base text-muted-foreground">Nenhum agendamento para este dia</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="space-y-2 md:space-y-3">
+      <div className="space-y-1.5 md:space-y-3">
         {sortedAppts.map((apt, index) => {
           const paymentMethod = apt.payment_method;
           const methodConfig = paymentMethod ? paymentMethodConfig[paymentMethod] : null;
@@ -135,101 +135,83 @@ Qualquer dúvida, estamos à disposição! 💈`;
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="p-3 md:p-4 rounded-2xl glass-effect"
+              className="p-2 md:p-4 rounded-xl md:rounded-2xl glass-effect"
             >
-              <div className="flex items-start justify-between gap-2 md:gap-4">
+              <div className="flex items-start justify-between gap-1.5 md:gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mb-2">
-                    <Clock className="h-3.5 md:h-4 w-3.5 md:w-4 text-primary shrink-0" />
-                    <span className="font-bold text-base md:text-lg">{apt.appointment_time.slice(0, 5)}</span>
-                    <Badge className={cn("text-[10px] md:text-xs px-1.5 md:px-2", statusColors[apt.status])}>
+                  <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1 md:mb-2">
+                    <Clock className="h-3 md:h-4 w-3 md:w-4 text-primary shrink-0" />
+                    <span className="font-bold text-sm md:text-lg">{apt.appointment_time.slice(0, 5)}</span>
+                    <Badge className={cn("text-[9px] md:text-xs px-1 md:px-2 py-0", statusColors[apt.status])}>
                       {statusLabels[apt.status]}
                     </Badge>
                     {isSubscriber && (
-                      <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-[10px] md:text-xs gap-0.5 font-semibold px-1.5">
-                        <Crown className="h-2.5 md:h-3 w-2.5 md:w-3" />
+                      <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-[9px] md:text-xs gap-0.5 font-semibold px-1 py-0">
+                        <Crown className="h-2 md:h-3 w-2 md:w-3" />
                         VIP
                       </Badge>
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm text-muted-foreground mb-1">
-                    <User className="h-3 w-3 shrink-0" />
-                    <span className={cn("truncate", apt.guest_name ? "text-amber-400 font-medium" : "")}>
+                  <div className="flex items-center gap-1 md:gap-2 text-[11px] md:text-sm text-muted-foreground mb-0.5 md:mb-1">
+                    <User className="h-2.5 md:h-3 w-2.5 md:w-3 shrink-0" />
+                    <span className={cn("truncate max-w-[120px] md:max-w-none", apt.guest_name ? "text-amber-400 font-medium" : "")}>
                       {apt.guest_name || apt.profile?.name || 'Cliente'}
-                      {apt.guest_name && <span className="text-[10px] ml-1 hidden sm:inline">(WhatsApp)</span>}
                     </span>
                     {(apt.guest_phone || apt.profile?.phone) && (
-                      <>
-                        <span className="hidden sm:inline">• {apt.guest_phone || apt.profile?.phone}</span>
-                        <button
-                          onClick={() => handleWhatsApp(apt)}
-                          className="p-1 rounded-full hover:bg-green-500/20 transition-colors group shrink-0"
-                          title="Enviar mensagem no WhatsApp"
-                        >
-                          <WhatsAppIcon size={14} className="group-hover:scale-110 transition-transform" />
-                        </button>
-                      </>
+                      <button
+                        onClick={() => handleWhatsApp(apt)}
+                        className="p-0.5 rounded-full hover:bg-green-500/20 transition-colors group shrink-0"
+                        title="Enviar mensagem no WhatsApp"
+                      >
+                        <WhatsAppIcon size={12} className="md:w-[14px] md:h-[14px] group-hover:scale-110 transition-transform" />
+                      </button>
                     )}
                   </div>
                   
-                  <p className="text-xs md:text-sm text-foreground line-clamp-1">
+                  <p className="text-[10px] md:text-sm text-foreground/80 line-clamp-1">
                     {apt.services.map(s => s.name).join(', ')}
                   </p>
                   
-                  <div className="flex items-center gap-1.5 md:gap-2 mt-2 flex-wrap">
+                  <div className="flex items-center gap-1 md:gap-2 mt-1 md:mt-2 flex-wrap">
                     <p className={cn(
-                      "font-semibold text-sm",
+                      "font-semibold text-xs md:text-sm",
                       isSubscriber ? "text-yellow-500" : "text-primary"
                     )}>
                       {isSubscriber ? 'GRÁTIS' : `R$ ${Number(apt.total_price).toFixed(0)}`}
                     </p>
                     
-                    {/* Payment method badge - hidden on mobile */}
-                    {paymentMethod && methodConfig && (
-                      <Badge 
-                        variant="outline" 
-                        className={cn(
-                          "text-[10px] gap-0.5 border-muted-foreground/30 hidden sm:flex",
-                          methodConfig.color
-                        )}
-                      >
-                        <PaymentIcon method={paymentMethod} size={10} />
-                        {methodConfig.label}
-                      </Badge>
-                    )}
-                    
                     {/* Payment status badge */}
                     {apt.payment_status === 'paid' ? (
-                      <Badge className="bg-green-500/20 text-green-400 text-[10px] md:text-xs border border-green-500/30 px-1.5">
+                      <Badge className="bg-green-500/20 text-green-400 text-[9px] md:text-xs border border-green-500/30 px-1 py-0">
                         ✓ Pago
                       </Badge>
                     ) : (
-                      <Badge className="bg-yellow-500/20 text-yellow-400 text-[10px] md:text-xs border border-yellow-500/30 px-1.5">
+                      <Badge className="bg-yellow-500/20 text-yellow-400 text-[9px] md:text-xs border border-yellow-500/30 px-1 py-0">
                         Aguard.
                       </Badge>
                     )}
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5 md:gap-2 shrink-0">
+                <div className="flex flex-col gap-1 md:gap-2 shrink-0">
                   {apt.status === 'pending' && (
-                    <div className="flex gap-1">
+                    <div className="flex gap-0.5 md:gap-1">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 w-8 p-0 border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                        className="h-6 w-6 md:h-8 md:w-8 p-0 border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
                         onClick={() => onUpdateStatus(apt.id, 'confirmed')}
                       >
-                        <Check className="h-3.5 w-3.5" />
+                        <Check className="h-3 md:h-3.5 w-3 md:w-3.5" />
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 w-8 p-0 border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                        className="h-6 w-6 md:h-8 md:w-8 p-0 border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
                         onClick={() => onUpdateStatus(apt.id, 'cancelled')}
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-3 md:h-3.5 w-3 md:w-3.5" />
                       </Button>
                     </div>
                   )}
@@ -237,21 +219,20 @@ Qualquer dúvida, estamos à disposição! 💈`;
                     <>
                       <Button
                         size="sm"
-                        className="h-8 text-xs px-2"
+                        className="h-6 md:h-8 text-[10px] md:text-xs px-1.5 md:px-2"
                         onClick={() => onUpdateStatus(apt.id, 'completed')}
                       >
-                        <Check className="h-3.5 w-3.5 mr-0.5" />
+                        <Check className="h-3 md:h-3.5 w-3 md:w-3.5 mr-0.5" />
                         OK
                       </Button>
                       {apt.payment_status !== 'paid' && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 px-2 border-green-500 text-green-500 gap-0.5"
+                          className="h-6 md:h-8 px-1.5 md:px-2 border-green-500 text-green-500 gap-0.5"
                           onClick={() => handleOpenPayment(apt)}
                         >
-                          <PixIcon size={14} />
-                          <span className="hidden sm:inline">Pagar</span>
+                          <PixIcon size={12} />
                         </Button>
                       )}
                     </>
@@ -260,21 +241,20 @@ Qualquer dúvida, estamos à disposição! 💈`;
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 px-2 border-green-500 text-green-500 gap-0.5"
+                      className="h-6 md:h-8 px-1.5 md:px-2 border-green-500 text-green-500 gap-0.5"
                       onClick={() => handleOpenPayment(apt)}
                     >
-                      <PixIcon size={14} />
-                      <span className="hidden sm:inline">Pagar</span>
+                      <PixIcon size={12} />
                     </Button>
                   )}
                   {onDelete && (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 w-8 p-0 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      className="h-6 w-6 md:h-8 md:w-8 p-0 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                       onClick={() => onDelete(apt.id)}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3 md:h-3.5 w-3 md:w-3.5" />
                     </Button>
                   )}
                 </div>
