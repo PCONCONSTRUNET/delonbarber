@@ -1,11 +1,10 @@
 import { motion } from 'framer-motion';
-import { Check, Clock, Crown, Lock, CalendarX } from 'lucide-react';
+import { Check, Clock, Crown } from 'lucide-react';
 import { Service } from '@/hooks/useAppointments';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { nextMonday, differenceInDays, isMonday } from 'date-fns';
 
 interface ServiceSelectionProps {
   services: Service[];
@@ -24,17 +23,7 @@ const categoryLabels: Record<string, string> = {
 const categoryOrder = ['corte', 'barba', 'sobrancelha', 'combo', 'adicional'];
 
 export function ServiceSelection({ services, selectedServices, onToggleService }: ServiceSelectionProps) {
-  const { packages, getRemainingForService, isBlockedByWeeklyLimit, getWeeklyLimitInfo } = useMyPackages();
-  
-  // Calculate days until next Monday (renewal day)
-  const getDaysUntilRenewal = (): number => {
-    const today = new Date();
-    if (isMonday(today)) return 7; // If today is Monday, next renewal is in 7 days
-    const next = nextMonday(today);
-    return differenceInDays(next, today);
-  };
-  
-  const daysUntilRenewal = getDaysUntilRenewal();
+  const { packages, getRemainingForService, getWeeklyLimitInfo } = useMyPackages();
   
   // Check if user has any active package
   const hasActivePackage = packages.some(p => p.status === 'active');
@@ -67,10 +56,8 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
     selectedServices.some(s => s.id === service.id);
 
   const handleToggleService = (service: Service) => {
-    // Block if weekly limit reached
-    if (isBlockedByWeeklyLimit(service.id)) {
-      return; // Don't allow selection
-    }
+    // No longer block based on current week - the limit will be checked based on the SELECTED DATE
+    // This allows VIP clients to schedule multiple future appointments in different weeks
     onToggleService(service);
   };
 
@@ -104,8 +91,9 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
                 const remaining = getRemainingForService(service.id);
                 const hasBenefit = remaining > 0;
                 const isExclusive = service.subscribers_only;
-                const weeklyBlocked = isBlockedByWeeklyLimit(service.id);
                 const weeklyInfo = getWeeklyLimitInfo(service.id);
+                // Show info badge about weekly limit if applicable (but don't block)
+                const hasWeeklyLimit = weeklyInfo && weeklyInfo.limit > 0;
 
                 return (
                   <motion.div
@@ -113,51 +101,45 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    whileTap={{ scale: weeklyBlocked ? 1 : 0.98 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => handleToggleService(service)}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-2xl transition-all duration-200 relative",
-                      weeklyBlocked
-                        ? "bg-muted/50 border-2 border-muted cursor-not-allowed opacity-60"
-                        : isSelected(service)
-                          ? hasBenefit
-                            ? "bg-yellow-500/15 border-2 border-yellow-500 cursor-pointer active:scale-[0.98]"
-                            : "bg-primary/15 border-2 border-primary cursor-pointer active:scale-[0.98]"
-                          : hasBenefit
-                            ? "bg-yellow-500/5 border-2 border-yellow-500/30 cursor-pointer active:scale-[0.98]"
-                            : "bg-card/80 border-2 border-transparent cursor-pointer active:scale-[0.98]"
+                      "flex items-center gap-3 p-3 rounded-2xl transition-all duration-200 relative cursor-pointer active:scale-[0.98]",
+                      isSelected(service)
+                        ? hasBenefit
+                          ? "bg-yellow-500/15 border-2 border-yellow-500"
+                          : "bg-primary/15 border-2 border-primary"
+                        : hasBenefit
+                          ? "bg-yellow-500/5 border-2 border-yellow-500/30"
+                          : "bg-card/80 border-2 border-transparent"
                     )}
                   >
-                    {/* VIP/Exclusive/Weekly Limit Badges */}
-                    {(hasBenefit || isExclusive || weeklyBlocked) && (
+                    {/* VIP/Exclusive Badges */}
+                    {(hasBenefit || isExclusive) && (
                       <div className="absolute -top-2 -right-2 flex gap-1">
-                        {weeklyBlocked && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge className="bg-orange-500/90 text-white text-[10px] px-2 py-0">
-                                <CalendarX className="w-3 h-3 mr-1" />
-                                Limite Semanal
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="font-medium">Você já usou {weeklyInfo?.used}/{weeklyInfo?.limit} esta semana</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                🔄 Renova em {daysUntilRenewal} {daysUntilRenewal === 1 ? 'dia' : 'dias'} (segunda-feira)
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {!weeklyBlocked && isExclusive && !hasBenefit && (
+                        {isExclusive && !hasBenefit && (
                           <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] px-2 py-0">
                             <Crown className="w-3 h-3 mr-1" />
                             Exclusivo
                           </Badge>
                         )}
-                        {!weeklyBlocked && hasBenefit && (
-                          <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-[10px] px-2 py-0">
-                            <Crown className="w-3 h-3 mr-1" />
-                            {remaining}x VIP
-                          </Badge>
+                        {hasBenefit && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 text-black text-[10px] px-2 py-0">
+                                <Crown className="w-3 h-3 mr-1" />
+                                {remaining}x VIP
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="font-medium">Restam {remaining} {remaining === 1 ? 'uso' : 'usos'} VIP</p>
+                              {hasWeeklyLimit && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  ⏰ Limite: {weeklyInfo?.limit} por semana
+                                </p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     )}

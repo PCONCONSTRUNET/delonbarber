@@ -166,12 +166,14 @@ export function useAppointments() {
     const servicesWithBenefits: string[] = [];
     const weeklyBlockedServices: string[] = [];
 
-    // Calculate current week boundaries (Monday to Sunday)
-    const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
-    const weekEnd = endOfWeek(now, { weekStartsOn: 1 }); // Sunday
+    // Calculate week boundaries for the SELECTED DATE (not current date)
+    // This allows VIP clients to schedule multiple future appointments in different weeks
+    const appointmentDate = date;
+    const weekStart = startOfWeek(appointmentDate, { weekStartsOn: 1 }); // Monday of appointment week
+    const weekEnd = endOfWeek(appointmentDate, { weekStartsOn: 1 }); // Sunday of appointment week
+    const appointmentDateStr = format(appointmentDate, 'yyyy-MM-dd');
 
-    console.log('Week boundaries:', { weekStart, weekEnd });
+    console.log('Week boundaries for appointment date:', { appointmentDate, weekStart, weekEnd });
 
     if (activePackages && activePackages.length > 0) {
       for (const pkg of activePackages) {
@@ -206,7 +208,7 @@ export function useAppointments() {
           return acc;
         }, {} as Record<string, number>);
 
-        // Count usage THIS WEEK per service
+        // Count usage THIS WEEK per service (based on usage records - for completed appointments)
         const usageThisWeekByService = (usage || []).reduce((acc, u) => {
           const usedAt = new Date(u.used_at);
           if (usedAt >= weekStart && usedAt <= weekEnd) {
@@ -217,6 +219,30 @@ export function useAppointments() {
 
         console.log('Usage by service:', usageByService);
         console.log('Usage this week by service:', usageThisWeekByService);
+
+        // ALSO check for SCHEDULED appointments in the same week (pending/confirmed)
+        // This prevents double-booking the same week even if usage hasn't been recorded yet
+        const { data: scheduledAppointments } = await supabase
+          .from('appointments')
+          .select(`
+            id,
+            appointment_date,
+            appointment_services!inner(service_id)
+          `)
+          .eq('user_id', user.id)
+          .gte('appointment_date', format(weekStart, 'yyyy-MM-dd'))
+          .lte('appointment_date', format(weekEnd, 'yyyy-MM-dd'))
+          .in('status', ['pending', 'confirmed']);
+
+        // Count scheduled appointments this week per service
+        const scheduledThisWeekByService: Record<string, number> = {};
+        scheduledAppointments?.forEach((apt: any) => {
+          apt.appointment_services.forEach((as: any) => {
+            scheduledThisWeekByService[as.service_id] = (scheduledThisWeekByService[as.service_id] || 0) + 1;
+          });
+        });
+
+        console.log('Scheduled appointments this week by service:', scheduledThisWeekByService);
 
         // Check which selected services have available benefits
         for (const service of selectedServices) {
@@ -234,15 +260,25 @@ export function useAppointments() {
             console.log('Benefit found:', { used, remaining, quantity: benefit.quantity, weeklyLimit: benefit.weekly_limit });
             
             // Check weekly limit if applicable
+            // IMPORTANT: Consider BOTH completed usage AND scheduled (pending/confirmed) appointments
             if (benefit.weekly_limit !== null && benefit.weekly_limit > 0) {
               const usedThisWeek = usageThisWeekByService[service.id] || 0;
-              const remainingThisWeek = benefit.weekly_limit - usedThisWeek;
+              const scheduledThisWeek = scheduledThisWeekByService[service.id] || 0;
+              // Use the MAX of the two to avoid double-counting (some scheduled may already be in usage)
+              const totalThisWeek = Math.max(usedThisWeek, scheduledThisWeek);
+              const remainingThisWeek = benefit.weekly_limit - totalThisWeek;
               
-              console.log('Weekly limit check:', { usedThisWeek, remainingThisWeek, weeklyLimit: benefit.weekly_limit });
+              console.log('Weekly limit check:', { 
+                usedThisWeek, 
+                scheduledThisWeek, 
+                totalThisWeek,
+                remainingThisWeek, 
+                weeklyLimit: benefit.weekly_limit 
+              });
               
               if (remainingThisWeek <= 0) {
-                // Weekly limit reached - block this service
-                console.log('Weekly limit reached for service:', service.name);
+                // Weekly limit reached for THIS APPOINTMENT'S WEEK - block this service
+                console.log('Weekly limit reached for service in appointment week:', service.name);
                 weeklyBlockedServices.push(service.id);
                 continue;
               }
@@ -272,9 +308,13 @@ export function useAppointments() {
         .map(s => s.name)
         .join(', ');
       
+      // Format the week for the error message
+      const weekStartFormatted = format(weekStart, 'dd/MM');
+      const weekEndFormatted = format(weekEnd, 'dd/MM');
+      
       toast({
         title: "Limite semanal atingido",
-        description: `Você já usou o limite semanal para: ${blockedServiceNames}. Aguarde a próxima segunda-feira.`,
+        description: `Você já tem agendamento para: ${blockedServiceNames} na semana ${weekStartFormatted} - ${weekEndFormatted}. Escolha outra semana.`,
         variant: "destructive"
       });
       return null;
