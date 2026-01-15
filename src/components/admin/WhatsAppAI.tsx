@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { MessageSquare, Sparkles, Loader2, Calendar, Clock, Scissors, Check, Phone, User, Send, Wand2, Copy, RefreshCw } from 'lucide-react';
+import { Sparkles, Loader2, Calendar, Clock, Scissors, Check, Phone, User, Send, Wand2, Copy, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -209,8 +210,8 @@ export function WhatsAppAI() {
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl" />
         
         <div className="relative flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-green-500/20 border border-green-500/30">
-            <MessageSquare className="h-6 w-6 text-green-500" />
+          <div className="p-3 rounded-2xl bg-white/10 border border-green-500/30">
+            <WhatsAppIcon size={28} />
           </div>
           <div>
             <h2 className="text-lg font-bold text-foreground">Assistente WhatsApp</h2>
@@ -232,8 +233,8 @@ export function WhatsAppAI() {
         {/* Input Area - Chat Style */}
         <div className="p-4 border-b border-border bg-muted/30">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-              <MessageSquare className="h-5 w-5 text-green-500" />
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
+              <WhatsAppIcon size={24} />
             </div>
             <div className="flex-1 space-y-3">
               <Textarea
