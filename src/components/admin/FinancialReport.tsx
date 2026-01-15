@@ -194,13 +194,12 @@ Status: PAGO
                 {filter === 'custom' ? format(customDate, 'dd/MM') : 'Data'}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0 z-50 bg-popover" align="start">
               <CalendarComponent
                 mode="single"
                 selected={customDate}
                 onSelect={handleSelectDate}
                 locale={ptBR}
-                initialFocus
               />
             </PopoverContent>
           </Popover>
