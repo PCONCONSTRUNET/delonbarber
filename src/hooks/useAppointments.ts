@@ -262,16 +262,13 @@ export function useAppointments() {
             // Check weekly limit if applicable
             // IMPORTANT: Consider BOTH completed usage AND scheduled (pending/confirmed) appointments
             if (benefit.weekly_limit !== null && benefit.weekly_limit > 0) {
-              const usedThisWeek = usageThisWeekByService[service.id] || 0;
+              // Only count SCHEDULED appointments for future weeks (not usage records)
+              // This allows VIP to schedule multiple future appointments in different weeks
               const scheduledThisWeek = scheduledThisWeekByService[service.id] || 0;
-              // Use the MAX of the two to avoid double-counting (some scheduled may already be in usage)
-              const totalThisWeek = Math.max(usedThisWeek, scheduledThisWeek);
-              const remainingThisWeek = benefit.weekly_limit - totalThisWeek;
+              const remainingThisWeek = benefit.weekly_limit - scheduledThisWeek;
               
               console.log('Weekly limit check:', { 
-                usedThisWeek, 
                 scheduledThisWeek, 
-                totalThisWeek,
                 remainingThisWeek, 
                 weeklyLimit: benefit.weekly_limit 
               });
