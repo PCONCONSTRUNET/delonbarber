@@ -36,6 +36,7 @@ const App = () => {
               <Route path="/pacotes" element={<Pacotes />} />
               <Route path="/pedido" element={<Pedido />} />
               <Route path="/pedidos" element={<Pedido />} />
+              {/* Route aliases for custom domain compatibility */}
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/agenda" element={<AdminAgenda />} />
               <Route path="/admin/clientes" element={<AdminClientes />} />
