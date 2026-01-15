@@ -326,6 +326,7 @@ const Agendar = () => {
                       selectedTime={selectedTime}
                       onSelectDate={handleDateSelect}
                       onSelectTime={setSelectedTime}
+                      selectedServices={selectedServices}
                     />
                   )}
                 </motion.div>
