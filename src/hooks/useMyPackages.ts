@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfWeek, endOfWeek } from 'date-fns';
+import { startOfWeek, endOfWeek, format } from 'date-fns';
 
 export interface MyPackageBenefit {
   id: string;
@@ -37,6 +37,7 @@ export interface MyPackage {
 export function useMyPackages() {
   const [packages, setPackages] = useState<MyPackage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   async function fetchMyPackages() {
     setLoading(true);
@@ -44,9 +45,12 @@ export function useMyPackages() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setPackages([]);
+      setUserId(null);
       setLoading(false);
       return;
     }
+    
+    setUserId(user.id);
 
     // Fetch user's active packages
     const { data: clientPackages, error } = await supabase
@@ -165,43 +169,30 @@ export function useMyPackages() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Check if user has an available benefit for a service (considering weekly limit)
+  // Check if user has an available benefit for a service (total remaining only, ignoring weekly limits for display)
   const hasAvailableBenefit = (serviceId: string): boolean => {
     for (const pkg of packages) {
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
-      if (benefit) {
-        // Check if there's remaining total
-        if (benefit.remaining <= 0) continue;
-        
-        // Check weekly limit if applicable
-        if (benefit.weekly_limit !== null && benefit.remaining_this_week !== null) {
-          if (benefit.remaining_this_week <= 0) continue;
-        }
-        
+      if (benefit && benefit.remaining > 0) {
         return true;
       }
     }
     return false;
   };
 
-  // Get total remaining for a specific service across all packages (considering weekly limit)
+  // Get total remaining for a specific service across all packages (total limit only)
   const getRemainingForService = (serviceId: string): number => {
     let total = 0;
     for (const pkg of packages) {
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
       if (benefit) {
-        // If there's a weekly limit, take the minimum of remaining total and remaining this week
-        if (benefit.weekly_limit !== null && benefit.remaining_this_week !== null) {
-          total += Math.min(benefit.remaining, benefit.remaining_this_week);
-        } else {
-          total += benefit.remaining;
-        }
+        total += benefit.remaining;
       }
     }
     return Math.max(0, total);
   };
 
-  // Check if a service is blocked due to weekly limit (has remaining total but no remaining this week)
+  // Check if a service is blocked due to weekly limit in the CURRENT week (for display purposes)
   const isBlockedByWeeklyLimit = (serviceId: string): boolean => {
     for (const pkg of packages) {
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
@@ -213,6 +204,82 @@ export function useMyPackages() {
     }
     return false;
   };
+
+  // NEW: Check if a specific date's week already has an appointment scheduled for this service
+  // This checks future scheduled appointments, not just usage records
+  const isWeekBlockedForDate = useCallback(async (serviceId: string, targetDate: Date): Promise<boolean> => {
+    if (!userId) return false;
+    
+    // Get the week boundaries for the target date
+    const targetWeekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
+    const targetWeekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
+    
+    // Check if user has a weekly limit for this service
+    let hasWeeklyLimit = false;
+    for (const pkg of packages) {
+      const benefit = pkg.benefits.find(b => b.service_id === serviceId);
+      if (benefit && benefit.weekly_limit !== null && benefit.weekly_limit > 0) {
+        hasWeeklyLimit = true;
+        break;
+      }
+    }
+    
+    if (!hasWeeklyLimit) return false;
+
+    // Query for existing appointments (confirmed or pending) in this week that use this service
+    const { data: existingAppointments, error } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        appointment_date,
+        appointment_services!inner(service_id)
+      `)
+      .eq('user_id', userId)
+      .gte('appointment_date', format(targetWeekStart, 'yyyy-MM-dd'))
+      .lte('appointment_date', format(targetWeekEnd, 'yyyy-MM-dd'))
+      .in('status', ['pending', 'confirmed']);
+
+    if (error) {
+      console.error('Error checking week appointments:', error);
+      return false;
+    }
+
+    // Check if any of these appointments include this service
+    const hasAppointmentWithService = existingAppointments?.some((apt: any) => 
+      apt.appointment_services.some((as: any) => as.service_id === serviceId)
+    );
+
+    return !!hasAppointmentWithService;
+  }, [userId, packages]);
+
+  // NEW: Get count of appointments already scheduled in a specific week for a service
+  const getScheduledCountForWeek = useCallback(async (serviceId: string, targetDate: Date): Promise<number> => {
+    if (!userId) return 0;
+    
+    const targetWeekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
+    const targetWeekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
+
+    const { data: existingAppointments, error } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        appointment_date,
+        appointment_services!inner(service_id)
+      `)
+      .eq('user_id', userId)
+      .gte('appointment_date', format(targetWeekStart, 'yyyy-MM-dd'))
+      .lte('appointment_date', format(targetWeekEnd, 'yyyy-MM-dd'))
+      .in('status', ['pending', 'confirmed']);
+
+    if (error) {
+      console.error('Error counting week appointments:', error);
+      return 0;
+    }
+
+    return existingAppointments?.filter((apt: any) => 
+      apt.appointment_services.some((as: any) => as.service_id === serviceId)
+    ).length || 0;
+  }, [userId]);
 
   // Get weekly limit info for a service
   const getWeeklyLimitInfo = (serviceId: string): { limit: number; used: number; remaining: number } | null => {
@@ -236,6 +303,8 @@ export function useMyPackages() {
     hasAvailableBenefit, 
     getRemainingForService,
     isBlockedByWeeklyLimit,
+    isWeekBlockedForDate,
+    getScheduledCountForWeek,
     getWeeklyLimitInfo
   };
 }
