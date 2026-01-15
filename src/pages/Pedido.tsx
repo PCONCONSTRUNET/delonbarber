@@ -203,7 +203,7 @@ const Pedido = () => {
     setIsSubmitting(true);
     
     try {
-      // Get or create a guest user
+      // Get admin user for placeholder
       const { data: adminUser } = await supabase
         .from('user_roles')
         .select('user_id')
@@ -216,10 +216,51 @@ const Pedido = () => {
         return;
       }
       
+      const cleanPhone = phone.replace(/\D/g, '');
+      const cleanName = name.trim();
+      
+      // Check if guest client already exists by phone
+      let guestClientId: string | null = null;
+      
+      const { data: existingClient } = await supabase
+        .from('guest_clients')
+        .select('id, name')
+        .eq('phone', cleanPhone)
+        .maybeSingle();
+      
+      if (existingClient) {
+        // Client already exists, use their ID
+        guestClientId = existingClient.id;
+        
+        // Update name if different
+        if (existingClient.name !== cleanName) {
+          await supabase
+            .from('guest_clients')
+            .update({ name: cleanName, updated_at: new Date().toISOString() })
+            .eq('id', existingClient.id);
+        }
+      } else {
+        // Create new guest client
+        const { data: newClient, error: clientError } = await supabase
+          .from('guest_clients')
+          .insert({
+            name: cleanName,
+            phone: cleanPhone,
+          })
+          .select('id')
+          .single();
+        
+        if (clientError) {
+          console.error('Error creating guest client:', clientError);
+        } else {
+          guestClientId = newClient.id;
+        }
+      }
+      
       const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
       const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
       
-      // Create appointment as guest
+      // Create appointment with guest_client_id
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
         .insert({
@@ -232,8 +273,9 @@ const Pedido = () => {
           payment_status: 'pending',
           payment_method: selectedPayment,
           notes: notes || null,
-          guest_name: name.trim(),
-          guest_phone: phone.replace(/\D/g, ''),
+          guest_name: cleanName,
+          guest_phone: cleanPhone,
+          guest_client_id: guestClientId,
         })
         .select()
         .single();
