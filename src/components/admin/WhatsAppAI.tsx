@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { MessageSquare, Sparkles, Loader2, Calendar, Clock, Scissors, Check, Phone, User } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { MessageSquare, Sparkles, Loader2, Calendar, Clock, Scissors, Check, Phone, User, Send, Wand2, Copy, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -57,7 +58,6 @@ export function WhatsAppAI() {
         if (dateParts) {
           appointmentDate = `${dateParts[3]}-${dateParts[2]}-${dateParts[1]}`;
         } else {
-          // Try other formats or use as-is if it's already in ISO format
           const dateMatch = parsed.date.match(/(\d{4})-(\d{2})-(\d{2})/);
           if (dateMatch) {
             appointmentDate = parsed.date;
@@ -65,7 +65,6 @@ export function WhatsAppAI() {
         }
       }
 
-      // Parse time to HH:MM format
       let appointmentTime = parsed.time || '10:00';
       if (appointmentTime && !appointmentTime.includes(':')) {
         appointmentTime = `${appointmentTime}:00`;
@@ -77,7 +76,6 @@ export function WhatsAppAI() {
         return;
       }
 
-      // Get admin's user id (the one creating the appointment)
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error("Você precisa estar logado para criar agendamentos.");
@@ -85,7 +83,6 @@ export function WhatsAppAI() {
         return;
       }
 
-      // Find services by name
       const serviceNames = parsed.services || [];
       let totalPrice = 0;
       let totalDuration = 0;
@@ -98,18 +95,15 @@ export function WhatsAppAI() {
           .eq('is_active', true);
 
         if (servicesData) {
-          // Track already matched service IDs to avoid duplicates
           const matchedIds = new Set<string>();
           
           for (const serviceName of serviceNames) {
             const normalizedSearch = serviceName.toLowerCase().trim();
             
-            // Try exact match first
             let found = servicesData.find(s => 
               s.name.toLowerCase().trim() === normalizedSearch
             );
             
-            // If no exact match, try partial matching
             if (!found) {
               found = servicesData.find(s => {
                 const normalizedName = s.name.toLowerCase().trim();
@@ -118,7 +112,6 @@ export function WhatsAppAI() {
               });
             }
             
-            // If still no match, try word-based matching
             if (!found) {
               const searchWords = normalizedSearch.split(/\s+/);
               found = servicesData.find(s => {
@@ -143,11 +136,10 @@ export function WhatsAppAI() {
         }
       }
 
-      // Create the appointment with guest client data
       const { data: appointment, error: aptError } = await supabase
         .from('appointments')
         .insert({
-          user_id: user.id, // Admin creates the appointment
+          user_id: user.id,
           appointment_date: appointmentDate,
           appointment_time: appointmentTime,
           notes: parsed.notes || null,
@@ -155,7 +147,6 @@ export function WhatsAppAI() {
           total_duration: totalDuration,
           status: 'pending',
           payment_status: 'pending',
-          // Guest client fields - stores exact data from WhatsApp
           guest_name: parsed.client_name || null,
           guest_phone: parsed.client_phone?.replace(/\D/g, '') || null
         })
@@ -167,7 +158,6 @@ export function WhatsAppAI() {
         throw aptError;
       }
 
-      // Add services to appointment
       if (matchedServices.length > 0 && appointment) {
         const appointmentServices = matchedServices.map(service => ({
           appointment_id: appointment.id,
@@ -195,152 +185,341 @@ export function WhatsAppAI() {
     setMessage('');
   };
 
+  const pasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setMessage(text);
+      toast.success("Mensagem colada!");
+    } catch {
+      toast.error("Não foi possível acessar a área de transferência");
+    }
+  };
+
   const canCreate = parsed && parsed.date && parsed.time;
 
   return (
-    <div className="space-y-6">
-      {/* Input area */}
-      <div className="rounded-2xl glass-effect p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <MessageSquare className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">Interpretar Mensagem do WhatsApp</h3>
+    <div className="space-y-4">
+      {/* Header Card */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500/20 via-green-600/10 to-emerald-500/20 border border-green-500/30 p-5"
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl" />
+        
+        <div className="relative flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-green-500/20 border border-green-500/30">
+            <MessageSquare className="h-6 w-6 text-green-500" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Assistente WhatsApp</h2>
+            <p className="text-sm text-muted-foreground">
+              Cole a mensagem do cliente e deixe a IA extrair os dados
+            </p>
+          </div>
+          <div className="ml-auto">
+            <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
+              <Sparkles className="h-3 w-3 mr-1" />
+              IA
+            </Badge>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Chat-like Interface */}
+      <div className="rounded-2xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden">
+        {/* Input Area - Chat Style */}
+        <div className="p-4 border-b border-border bg-muted/30">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+              <MessageSquare className="h-5 w-5 text-green-500" />
+            </div>
+            <div className="flex-1 space-y-3">
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Cole a mensagem do WhatsApp aqui...
+
+Ex: João Silva - 48999001234
+Quero corte + barba
+Sábado dia 18 às 10h"
+                rows={4}
+                className="resize-none border-0 bg-background/80 focus-visible:ring-green-500/50 rounded-xl text-sm"
+              />
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={pasteFromClipboard}
+                  className="text-xs gap-1.5 rounded-lg"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Colar
+                </Button>
+                
+                <div className="flex-1" />
+                
+                <Button 
+                  onClick={parseMessage} 
+                  disabled={loading || !message.trim()}
+                  size="sm"
+                  className="gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="hidden sm:inline">Analisando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4" />
+                      <span className="hidden sm:inline">Interpretar</span>
+                      <Send className="h-4 w-4 sm:hidden" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <Textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Cole aqui a mensagem do cliente do WhatsApp...
-
-Exemplo:
-João Pereira
-48998601201
-corte tradicional + barba
-dia 12/02 as 12:00"
-          rows={6}
-          className="mb-4 font-mono text-sm"
-        />
-
-        <Button 
-          onClick={parseMessage} 
-          disabled={loading || !message.trim()}
-          className="w-full"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Interpretando...
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Interpretar com IA
-            </>
-          )}
-        </Button>
-      </div>
-
-      {/* Result */}
-      {parsed && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl glass-effect p-6"
-        >
-          <h3 className="font-semibold mb-4 text-green-500">✓ Dados Extraídos</h3>
-
-          <div className="space-y-3">
-            {parsed.client_name && (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
-                <User className="h-4 w-4 text-primary" />
-                <span className="text-muted-foreground">Cliente:</span>
-                <span className="font-medium text-primary">{parsed.client_name}</span>
-              </div>
-            )}
-
-            {parsed.client_phone && (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
-                <Phone className="h-4 w-4 text-green-500" />
-                <span className="text-muted-foreground">Telefone:</span>
-                <span className="font-medium text-green-500">{parsed.client_phone}</span>
-              </div>
-            )}
-
-            {parsed.date && (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
-                <Calendar className="h-4 w-4 text-primary" />
-                <span className="text-muted-foreground">Data:</span>
-                <span className="font-medium">{parsed.date}</span>
-              </div>
-            )}
-
-            {parsed.time && (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
-                <Clock className="h-4 w-4 text-primary" />
-                <span className="text-muted-foreground">Horário:</span>
-                <span className="font-medium">{parsed.time}</span>
-              </div>
-            )}
-
-            {parsed.services && parsed.services.length > 0 && (
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted">
-                <Scissors className="h-4 w-4 text-primary mt-0.5" />
-                <span className="text-muted-foreground">Serviços:</span>
-                <span className="font-medium">{parsed.services.join(', ')}</span>
-              </div>
-            )}
-
-            {parsed.notes && (
-              <div className="p-3 rounded-lg bg-muted">
-                <span className="text-muted-foreground">Observações:</span>
-                <p className="font-medium mt-1">{parsed.notes}</p>
-              </div>
-            )}
-          </div>
-
-          {!canCreate && (
-            <p className="text-amber-500 text-sm mt-4">
-              ⚠️ Data e horário são obrigatórios para criar o agendamento.
-            </p>
-          )}
-
-          <div className="flex gap-3 mt-6">
-            <Button variant="outline" onClick={clearResult} className="flex-1">
-              Limpar
-            </Button>
-            <Button 
-              className="flex-1" 
-              onClick={createAppointment}
-              disabled={!canCreate || creating}
+        {/* Loading State */}
+        <AnimatePresence>
+          {loading && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="p-4 border-b border-border"
             >
-              {creating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Criando...
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Criar Agendamento
-                </>
-              )}
-            </Button>
-          </div>
-        </motion.div>
-      )}
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                </div>
+                <div className="flex-1">
+                  <div className="bg-muted/50 rounded-2xl rounded-tl-sm p-4 inline-block">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span className="text-sm text-muted-foreground">Interpretando mensagem...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Instructions */}
-      <div className="rounded-2xl glass-effect p-6">
-        <h4 className="font-medium mb-2">💡 Como usar:</h4>
-        <ol className="text-sm text-muted-foreground space-y-2">
-          <li>1. Copie a mensagem do cliente no WhatsApp</li>
-          <li>2. Cole no campo acima</li>
-          <li>3. Clique em "Interpretar com IA"</li>
-          <li>4. Revise os dados extraídos</li>
-          <li>5. Clique em "Criar Agendamento"</li>
-        </ol>
-        <p className="text-xs text-muted-foreground mt-3 p-2 rounded bg-muted">
-          ℹ️ O agendamento será criado com os dados do cliente exatamente como foram enviados no WhatsApp.
-        </p>
+        {/* Parsed Result - Chat Response Style */}
+        <AnimatePresence>
+          {parsed && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="p-4"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 space-y-3">
+                  {/* Success Header */}
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-500/20 text-green-600 border-green-500/30">
+                      <Check className="h-3 w-3 mr-1" />
+                      Dados extraídos
+                    </Badge>
+                  </div>
+
+                  {/* Extracted Data Cards */}
+                  <div className="grid gap-2">
+                    {parsed.client_name && (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                          <User className="h-4 w-4 text-blue-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Cliente</p>
+                          <p className="font-medium text-sm">{parsed.client_name}</p>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {parsed.client_phone && (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.15 }}
+                        className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                          <Phone className="h-4 w-4 text-green-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">WhatsApp</p>
+                          <p className="font-medium text-sm text-green-600">{parsed.client_phone}</p>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {parsed.date && (
+                        <motion.div 
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.2 }}
+                          className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                            <Calendar className="h-4 w-4 text-orange-500" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Data</p>
+                            <p className="font-medium text-sm">{parsed.date}</p>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {parsed.time && (
+                        <motion.div 
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.25 }}
+                          className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                            <Clock className="h-4 w-4 text-purple-500" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Horário</p>
+                            <p className="font-medium text-sm">{parsed.time}</p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+
+                    {parsed.services && parsed.services.length > 0 && (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="p-3 rounded-xl bg-muted/50 border border-border"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                            <Scissors className="h-4 w-4 text-primary" />
+                          </div>
+                          <p className="text-xs text-muted-foreground">Serviços</p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 ml-10">
+                          {parsed.services.map((service, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs">
+                              {service}
+                            </Badge>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {parsed.notes && (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.35 }}
+                        className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30"
+                      >
+                        <p className="text-xs text-yellow-600 font-medium mb-1">📝 Observações</p>
+                        <p className="text-sm">{parsed.notes}</p>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  {/* Warning if missing required fields */}
+                  {!canCreate && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30"
+                    >
+                      <p className="text-sm text-amber-600">
+                        ⚠️ Data e horário são obrigatórios para criar o agendamento.
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="flex gap-2 pt-2"
+                  >
+                    <Button 
+                      variant="outline" 
+                      onClick={clearResult} 
+                      size="sm"
+                      className="gap-2 rounded-lg"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Nova mensagem
+                    </Button>
+                    <Button 
+                      onClick={createAppointment}
+                      disabled={!canCreate || creating}
+                      size="sm"
+                      className="flex-1 gap-2 rounded-lg bg-primary hover:bg-primary/90"
+                    >
+                      {creating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Criando...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Criar Agendamento
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Empty State / Instructions */}
+        {!parsed && !loading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="p-6 text-center"
+          >
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
+              <Wand2 className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h4 className="font-medium text-foreground mb-2">Como funciona?</h4>
+            <div className="text-sm text-muted-foreground space-y-1 max-w-xs mx-auto">
+              <p>1️⃣ Copie a mensagem do cliente no WhatsApp</p>
+              <p>2️⃣ Cole no campo acima e clique em Interpretar</p>
+              <p>3️⃣ Revise os dados e crie o agendamento</p>
+            </div>
+            <div className="mt-4 p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-xs text-green-600 max-w-xs mx-auto">
+              💡 A IA extrai automaticamente nome, telefone, data, horário e serviços!
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );
