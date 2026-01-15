@@ -55,6 +55,7 @@ export type Database = {
           appointment_date: string
           appointment_time: string
           created_at: string | null
+          guest_client_id: string | null
           guest_name: string | null
           guest_phone: string | null
           id: string
@@ -72,6 +73,7 @@ export type Database = {
           appointment_date: string
           appointment_time: string
           created_at?: string | null
+          guest_client_id?: string | null
           guest_name?: string | null
           guest_phone?: string | null
           id?: string
@@ -89,6 +91,7 @@ export type Database = {
           appointment_date?: string
           appointment_time?: string
           created_at?: string | null
+          guest_client_id?: string | null
           guest_name?: string | null
           guest_phone?: string | null
           id?: string
@@ -103,6 +106,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_guest_client_id_fkey"
+            columns: ["guest_client_id"]
+            isOneToOne: false
+            referencedRelation: "guest_clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_user_id_fkey"
             columns: ["user_id"]
@@ -293,6 +303,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      guest_clients: {
+        Row: {
+          created_at: string
+          id: string
+          last_visit_at: string | null
+          name: string
+          phone: string
+          total_spent: number | null
+          total_visits: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_visit_at?: string | null
+          name: string
+          phone: string
+          total_spent?: number | null
+          total_visits?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_visit_at?: string | null
+          name?: string
+          phone?: string
+          total_spent?: number | null
+          total_visits?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       loyalty_program: {
         Row: {
