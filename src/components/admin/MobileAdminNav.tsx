@@ -8,13 +8,15 @@ import {
   MoreHorizontal,
   Star,
   Gift,
-  MessageSquare
+  MessageSquare,
+  ExternalLink
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AdminNotificationBell } from './AdminNotificationBell';
+import { Button } from '@/components/ui/button';
 
 const mainItems = [
   { icon: LayoutDashboard, label: 'Home', path: '/admin' },
@@ -33,13 +35,25 @@ const moreItems = [
 
 export function MobileAdminNav() {
   const [moreOpen, setMoreOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <>
       {/* Top Header for mobile */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-background/80 backdrop-blur-lg border-b border-border flex items-center justify-between px-4">
         <h1 className="font-display text-lg font-bold">Admin</h1>
-        <AdminNotificationBell />
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate('/')}
+            className="h-8 px-2 text-xs gap-1"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Site
+          </Button>
+          <AdminNotificationBell />
+        </div>
       </header>
 
       {/* Bottom Navigation for mobile */}
