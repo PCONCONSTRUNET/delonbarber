@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-
+import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -210,8 +210,8 @@ export function WhatsAppAI() {
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl" />
         
         <div className="relative flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-green-500/20 border border-green-500/30">
-            <MessageCircle className="h-7 w-7 text-green-500" />
+          <div className="p-3 rounded-2xl bg-white/10 border border-green-500/30">
+            <WhatsAppIcon size={28} />
           </div>
           <div>
             <h2 className="text-lg font-bold text-foreground">Assistente WhatsApp</h2>
