@@ -381,81 +381,128 @@ export function useAdminClients() {
     setLoading(false);
   }
 
-  async function deleteClient(userId: string) {
-    // Delete in order: usage -> client_packages -> client_notes -> appointment_services -> appointments -> profiles
-    // Note: We can't delete from auth.users directly, but we can clean up all related data
-    
-    // 1. Get all client packages for this user
-    const { data: clientPackages } = await supabase
-      .from('client_packages')
-      .select('id')
-      .eq('user_id', userId);
+  async function deleteClient(userId: string, isGuest: boolean = false) {
+    try {
+      if (isGuest) {
+        // Delete guest client
+        // 1. Get all appointments for this guest client
+        const { data: appointments } = await supabase
+          .from('appointments')
+          .select('id')
+          .eq('guest_client_id', userId);
 
-    // 2. Delete client_package_usage for those packages
-    if (clientPackages && clientPackages.length > 0) {
-      const packageIds = clientPackages.map(p => p.id);
-      await supabase
-        .from('client_package_usage')
-        .delete()
-        .in('client_package_id', packageIds);
-    }
+        // 2. Delete appointment_services for those appointments
+        if (appointments && appointments.length > 0) {
+          const appointmentIds = appointments.map(a => a.id);
+          await supabase
+            .from('appointment_services')
+            .delete()
+            .in('appointment_id', appointmentIds);
+          
+          // 3. Delete blocked_slots for those appointments
+          await supabase
+            .from('blocked_slots')
+            .delete()
+            .in('appointment_id', appointmentIds);
+        }
 
-    // 3. Delete client_packages
-    await supabase
-      .from('client_packages')
-      .delete()
-      .eq('user_id', userId);
+        // 4. Update appointments to remove guest_client_id reference
+        await supabase
+          .from('appointments')
+          .update({ guest_client_id: null })
+          .eq('guest_client_id', userId);
 
-    // 4. Get profile id for client_notes
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
+        // 5. Delete guest_client
+        const { error } = await supabase
+          .from('guest_clients')
+          .delete()
+          .eq('id', userId);
 
-    if (profile) {
-      // 5. Delete client_notes
-      await supabase
-        .from('client_notes')
-        .delete()
-        .eq('client_id', profile.id);
-    }
+        if (error) {
+          console.error('Error deleting guest client:', error);
+          toast({ title: "Erro", description: "Não foi possível excluir cliente.", variant: "destructive" });
+          return false;
+        }
+      } else {
+        // Delete regular client (profile)
+        // 1. Get all client packages for this user
+        const { data: clientPackages } = await supabase
+          .from('client_packages')
+          .select('id')
+          .eq('user_id', userId);
 
-    // 6. Get all appointments for this user
-    const { data: appointments } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('user_id', userId);
+        // 2. Delete client_package_usage for those packages
+        if (clientPackages && clientPackages.length > 0) {
+          const packageIds = clientPackages.map(p => p.id);
+          await supabase
+            .from('client_package_usage')
+            .delete()
+            .in('client_package_id', packageIds);
+        }
 
-    // 7. Delete appointment_services for those appointments
-    if (appointments && appointments.length > 0) {
-      const appointmentIds = appointments.map(a => a.id);
-      await supabase
-        .from('appointment_services')
-        .delete()
-        .in('appointment_id', appointmentIds);
-    }
+        // 3. Delete client_packages
+        await supabase
+          .from('client_packages')
+          .delete()
+          .eq('user_id', userId);
 
-    // 8. Delete appointments
-    await supabase
-      .from('appointments')
-      .delete()
-      .eq('user_id', userId);
+        // 4. Get profile id for client_notes
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
 
-    // 9. Delete profile
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('user_id', userId);
+        if (profile) {
+          // 5. Delete client_notes
+          await supabase
+            .from('client_notes')
+            .delete()
+            .eq('client_id', profile.id);
+        }
 
-    if (error) {
+        // 6. Get all appointments for this user
+        const { data: appointments } = await supabase
+          .from('appointments')
+          .select('id')
+          .eq('user_id', userId);
+
+        // 7. Delete appointment_services for those appointments
+        if (appointments && appointments.length > 0) {
+          const appointmentIds = appointments.map(a => a.id);
+          await supabase
+            .from('appointment_services')
+            .delete()
+            .in('appointment_id', appointmentIds);
+        }
+
+        // 8. Delete appointments
+        await supabase
+          .from('appointments')
+          .delete()
+          .eq('user_id', userId);
+
+        // 9. Delete profile
+        const { error } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('user_id', userId);
+
+        if (error) {
+          console.error('Error deleting profile:', error);
+          toast({ title: "Erro", description: "Não foi possível excluir cliente.", variant: "destructive" });
+          return false;
+        }
+      }
+
+      toast({ title: "Cliente excluído!", description: "Todos os dados foram removidos." });
+      fetchClients();
+      return true;
+    } catch (error) {
+      console.error('Error deleting client:', error);
       toast({ title: "Erro", description: "Não foi possível excluir cliente.", variant: "destructive" });
       return false;
     }
-
-    toast({ title: "Cliente excluído!", description: "Todos os dados foram removidos." });
-    fetchClients();
-    return true;
   }
 
   useEffect(() => {

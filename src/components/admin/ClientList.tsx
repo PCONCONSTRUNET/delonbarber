@@ -11,7 +11,7 @@ import { ptBR } from 'date-fns/locale';
 
 interface ClientListProps {
   clients: Client[];
-  onDeleteClient?: (userId: string) => Promise<boolean>;
+  onDeleteClient?: (userId: string, isGuest: boolean) => Promise<boolean>;
 }
 
 export function ClientList({ clients, onDeleteClient }: ClientListProps) {
@@ -21,7 +21,7 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
   const handleDelete = async (client: Client) => {
     if (!onDeleteClient) return;
     setDeletingId(client.user_id);
-    await onDeleteClient(client.user_id);
+    await onDeleteClient(client.user_id, client.is_guest);
     setDeletingId(null);
   };
 
