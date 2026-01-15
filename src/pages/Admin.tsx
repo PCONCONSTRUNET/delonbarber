@@ -24,7 +24,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, Pencil, Trash2, Bell, Crown, Download } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Bell, Crown, Download, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -163,18 +164,29 @@ export function AdminAgenda() {
 export function AdminClientes() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const { clients, loading, deleteClient } = useAdminClients();
+  const [searchTerm, setSearchTerm] = useState('');
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!isAdmin) return <Navigate to="/login" replace />;
 
-  const exportToCSV = () => {
-    if (clients.length === 0) return;
+  // Filter clients by search term
+  const filteredClients = clients.filter(client => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    const name = (client.name || '').toLowerCase();
+    const phone = (client.phone || '').toLowerCase();
+    return name.includes(term) || phone.includes(term);
+  });
 
-    const headers = ['Nome', 'Telefone', 'Agendamentos', 'Total Gasto (R$)', 'Última Visita', 'Data Cadastro'];
+  const exportToCSV = () => {
+    if (filteredClients.length === 0) return;
+
+    const headers = ['Nome', 'Telefone', 'Tipo', 'Agendamentos', 'Total Gasto (R$)', 'Última Visita', 'Data Cadastro'];
     
-    const rows = clients.map(client => [
+    const rows = filteredClients.map(client => [
       client.name || 'Sem nome',
       client.phone || 'Sem telefone',
+      client.is_guest ? 'Formulário' : 'Conta',
       client.total_appointments.toString(),
       client.total_spent.toFixed(2).replace('.', ','),
       client.last_appointment || 'Nunca',
@@ -204,12 +216,31 @@ export function AdminClientes() {
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
         <h1 className="font-display text-2xl md:text-3xl font-bold">Clientes</h1>
-        <Button onClick={exportToCSV} variant="outline" size="sm" disabled={loading || clients.length === 0}>
+        <Button onClick={exportToCSV} variant="outline" size="sm" disabled={loading || filteredClients.length === 0}>
           <Download className="h-4 w-4 mr-2" />
           <span className="hidden sm:inline">Exportar</span> CSV
         </Button>
       </div>
-      {loading ? <Loader2 className="animate-spin" /> : <ClientList clients={clients} onDeleteClient={deleteClient} />}
+      
+      {/* Search Bar */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Pesquisar por nome ou telefone..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 h-11 rounded-xl"
+        />
+      </div>
+      
+      {/* Results count */}
+      {searchTerm && (
+        <p className="text-sm text-muted-foreground mb-3">
+          {filteredClients.length} cliente{filteredClients.length !== 1 ? 's' : ''} encontrado{filteredClients.length !== 1 ? 's' : ''}
+        </p>
+      )}
+      
+      {loading ? <Loader2 className="animate-spin" /> : <ClientList clients={filteredClients} onDeleteClient={deleteClient} />}
     </AdminLayout>
   );
 }
