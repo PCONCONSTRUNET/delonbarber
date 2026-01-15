@@ -1,11 +1,11 @@
 import { useMemo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar } from '@/components/ui/calendar';
-import { Clock, Crown, AlertCircle } from 'lucide-react';
+import { Clock, Crown, AlertCircle, CalendarX } from 'lucide-react';
 import { BusinessHours, Service } from '@/hooks/useAppointments';
 import { cn } from '@/lib/utils';
 import { ptBR } from 'date-fns/locale';
-import { format, startOfWeek, endOfWeek, isSameWeek } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isSameMonth } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,7 @@ export function DateTimeSelection({
   const { packages } = useMyPackages();
   const [blockedWeekDates, setBlockedWeekDates] = useState<Date[]>([]);
   const [isVipBooking, setIsVipBooking] = useState(false);
+  const [vipPackageMonth, setVipPackageMonth] = useState<{ start: Date; end: Date } | null>(null);
 
   // Check if any selected service has VIP benefit with weekly limit
   useEffect(() => {
@@ -40,22 +41,32 @@ export function DateTimeSelection({
       if (!user || selectedServices.length === 0) {
         setBlockedWeekDates([]);
         setIsVipBooking(false);
+        setVipPackageMonth(null);
         return;
       }
 
       // Get service IDs that have weekly limits in user's packages
-      const servicesWithWeeklyLimit: { serviceId: string; weeklyLimit: number }[] = [];
+      const servicesWithWeeklyLimit: { serviceId: string; weeklyLimit: number; packageStartDate: string }[] = [];
+      let earliestPackageStart: Date | null = null;
       
       for (const pkg of packages) {
         if (pkg.status === 'active') {
+          const packageStartDate = new Date(pkg.start_date + 'T00:00:00');
+          
           for (const benefit of pkg.benefits) {
             if (benefit.weekly_limit !== null && benefit.weekly_limit > 0 && benefit.remaining > 0) {
               const isSelected = selectedServices.some(s => s.id === benefit.service_id);
               if (isSelected) {
                 servicesWithWeeklyLimit.push({
                   serviceId: benefit.service_id,
-                  weeklyLimit: benefit.weekly_limit
+                  weeklyLimit: benefit.weekly_limit,
+                  packageStartDate: pkg.start_date
                 });
+                
+                // Track the earliest package start date for VIP services
+                if (!earliestPackageStart || packageStartDate < earliestPackageStart) {
+                  earliestPackageStart = packageStartDate;
+                }
               }
             }
           }
@@ -65,10 +76,18 @@ export function DateTimeSelection({
       if (servicesWithWeeklyLimit.length === 0) {
         setBlockedWeekDates([]);
         setIsVipBooking(false);
+        setVipPackageMonth(null);
         return;
       }
 
       setIsVipBooking(true);
+
+      // Set the VIP package month boundaries (only the month when package was purchased)
+      if (earliestPackageStart) {
+        const monthStart = startOfMonth(earliestPackageStart);
+        const monthEnd = endOfMonth(earliestPackageStart);
+        setVipPackageMonth({ start: monthStart, end: monthEnd });
+      }
 
       // Get all scheduled appointments for the next 60 days
       const today = new Date();
@@ -176,14 +195,21 @@ export function DateTimeSelection({
     );
   };
 
-  // Disable days that are closed OR blocked by VIP weekly limit
+  // Check if a date is outside the VIP package month (only for VIP bookings)
+  const isDateOutsideVipMonth = (date: Date): boolean => {
+    if (!isVipBooking || !vipPackageMonth) return false;
+    return date < vipPackageMonth.start || date > vipPackageMonth.end;
+  };
+
+  // Disable days that are closed OR blocked by VIP weekly limit OR outside VIP month
   const disabledDays = (date: Date) => {
     const dayOfWeek = date.getDay();
     const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     const isBlockedByVipLimit = isDateBlockedByVip(date);
+    const isOutsideVipMonth = isDateOutsideVipMonth(date);
     
-    return isPast || !dayHours?.is_open || isBlockedByVipLimit;
+    return isPast || !dayHours?.is_open || isBlockedByVipLimit || isOutsideVipMonth;
   };
 
   // Custom day content to show VIP blocked indicator
@@ -206,6 +232,25 @@ export function DateTimeSelection({
 
   return (
     <div className="space-y-6">
+      {/* VIP Month Restriction Info */}
+      {isVipBooking && vipPackageMonth && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-primary/10 border border-primary/30 rounded-2xl p-3"
+        >
+          <div className="flex items-start gap-2">
+            <CalendarX className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+            <div className="text-xs">
+              <p className="font-medium text-primary">Pacote válido apenas em {format(vipPackageMonth.start, 'MMMM/yyyy', { locale: ptBR })}</p>
+              <p className="text-muted-foreground mt-0.5">
+                Seu pacote VIP é válido somente no mês da compra. Agende dentro deste período.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* VIP Weekly Limit Info */}
       {isVipBooking && blockedWeekDates.length > 0 && (
         <motion.div
