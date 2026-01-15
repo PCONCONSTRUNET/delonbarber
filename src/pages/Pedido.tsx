@@ -204,12 +204,13 @@ const Pedido = () => {
     
     try {
       // Get admin user for placeholder
-      const { data: adminUser } = await supabase
+      const { data: adminUsers } = await supabase
         .from('user_roles')
         .select('user_id')
         .eq('role', 'admin')
-        .limit(1)
-        .single();
+        .limit(1);
+      
+      const adminUser = adminUsers?.[0];
       
       if (!adminUser) {
         toast.error('Erro de configuração do sistema');
@@ -395,42 +396,42 @@ const Pedido = () => {
     <div className="min-h-screen bg-background pb-24 overflow-x-hidden">
       <AnimatedBackground />
       
-      <main className="pt-6 pb-20 px-4 max-w-lg mx-auto safe-area-top">
-        {/* Header with Logo */}
+      <main className="pt-4 pb-20 px-3 sm:px-4 max-w-lg mx-auto safe-area-top">
+        {/* Header with Logo - More compact on mobile */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6"
+          className="text-center mb-4"
         >
           {/* Logo */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="mb-4"
+            className="mb-2"
           >
             <img 
               src="/icons/icon-192.png" 
               alt="Delon Barber" 
-              className="w-20 h-20 mx-auto rounded-2xl shadow-lg"
+              className="w-14 h-14 sm:w-20 sm:h-20 mx-auto rounded-xl shadow-lg"
             />
           </motion.div>
           
-          <h1 className="font-display text-2xl font-bold text-foreground mb-1">
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">
             Delon Barber
           </h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-xs sm:text-sm">
             Preencha seus dados para agendar
           </p>
         </motion.div>
 
-        {/* Progress Steps */}
+        {/* Progress Steps - Compact on mobile */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="flex justify-center mb-6"
+          className="flex justify-center mb-4"
         >
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             {steps.map((step, index) => {
               const isActive = currentStep === step.id;
               const isCompleted = currentStep > step.id;
@@ -440,18 +441,18 @@ const Pedido = () => {
                 <div key={step.id} className="flex items-center">
                   <div
                     className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                      "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all",
                       isActive || isCompleted
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground"
                     )}
                   >
-                    {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                    {isCompleted ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : <Icon className="w-4 h-4 sm:w-5 sm:h-5" />}
                   </div>
                   
                   {index < steps.length - 1 && (
                     <div className={cn(
-                      "w-8 h-0.5 mx-1",
+                      "w-6 sm:w-8 h-0.5 mx-0.5 sm:mx-1",
                       isCompleted ? "bg-primary" : "bg-muted"
                     )} />
                   )}
@@ -461,14 +462,14 @@ const Pedido = () => {
           </div>
         </motion.div>
 
-        {/* Selected services summary */}
+        {/* Selected services summary - Compact on mobile */}
         {selectedServices.length > 0 && currentStep > 1 && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-primary/10 rounded-2xl p-3 mb-4 flex items-center justify-between"
+            className="bg-primary/10 rounded-xl p-2 sm:p-3 mb-3 flex items-center justify-between"
           >
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm">
               <span className="font-semibold text-foreground">
                 {selectedServices.length}x
               </span>
@@ -476,7 +477,7 @@ const Pedido = () => {
                 {totalDuration}min
               </span>
             </div>
-            <span className="text-lg font-bold text-primary">
+            <span className="text-base sm:text-lg font-bold text-primary">
               R$ {totalPrice.toFixed(0)}
             </span>
           </motion.div>
@@ -492,11 +493,11 @@ const Pedido = () => {
               exit={{ opacity: 0, x: -10 }}
               className="space-y-4"
             >
-              <Card className="rounded-2xl">
-                <CardContent className="p-4 space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-primary" />
+              <Card className="rounded-xl sm:rounded-2xl">
+                <CardContent className="p-3 sm:p-4 space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name" className="flex items-center gap-1.5 text-sm">
+                      <User className="w-3.5 h-3.5 text-primary" />
                       Nome completo
                     </Label>
                     <Input
@@ -504,13 +505,13 @@ const Pedido = () => {
                       placeholder="Seu nome"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="rounded-xl h-12"
+                      className="rounded-lg h-10 sm:h-12 text-sm"
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-primary" />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone" className="flex items-center gap-1.5 text-sm">
+                      <Phone className="w-3.5 h-3.5 text-primary" />
                       WhatsApp
                     </Label>
                     <Input
@@ -518,14 +519,14 @@ const Pedido = () => {
                       placeholder="(48) 99999-9999"
                       value={phone}
                       onChange={(e) => setPhone(formatPhone(e.target.value))}
-                      className="rounded-xl h-12"
+                      className="rounded-lg h-10 sm:h-12 text-sm"
                       maxLength={15}
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="notes" className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-primary" />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="notes" className="flex items-center gap-1.5 text-sm">
+                      <MessageSquare className="w-3.5 h-3.5 text-primary" />
                       Observações (opcional)
                     </Label>
                     <Textarea
@@ -533,8 +534,8 @@ const Pedido = () => {
                       placeholder="Algum pedido especial?"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="rounded-xl resize-none"
-                      rows={3}
+                      className="rounded-lg resize-none text-sm"
+                      rows={2}
                     />
                   </div>
                 </CardContent>
@@ -548,14 +549,14 @@ const Pedido = () => {
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
-              className="space-y-3"
+              className="space-y-2"
             >
               {loading ? (
-                <div className="flex justify-center py-12">
+                <div className="flex justify-center py-8">
                   <motion.span
                     animate={{ rotate: 360 }}
                     transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                    className="text-3xl"
+                    className="text-2xl"
                   >
                     ✂️
                   </motion.span>
@@ -569,7 +570,7 @@ const Pedido = () => {
                       whileTap={{ scale: 0.98 }}
                       onClick={() => toggleService(service)}
                       className={cn(
-                        "p-4 rounded-2xl border-2 cursor-pointer transition-all",
+                        "p-3 rounded-xl border-2 cursor-pointer transition-all active:scale-[0.98]",
                         isSelected
                           ? "border-primary bg-primary/10"
                           : "border-border bg-card hover:border-primary/50"
@@ -577,20 +578,20 @@ const Pedido = () => {
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="font-semibold text-foreground">{service.name}</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <h3 className="font-semibold text-foreground text-sm">{service.name}</h3>
+                          <p className="text-xs text-muted-foreground">
                             {service.duration_minutes} min
                           </p>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-primary">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-primary text-sm">
                             R$ {Number(service.price).toFixed(0)}
                           </span>
                           <div className={cn(
-                            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                            "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
                             isSelected ? "bg-primary border-primary" : "border-muted-foreground"
                           )}>
-                            {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
+                            {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
                           </div>
                         </div>
                       </div>
@@ -607,13 +608,13 @@ const Pedido = () => {
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
-              className="space-y-4"
+              className="space-y-3"
             >
-              <Card className="rounded-2xl">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Calendar className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold">Escolha a data</h3>
+              <Card className="rounded-xl">
+                <CardContent className="p-2 sm:p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Calendar className="w-4 h-4 text-primary" />
+                    <h3 className="font-semibold text-sm">Escolha a data</h3>
                   </div>
                   <CalendarComponent
                     mode="single"
@@ -624,7 +625,7 @@ const Pedido = () => {
                     }}
                     disabled={isDateDisabled}
                     locale={ptBR}
-                    className="rounded-xl"
+                    className="rounded-lg !p-1 [&_table]:w-full [&_td]:p-0.5 [&_th]:p-0.5 [&_button]:h-8 [&_button]:w-8 [&_button]:text-xs"
                     fromDate={new Date()}
                     toDate={addDays(new Date(), 30)}
                   />
@@ -632,26 +633,26 @@ const Pedido = () => {
               </Card>
               
               {selectedDate && (
-                <Card className="rounded-2xl">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Clock className="w-5 h-5 text-primary" />
-                      <h3 className="font-semibold">Escolha o horário</h3>
+                <Card className="rounded-xl">
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Clock className="w-4 h-4 text-primary" />
+                      <h3 className="font-semibold text-sm">Escolha o horário</h3>
                     </div>
                     
                     {timeSlots.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-4">
+                      <p className="text-muted-foreground text-center py-3 text-sm">
                         Nenhum horário disponível nesta data
                       </p>
                     ) : (
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-4 gap-1.5">
                         {timeSlots.map((time) => (
                           <Button
                             key={time}
                             variant={selectedTime === time ? "default" : "outline"}
                             size="sm"
                             onClick={() => setSelectedTime(time)}
-                            className="rounded-xl h-10"
+                            className="rounded-lg h-9 text-xs px-2"
                           >
                             {time}
                           </Button>
@@ -670,16 +671,16 @@ const Pedido = () => {
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
-              className="space-y-4"
+              className="space-y-3"
             >
-              <Card className="rounded-2xl">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <CreditCard className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold">Forma de pagamento</h3>
+              <Card className="rounded-xl">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <CreditCard className="w-4 h-4 text-primary" />
+                    <h3 className="font-semibold text-sm">Forma de pagamento</h3>
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {paymentMethods.map((method) => {
                       const isSelected = selectedPayment === method.id;
                       return (
@@ -688,22 +689,22 @@ const Pedido = () => {
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setSelectedPayment(method.id)}
                           className={cn(
-                            "p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4",
+                            "p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-3 active:scale-[0.98]",
                             isSelected
                               ? "border-primary bg-primary/10"
                               : "border-border bg-card hover:border-primary/50"
                           )}
                         >
-                          <img src={method.icon} alt={method.name} className="w-10 h-10" />
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-foreground">{method.name}</h4>
-                            <p className="text-sm text-muted-foreground">{method.description}</p>
+                          <img src={method.icon} alt={method.name} className="w-8 h-8" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-foreground text-sm">{method.name}</h4>
+                            <p className="text-xs text-muted-foreground truncate">{method.description}</p>
                           </div>
                           <div className={cn(
-                            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                            "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0",
                             isSelected ? "bg-primary border-primary" : "border-muted-foreground"
                           )}>
-                            {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
+                            {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
                           </div>
                         </motion.div>
                       );
@@ -712,14 +713,14 @@ const Pedido = () => {
                 </CardContent>
               </Card>
               
-              {/* Order Summary */}
-              <Card className="rounded-2xl bg-muted/30">
-                <CardContent className="p-4">
-                  <h3 className="font-semibold mb-3">Resumo do pedido</h3>
-                  <div className="space-y-2 text-sm">
+              {/* Order Summary - Compact */}
+              <Card className="rounded-xl bg-muted/30">
+                <CardContent className="p-3">
+                  <h3 className="font-semibold text-sm mb-2">Resumo do pedido</h3>
+                  <div className="space-y-1.5 text-xs">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Cliente:</span>
-                      <span className="font-medium">{name}</span>
+                      <span className="font-medium truncate max-w-[150px]">{name}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Data:</span>
@@ -733,13 +734,13 @@ const Pedido = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Serviços:</span>
-                      <span className="font-medium text-right max-w-[180px]">
+                      <span className="font-medium text-right max-w-[150px] truncate">
                         {selectedServices.map(s => s.name).join(', ')}
                       </span>
                     </div>
                     <div className="flex justify-between border-t border-border pt-2 mt-2">
-                      <span className="font-semibold">Total:</span>
-                      <span className="font-bold text-primary text-lg">R$ {totalPrice.toFixed(0)}</span>
+                      <span className="font-semibold text-sm">Total:</span>
+                      <span className="font-bold text-primary">R$ {totalPrice.toFixed(0)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -748,14 +749,14 @@ const Pedido = () => {
           )}
         </AnimatePresence>
 
-        {/* Navigation Buttons */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-lg border-t border-border safe-area-bottom">
-          <div className="max-w-lg mx-auto flex gap-3">
+        {/* Navigation Buttons - Compact on mobile */}
+        <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-lg border-t border-border safe-area-bottom">
+          <div className="max-w-lg mx-auto flex gap-2">
             {currentStep > 1 && (
               <Button
                 variant="outline"
                 onClick={() => setCurrentStep(prev => prev - 1)}
-                className="flex-1 h-12 rounded-2xl"
+                className="flex-1 h-11 rounded-xl text-sm"
               >
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 Voltar
@@ -766,7 +767,7 @@ const Pedido = () => {
               <Button
                 onClick={() => setCurrentStep(prev => prev + 1)}
                 disabled={!canProceed()}
-                className="flex-1 h-12 rounded-2xl"
+                className="flex-1 h-11 rounded-xl text-sm"
               >
                 Próximo
                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -775,7 +776,7 @@ const Pedido = () => {
               <Button
                 onClick={handleSubmit}
                 disabled={!canProceed() || isSubmitting}
-                className="flex-1 h-12 rounded-2xl"
+                className="flex-1 h-11 rounded-xl text-sm"
               >
                 {isSubmitting ? (
                   <motion.span
@@ -786,8 +787,8 @@ const Pedido = () => {
                   </motion.span>
                 ) : (
                   <>
-                    Confirmar Pedido
-                    <Check className="w-4 h-4 ml-2" />
+                    Confirmar
+                    <Check className="w-4 h-4 ml-1" />
                   </>
                 )}
               </Button>
