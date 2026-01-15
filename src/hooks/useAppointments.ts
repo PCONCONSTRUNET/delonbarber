@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { sendPushToAdmins } from '@/lib/pushNotifications';
 
 export interface Service {
@@ -150,7 +150,7 @@ export function useAppointments() {
     // Check for active package benefits
     const { data: activePackages, error: pkgError } = await supabase
       .from('client_packages')
-      .select('id, package_id')
+      .select('id, package_id, start_date, end_date')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .gte('end_date', new Date().toISOString().split('T')[0]);
@@ -165,6 +165,7 @@ export function useAppointments() {
     const benefitsToUse: { clientPackageId: string; serviceId: string }[] = [];
     const servicesWithBenefits: string[] = [];
     const weeklyBlockedServices: string[] = [];
+    const monthBlockedServices: string[] = [];
 
     // Calculate week boundaries for the SELECTED DATE (not current date)
     // This allows VIP clients to schedule multiple future appointments in different weeks
@@ -177,6 +178,22 @@ export function useAppointments() {
 
     if (activePackages && activePackages.length > 0) {
       for (const pkg of activePackages) {
+        // CHECK: VIP package is only valid for the month it was purchased
+        const packageStartDate = new Date(pkg.start_date + 'T00:00:00');
+        const packageMonthStart = startOfMonth(packageStartDate);
+        const packageMonthEnd = endOfMonth(packageStartDate);
+        
+        // Check if appointment date is within the package's valid month
+        const isWithinPackageMonth = appointmentDate >= packageMonthStart && appointmentDate <= packageMonthEnd;
+        
+        console.log('Package month validation:', { 
+          packageStartDate, 
+          packageMonthStart, 
+          packageMonthEnd, 
+          appointmentDate,
+          isWithinPackageMonth 
+        });
+
         // Get benefits for this package with weekly_limit
         const { data: benefits, error: benefitsError } = await supabase
           .from('package_benefits')
@@ -249,11 +266,19 @@ export function useAppointments() {
           // Skip if we already found a benefit for this service
           if (servicesWithBenefits.includes(service.id)) continue;
           if (weeklyBlockedServices.includes(service.id)) continue;
+          if (monthBlockedServices.includes(service.id)) continue;
 
           const benefit = benefits?.find(b => b.service_id === service.id);
           console.log('Checking service', service.name, ':', { benefit, serviceId: service.id });
           
           if (benefit) {
+            // CHECK: If appointment is outside the package month, block VIP usage for this service
+            if (!isWithinPackageMonth) {
+              console.log('Appointment date is outside package month for service:', service.name);
+              monthBlockedServices.push(service.id);
+              continue;
+            }
+
             const used = usageByService[service.id] || 0;
             const remaining = benefit.quantity - used;
             
@@ -297,6 +322,22 @@ export function useAppointments() {
     console.log('Final benefits to use:', benefitsToUse);
     console.log('Services with benefits:', servicesWithBenefits);
     console.log('Weekly blocked services:', weeklyBlockedServices);
+    console.log('Month blocked services:', monthBlockedServices);
+
+    // If any services are blocked by month restriction and user is trying to use as subscriber
+    if (monthBlockedServices.length > 0 && paymentMethod === 'subscriber') {
+      const blockedServiceNames = selectedServices
+        .filter(s => monthBlockedServices.includes(s.id))
+        .map(s => s.name)
+        .join(', ');
+      
+      toast({
+        title: "Pacote válido somente no mês da compra",
+        description: `O serviço "${blockedServiceNames}" só pode ser agendado no mês em que você comprou o pacote VIP.`,
+        variant: "destructive"
+      });
+      return null;
+    }
 
     // If any services are blocked by weekly limit and user is trying to use as subscriber
     if (weeklyBlockedServices.length > 0 && paymentMethod === 'subscriber') {
