@@ -59,7 +59,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
 
   const now = new Date();
 
-  const getDateRange = () => {
+  const getDateRange = (): { start: Date; end: Date } => {
     switch (filter) {
       case 'today':
         return { start: startOfDay(now), end: endOfDay(now) };
@@ -69,16 +69,23 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
         return { start: startOfMonth(now), end: endOfMonth(now) };
       case 'custom':
         return { start: startOfDay(customDate), end: endOfDay(customDate) };
+      default:
+        return { start: startOfDay(now), end: endOfDay(now) };
     }
   };
 
   const { start: periodStart, end: periodEnd } = getDateRange();
 
   const filteredAppointments = appointments.filter(a => {
-    // Parse the date string correctly to avoid timezone issues
-    const dateStr = a.appointment_date;
-    const date = parseISO(dateStr + 'T00:00:00');
-    return isWithinInterval(date, { start: periodStart, end: periodEnd });
+    try {
+      // Parse the date string correctly to avoid timezone issues
+      const dateStr = a.appointment_date;
+      if (!dateStr) return false;
+      const date = parseISO(dateStr + 'T00:00:00');
+      return isWithinInterval(date, { start: periodStart, end: periodEnd });
+    } catch {
+      return false;
+    }
   });
 
   const paidAppointments = filteredAppointments.filter(a => a.payment_status === 'paid');
