@@ -120,14 +120,14 @@ export function AdminSidebar() {
       {/* Footer */}
       <div className="p-2 border-t border-sidebar-border space-y-1">
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/cliente')}
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg w-full transition-colors",
             "text-sidebar-foreground hover:bg-sidebar-accent"
           )}
         >
           <ExternalLink className="h-5 w-5 flex-shrink-0" />
-          {!collapsed && <span className="text-sm font-medium">Voltar ao Site</span>}
+          {!collapsed && <span className="text-sm font-medium">Área do Cliente</span>}
         </button>
         <button
           onClick={handleLogout}

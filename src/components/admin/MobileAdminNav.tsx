@@ -46,11 +46,11 @@ export function MobileAdminNav() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/cliente')}
             className="h-8 px-2 text-xs gap-1"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Site
+            Cliente
           </Button>
           <AdminNotificationBell />
         </div>
