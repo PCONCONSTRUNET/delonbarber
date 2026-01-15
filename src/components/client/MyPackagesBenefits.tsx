@@ -1,10 +1,12 @@
-import { Crown, Scissors, Calendar, AlertTriangle, Clock, CalendarDays } from 'lucide-react';
+import { Crown, Scissors, Calendar, AlertTriangle, Clock, CalendarDays, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useMyPackages, MyPackage } from '@/hooks/useMyPackages';
 import { format, differenceInDays, endOfMonth, startOfMonth, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 interface MyPackagesBenefitsProps {
   compact?: boolean;
@@ -369,9 +371,42 @@ function FullView({ packages }: { packages: MyPackage[] }) {
                 </Badge>
               </div>
             )}
+
+            {/* Renew Button */}
+            <RenewButton daysRemaining={daysUntilMonthEnd} />
           </motion.div>
         );
       })}
     </div>
+  );
+}
+
+function RenewButton({ daysRemaining }: { daysRemaining: number }) {
+  const navigate = useNavigate();
+  const isUrgent = daysRemaining <= 7;
+  
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-4 pt-4 border-t border-border"
+    >
+      <Button
+        onClick={() => navigate('/pacotes')}
+        className={`w-full gap-2 rounded-xl ${
+          isUrgent 
+            ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white' 
+            : 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black'
+        }`}
+      >
+        <RefreshCw className="h-4 w-4" />
+        {isUrgent ? 'Renovar Agora!' : 'Renovar Pacote VIP'}
+      </Button>
+      {isUrgent && (
+        <p className="text-xs text-center text-muted-foreground mt-2">
+          ⚡ Renove antes do fim do mês para não perder seus benefícios
+        </p>
+      )}
+    </motion.div>
   );
 }
