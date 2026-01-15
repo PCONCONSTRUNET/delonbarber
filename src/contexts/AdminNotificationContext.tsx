@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 interface AdminNotificationContextValue {
   pendingCount: number;
   isAdmin: boolean;
+  pushEnabled: boolean;
+  enablePush: () => Promise<boolean>;
 }
 
 const AdminNotificationContext = createContext<AdminNotificationContextValue | null>(null);
@@ -23,6 +25,18 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+
+  const enablePush = async () => {
+    const success = await subscribeToPushNotifications();
+    setPushEnabled(success);
+    if (success) {
+      toast.success('🔔 Notificações push ativadas!', {
+        description: 'Você receberá alertas mesmo com o navegador minimizado.',
+      });
+    }
+    return success;
+  };
 
   // Check if user is admin
   useEffect(() => {
@@ -44,14 +58,16 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
 
       if (hasAdminRole) {
         // Request notification permission for admins
-        requestNotificationPermission();
+        const hasPermission = await requestNotificationPermission();
         
-        // Subscribe to push notifications for background alerts
-        subscribeToPushNotifications().then(success => {
-          if (success) {
-            console.log('Admin subscribed to push notifications');
+        if (hasPermission) {
+          // Subscribe to push notifications for background alerts
+          const pushSuccess = await subscribeToPushNotifications();
+          setPushEnabled(pushSuccess);
+          if (pushSuccess) {
+            console.log('✅ Admin subscribed to push notifications');
           }
-        });
+        }
       }
     }
 
@@ -173,7 +189,7 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
   }, [isAdmin, initialLoadComplete]);
 
   return (
-    <AdminNotificationContext.Provider value={{ pendingCount, isAdmin }}>
+    <AdminNotificationContext.Provider value={{ pendingCount, isAdmin, pushEnabled, enablePush }}>
       {children}
     </AdminNotificationContext.Provider>
   );
