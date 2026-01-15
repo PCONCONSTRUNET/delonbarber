@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DollarSign, TrendingUp, Calendar, Download, QrCode, CreditCard, Banknote, CalendarDays } from 'lucide-react';
+import { DollarSign, TrendingUp, Calendar as CalendarIcon, Download, QrCode, CreditCard, Banknote, CalendarDays } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -244,7 +244,7 @@ Status: PAGO
           className="p-4 rounded-2xl glass-effect"
         >
           <div className="flex items-center gap-2 mb-2">
-            <Calendar className="h-5 w-5 text-primary" />
+            <CalendarIcon className="h-5 w-5 text-primary" />
             <span className="text-sm text-muted-foreground">Atendimentos</span>
           </div>
           <p className="text-2xl font-bold">{completedCount}</p>
