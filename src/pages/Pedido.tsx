@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Check, Calendar, Clock, User, Phone, MessageSquare, Scissors } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, Calendar, Clock, User, Phone, MessageSquare, Scissors, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, addDays, getDay, setHours, setMinutes, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+// Import payment icons
+import iconPix from '@/assets/icon-pix.png';
+import iconCard from '@/assets/icon-card.png';
+import iconCash from '@/assets/icon-cash.png';
 
 interface Service {
   id: string;
@@ -31,10 +36,19 @@ interface BusinessHours {
   is_open: boolean;
 }
 
+type PaymentMethod = 'pix' | 'card' | 'cash';
+
+const paymentMethods = [
+  { id: 'pix' as PaymentMethod, name: 'PIX', icon: iconPix, description: 'Pagamento instantâneo' },
+  { id: 'card' as PaymentMethod, name: 'Cartão', icon: iconCard, description: 'Crédito ou débito' },
+  { id: 'cash' as PaymentMethod, name: 'Dinheiro', icon: iconCash, description: 'Pagamento no local' },
+];
+
 const steps = [
   { id: 1, title: 'Dados', icon: User },
   { id: 2, title: 'Serviços', icon: Scissors },
   { id: 3, title: 'Data/Hora', icon: Calendar },
+  { id: 4, title: 'Pagamento', icon: CreditCard },
 ];
 
 const Pedido = () => {
@@ -48,6 +62,7 @@ const Pedido = () => {
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | undefined>();
+  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | undefined>();
   const [notes, setNotes] = useState('');
   
   // Data from DB
@@ -119,6 +134,7 @@ const Pedido = () => {
       case 1: return name.trim().length >= 2 && phone.replace(/\D/g, '').length >= 10;
       case 2: return selectedServices.length > 0;
       case 3: return selectedDate && selectedTime;
+      case 4: return selectedPayment;
       default: return false;
     }
   };
@@ -214,6 +230,7 @@ const Pedido = () => {
           total_duration: totalDuration,
           status: 'pending',
           payment_status: 'pending',
+          payment_method: selectedPayment,
           notes: notes || null,
           guest_name: name.trim(),
           guest_phone: phone.replace(/\D/g, ''),
@@ -604,6 +621,89 @@ const Pedido = () => {
               )}
             </motion.div>
           )}
+
+          {currentStep === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              className="space-y-4"
+            >
+              <Card className="rounded-2xl">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <CreditCard className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold">Forma de pagamento</h3>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {paymentMethods.map((method) => {
+                      const isSelected = selectedPayment === method.id;
+                      return (
+                        <motion.div
+                          key={method.id}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setSelectedPayment(method.id)}
+                          className={cn(
+                            "p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4",
+                            isSelected
+                              ? "border-primary bg-primary/10"
+                              : "border-border bg-card hover:border-primary/50"
+                          )}
+                        >
+                          <img src={method.icon} alt={method.name} className="w-10 h-10" />
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-foreground">{method.name}</h4>
+                            <p className="text-sm text-muted-foreground">{method.description}</p>
+                          </div>
+                          <div className={cn(
+                            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                            isSelected ? "bg-primary border-primary" : "border-muted-foreground"
+                          )}>
+                            {isSelected && <Check className="w-4 h-4 text-primary-foreground" />}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Order Summary */}
+              <Card className="rounded-2xl bg-muted/30">
+                <CardContent className="p-4">
+                  <h3 className="font-semibold mb-3">Resumo do pedido</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Cliente:</span>
+                      <span className="font-medium">{name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Data:</span>
+                      <span className="font-medium">
+                        {selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Horário:</span>
+                      <span className="font-medium">{selectedTime}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Serviços:</span>
+                      <span className="font-medium text-right max-w-[180px]">
+                        {selectedServices.map(s => s.name).join(', ')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t border-border pt-2 mt-2">
+                      <span className="font-semibold">Total:</span>
+                      <span className="font-bold text-primary text-lg">R$ {totalPrice.toFixed(0)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Navigation Buttons */}
@@ -620,7 +720,7 @@ const Pedido = () => {
               </Button>
             )}
 
-            {currentStep < 3 ? (
+            {currentStep < 4 ? (
               <Button
                 onClick={() => setCurrentStep(prev => prev + 1)}
                 disabled={!canProceed()}
