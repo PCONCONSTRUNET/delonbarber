@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { User, Phone, Calendar, DollarSign, Eye, Trash2 } from 'lucide-react';
+import { User, Phone, Calendar, DollarSign, Eye, Trash2, Link } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Client } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ClientDetailsModal } from './ClientDetailsModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
@@ -40,9 +41,15 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
                 className="flex-1 min-w-0 cursor-pointer"
                 onClick={() => setSelectedClient(client)}
               >
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <User className="h-4 w-4 text-primary shrink-0" />
                   <span className="font-semibold text-sm md:text-base truncate">{client.name || 'Sem nome'}</span>
+                  {client.is_guest && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-500/10 text-blue-500 border-blue-500/30">
+                      <Link className="h-2.5 w-2.5 mr-0.5" />
+                      Formulário
+                    </Badge>
+                  )}
                 </div>
                 
                 {client.phone && (
