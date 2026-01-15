@@ -38,6 +38,7 @@ export interface Client {
   total_appointments: number;
   total_spent: number;
   last_appointment: string | null;
+  is_guest: boolean; // true if from guest_clients table
 }
 
 export interface ClientNote {
@@ -239,15 +240,24 @@ export function useAdminClients() {
   async function fetchClients() {
     setLoading(true);
 
-    // Fetch profiles and appointments in parallel
-    const [profilesResult, appointmentsResult] = await Promise.all([
+    // Fetch profiles, guest_clients, and appointments in parallel
+    const [profilesResult, guestClientsResult, appointmentsResult, guestAppointmentsResult] = await Promise.all([
       supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false }),
       supabase
+        .from('guest_clients')
+        .select('*')
+        .order('created_at', { ascending: false }),
+      supabase
         .from('appointments')
         .select('user_id, total_price, appointment_date, status')
+        .neq('status', 'cancelled'),
+      supabase
+        .from('appointments')
+        .select('guest_client_id, total_price, appointment_date, status')
+        .not('guest_client_id', 'is', null)
         .neq('status', 'cancelled')
     ]);
 
@@ -258,7 +268,9 @@ export function useAdminClients() {
     }
 
     const profiles = profilesResult.data || [];
+    const guestClients = guestClientsResult.data || [];
     const appointments = appointmentsResult.data || [];
+    const guestAppointments = guestAppointmentsResult.data || [];
 
     // Pre-compute stats by user_id using a Map for O(1) lookups
     const statsByUser = new Map<string, {
@@ -289,8 +301,39 @@ export function useAdminClients() {
       }
     });
 
+    // Pre-compute stats for guest clients
+    const statsByGuestClient = new Map<string, {
+      total_appointments: number;
+      total_spent: number;
+      last_appointment: string | null;
+    }>();
+
+    guestAppointments.forEach(apt => {
+      const guestId = apt.guest_client_id;
+      if (!guestId) return;
+      
+      if (!statsByGuestClient.has(guestId)) {
+        statsByGuestClient.set(guestId, {
+          total_appointments: 0,
+          total_spent: 0,
+          last_appointment: null
+        });
+      }
+      
+      const stats = statsByGuestClient.get(guestId)!;
+      stats.total_appointments++;
+      
+      if (apt.status === 'completed') {
+        stats.total_spent += Number(apt.total_price || 0);
+      }
+      
+      if (!stats.last_appointment || apt.appointment_date > stats.last_appointment) {
+        stats.last_appointment = apt.appointment_date;
+      }
+    });
+
     // Map profiles with pre-computed stats
-    const clientsWithStats: Client[] = profiles.map(profile => {
+    const clientsFromProfiles: Client[] = profiles.map(profile => {
       const stats = statsByUser.get(profile.user_id) || {
         total_appointments: 0,
         total_spent: 0,
@@ -301,11 +344,40 @@ export function useAdminClients() {
         ...profile,
         total_appointments: stats.total_appointments,
         total_spent: stats.total_spent,
-        last_appointment: stats.last_appointment
+        last_appointment: stats.last_appointment,
+        is_guest: false
       };
     });
 
-    setClients(clientsWithStats);
+    // Map guest clients with their stats
+    const clientsFromGuests: Client[] = guestClients.map(guest => {
+      const stats = statsByGuestClient.get(guest.id) || {
+        total_appointments: guest.total_visits || 0,
+        total_spent: Number(guest.total_spent) || 0,
+        last_appointment: guest.last_visit_at
+      };
+
+      return {
+        id: guest.id,
+        user_id: guest.id, // Use guest id as user_id for consistency
+        name: guest.name,
+        phone: guest.phone,
+        avatar_url: null,
+        created_at: guest.created_at,
+        total_appointments: stats.total_appointments || guest.total_visits || 0,
+        total_spent: stats.total_spent || Number(guest.total_spent) || 0,
+        last_appointment: stats.last_appointment || guest.last_visit_at,
+        is_guest: true
+      };
+    });
+
+    // Combine both lists, profiles first then guests
+    const allClients = [...clientsFromProfiles, ...clientsFromGuests];
+    
+    // Sort by created_at descending
+    allClients.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    setClients(allClients);
     setLoading(false);
   }
 
