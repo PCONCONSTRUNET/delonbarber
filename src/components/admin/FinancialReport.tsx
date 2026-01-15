@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { DollarSign, TrendingUp, Calendar, Download, QrCode, CreditCard, Banknote } from 'lucide-react';
+import { DollarSign, TrendingUp, Calendar, Download, QrCode, CreditCard, Banknote, CalendarDays } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { PixQRCode } from '@/components/payments/PixQRCode';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-type FilterType = 'today' | 'weekly' | 'monthly';
+type FilterType = 'today' | 'weekly' | 'monthly' | 'custom';
 
 interface FinancialReportProps {
   appointments: AdminAppointment[];
@@ -43,10 +45,13 @@ const filterLabels: Record<FilterType, string> = {
   today: 'Hoje',
   weekly: 'Semanal',
   monthly: 'Mensal',
+  custom: 'Data',
 };
 
 export function FinancialReport({ appointments }: FinancialReportProps) {
   const [filter, setFilter] = useState<FilterType>('today');
+  const [customDate, setCustomDate] = useState<Date>(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [pixModal, setPixModal] = useState<{ open: boolean; appointment: AdminAppointment | null }>({
     open: false,
     appointment: null,
@@ -62,14 +67,18 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
         return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
       case 'monthly':
         return { start: startOfMonth(now), end: endOfMonth(now) };
+      case 'custom':
+        return { start: startOfDay(customDate), end: endOfDay(customDate) };
     }
   };
 
   const { start: periodStart, end: periodEnd } = getDateRange();
 
   const filteredAppointments = appointments.filter(a => {
-    const date = new Date(a.appointment_date);
-    return date >= periodStart && date <= periodEnd;
+    // Parse the date string correctly to avoid timezone issues
+    const dateStr = a.appointment_date;
+    const date = parseISO(dateStr + 'T00:00:00');
+    return isWithinInterval(date, { start: periodStart, end: periodEnd });
   });
 
   const paidAppointments = filteredAppointments.filter(a => a.payment_status === 'paid');
@@ -108,6 +117,16 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
         return `${format(periodStart, 'dd/MM')} - ${format(periodEnd, 'dd/MM')}`;
       case 'monthly':
         return format(now, 'MMMM yyyy', { locale: ptBR });
+      case 'custom':
+        return format(customDate, "dd 'de' MMMM", { locale: ptBR });
+    }
+  };
+
+  const handleSelectDate = (date: Date | undefined) => {
+    if (date) {
+      setCustomDate(date);
+      setFilter('custom');
+      setCalendarOpen(false);
     }
   };
 
@@ -150,7 +169,7 @@ Status: PAGO
     <div className="space-y-6">
       {/* Filter selector */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           {(['today', 'weekly', 'monthly'] as FilterType[]).map((type) => (
             <Button
               key={type}
@@ -162,6 +181,29 @@ Status: PAGO
               {filterLabels[type]}
             </Button>
           ))}
+          
+          {/* Custom Date Picker */}
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={filter === 'custom' ? 'default' : 'outline'}
+                size="sm"
+                className="flex-1 sm:flex-none gap-1"
+              >
+                <CalendarDays className="h-4 w-4" />
+                {filter === 'custom' ? format(customDate, 'dd/MM') : 'Data'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={customDate}
+                onSelect={handleSelectDate}
+                locale={ptBR}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <h2 className="font-display text-lg sm:text-xl font-semibold capitalize text-muted-foreground">
           {getPeriodLabel()}
