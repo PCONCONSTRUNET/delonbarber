@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DollarSign, TrendingUp, Calendar as CalendarIcon, Download, QrCode, CreditCard, Banknote, CalendarDays } from 'lucide-react';
+import { DollarSign, TrendingUp, Calendar as CalendarIcon, Download, QrCode, CreditCard, Banknote, CalendarDays, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ const paymentMethodIcons: Record<string, typeof QrCode> = {
   debit: CreditCard,
   cash: Banknote,
   card: CreditCard,
+  subscriber: Crown,
 };
 
 const paymentMethodLabels: Record<string, string> = {
@@ -31,6 +32,7 @@ const paymentMethodLabels: Record<string, string> = {
   debit: 'Débito',
   cash: 'Dinheiro',
   card: 'Cartão',
+  subscriber: 'VIP',
 };
 
 const paymentMethodColors: Record<string, string> = {
@@ -39,6 +41,7 @@ const paymentMethodColors: Record<string, string> = {
   debit: 'text-blue-500 bg-blue-500/20',
   cash: 'text-green-500 bg-green-500/20',
   card: 'text-purple-500 bg-purple-500/20',
+  subscriber: 'text-yellow-500 bg-yellow-500/20',
 };
 
 const filterLabels: Record<FilterType, string> = {
@@ -367,7 +370,7 @@ Status: PAGO
             </p>
           ) : (
             paidAppointments.map(apt => {
-              const PaymentIcon = apt.payment_method ? paymentMethodIcons[apt.payment_method] : DollarSign;
+              const PaymentIcon = (apt.payment_method && paymentMethodIcons[apt.payment_method]) || DollarSign;
               return (
                 <div key={apt.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-3">
