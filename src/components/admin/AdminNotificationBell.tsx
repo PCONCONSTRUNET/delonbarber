@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { playNotificationSound } from '@/lib/notifications';
+import { toast } from 'sonner';
 
 interface Notification {
   id: string;
@@ -16,21 +18,22 @@ interface Notification {
   type: string;
   is_read: boolean;
   created_at: string;
+  appointment_id?: string;
 }
 
 export function AdminNotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  async function fetchNotifications() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  const fetchNotifications = useCallback(async () => {
+    if (!userId) return;
 
     const { data } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -38,7 +41,7 @@ export function AdminNotificationBell() {
       setNotifications(data);
       setUnreadCount(data.filter(n => !n.is_read).length);
     }
-  }
+  }, [userId]);
 
   async function markAsRead(id: string) {
     await supabase
@@ -53,49 +56,76 @@ export function AdminNotificationBell() {
   }
 
   async function markAllAsRead() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!userId) return;
 
     await supabase
       .from('notifications')
       .update({ is_read: true })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_read', false);
 
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     setUnreadCount(0);
   }
 
+  // Get user ID on mount
   useEffect(() => {
-    fetchNotifications();
+    async function getUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    }
+    getUser();
+  }, []);
 
-    // Subscribe to new notifications
+  // Fetch notifications when userId changes
+  useEffect(() => {
+    if (userId) {
+      fetchNotifications();
+    }
+  }, [userId, fetchNotifications]);
+
+  // Subscribe to realtime notifications
+  useEffect(() => {
+    if (!userId) return;
+
     const channel = supabase
-      .channel('admin-notifications')
+      .channel(`admin-notifications-${userId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'notifications'
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('New notification:', payload);
-          fetchNotifications();
+          const newNotification = payload.new as Notification;
+          console.log('🔔 Nova notificação recebida:', newNotification);
+          
+          // Add to state immediately
+          setNotifications(prev => [newNotification, ...prev.slice(0, 19)]);
+          setUnreadCount(prev => prev + 1);
+          
           // Play sound
-          try {
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQkAKqLV6Kh0CgAfn9LgoX4UAB2Z0NyijBsAGJXM2qOTIwAUkcrZo5kqABCQyNeknikADY7H1qScJgAKjcfVpJsiAAiMxtSlmx4AB4zG1KWZHAAGT8TRopcaAAZOw9CiihsABU7D0KKHHQAFTsPQoocdAAVOw9CiiB4ABU7D0KKKIAAFT8TRoowiAAVQxNGjjSQABlHF0aSPJwAHUcXRpZAqAAhSxtKmkS0ACVLG0qaRLwAKU8fTppIxAAtUx9OmkjMAC1TI1KaTNQAMVMjUpZQ2AA1VydWllTgADVXJ1aaVOQAOVsnVppU6AA9XytanljsAD1fK1qeWPAAPV8rWp5c8AA9Xy9anlzwAEFjL16iYPQAQWMvXqJg+ABBYy9eomD4AEFjL16iYPgAQWMvXqJg+AA==');
-            audio.volume = 0.3;
-            audio.play().catch(() => {});
-          } catch {}
+          playNotificationSound();
+          
+          // Show toast
+          toast.success(newNotification.title, {
+            description: newNotification.message,
+            duration: 8000,
+          });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Notification subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [userId]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -110,14 +140,28 @@ export function AdminNotificationBell() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          <motion.div
+            animate={unreadCount > 0 ? { 
+              rotate: [0, -10, 10, -10, 10, 0],
+            } : {}}
+            transition={{ 
+              duration: 0.5, 
+              repeat: unreadCount > 0 ? Infinity : 0,
+              repeatDelay: 3
+            }}
+          >
+            <Bell className={cn(
+              "h-5 w-5 transition-colors",
+              unreadCount > 0 && "text-primary"
+            )} />
+          </motion.div>
           <AnimatePresence>
             {unreadCount > 0 && (
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 exit={{ scale: 0 }}
-                className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center"
+                className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center animate-pulse"
               >
                 {unreadCount > 9 ? '9+' : unreadCount}
               </motion.span>
