@@ -261,7 +261,7 @@ const Pedido = () => {
       const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
       const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
       
-      // Create appointment with guest_client_id - AUTO CONFIRMED for WhatsApp orders
+      // Create appointment with guest_client_id
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
         .insert({
@@ -270,10 +270,10 @@ const Pedido = () => {
           appointment_time: selectedTime + ':00',
           total_price: totalPrice,
           total_duration: totalDuration,
-          status: 'confirmed', // Auto-confirm orders from WhatsApp form
+          status: 'pending',
           payment_status: 'pending',
           payment_method: selectedPayment,
-          notes: notes ? `[Via WhatsApp] ${notes}` : '[Via WhatsApp]',
+          notes: notes || null,
           guest_name: cleanName,
           guest_phone: cleanPhone,
           guest_client_id: guestClientId,
@@ -302,22 +302,11 @@ const Pedido = () => {
         blocked_time: selectedTime + ':00',
         appointment_id: appointment.id,
         is_manual: false,
-        reason: 'Agendamento via WhatsApp',
+        reason: 'Agendamento via link',
       });
       
-      // Update guest client stats if created
-      if (guestClientId) {
-        await supabase
-          .from('guest_clients')
-          .update({ 
-            last_visit_at: new Date().toISOString(),
-            total_visits: (await supabase.from('guest_clients').select('total_visits').eq('id', guestClientId).single()).data?.total_visits + 1 || 1
-          })
-          .eq('id', guestClientId);
-      }
-      
       setIsSuccess(true);
-      toast.success('Pedido confirmado com sucesso!');
+      toast.success('Pedido enviado com sucesso!');
       
     } catch (error) {
       console.error('Error creating appointment:', error);
@@ -364,10 +353,10 @@ const Pedido = () => {
           </motion.div>
           
           <h1 className="text-2xl font-bold text-foreground mb-2">
-            Agendamento Confirmado! ✂️
+            Pedido Enviado! ✂️
           </h1>
           <p className="text-muted-foreground mb-6">
-            Seu horário está reservado. Te esperamos!
+            Seu agendamento foi recebido. Aguarde a confirmação.
           </p>
           
           <div className="bg-muted/50 rounded-2xl p-4 text-left space-y-2 mb-6">
