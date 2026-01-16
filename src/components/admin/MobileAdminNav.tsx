@@ -8,7 +8,6 @@ import {
   MoreHorizontal,
   Star,
   Gift,
-  MessageSquare,
   ExternalLink
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -17,6 +16,12 @@ import { useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AdminNotificationBell } from './AdminNotificationBell';
 import { Button } from '@/components/ui/button';
+import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
+
+// Custom component to render WhatsApp icon with same size as lucide icons
+const WhatsAppMenuItem = ({ className }: { className?: string }) => (
+  <WhatsAppIcon size={24} className={className} />
+);
 
 const mainItems = [
   { icon: LayoutDashboard, label: 'Home', path: '/admin' },
@@ -30,7 +35,7 @@ const moreItems = [
   { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
   { icon: Star, label: 'Avaliações', path: '/admin/avaliacoes' },
   { icon: Gift, label: 'Fidelidade', path: '/admin/fidelidade' },
-  { icon: MessageSquare, label: 'IA WhatsApp', path: '/admin/ia' },
+  { icon: WhatsAppMenuItem, label: 'IA WhatsApp', path: '/admin/ia' },
 ];
 
 export function MobileAdminNav() {

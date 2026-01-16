@@ -4,7 +4,6 @@ import {
   Users, 
   Scissors, 
   DollarSign,
-  MessageSquare,
   Crown,
   LogOut,
   ChevronLeft,
@@ -20,6 +19,12 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { AdminNotificationBell } from './AdminNotificationBell';
+import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
+
+// Custom component to render WhatsApp icon with same size as lucide icons
+const WhatsAppMenuItem = ({ className }: { className?: string }) => (
+  <WhatsAppIcon size={20} className={className} />
+);
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -30,7 +35,7 @@ const menuItems = [
   { icon: Gift, label: 'Fidelidade', path: '/admin/fidelidade' },
   { icon: Star, label: 'Avaliações', path: '/admin/avaliacoes' },
   { icon: DollarSign, label: 'Financeiro', path: '/admin/financeiro' },
-  { icon: MessageSquare, label: 'IA WhatsApp', path: '/admin/ia' },
+  { icon: WhatsAppMenuItem, label: 'IA WhatsApp', path: '/admin/ia' },
 ];
 
 const clientLinks = [
