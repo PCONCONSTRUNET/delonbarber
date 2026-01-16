@@ -538,6 +538,25 @@ export function useAppointments() {
   };
 }
 
+// Helper function to calculate blocked time slots based on duration
+function calculateBlockedSlots(startTime: string, durationMinutes: number): string[] {
+  const slots: string[] = [];
+  const [hours, minutes] = startTime.split(':').map(Number);
+  
+  let currentMinutes = hours * 60 + minutes;
+  const endMinutes = currentMinutes + durationMinutes;
+  
+  // Block slots in 30-minute increments until the service duration is covered
+  while (currentMinutes < endMinutes) {
+    const h = Math.floor(currentMinutes / 60);
+    const m = currentMinutes % 60;
+    slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
+    currentMinutes += 30;
+  }
+  
+  return slots;
+}
+
 export function useBookedSlots(date: Date | undefined) {
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
 
@@ -547,10 +566,10 @@ export function useBookedSlots(date: Date | undefined) {
 
       const dateStr = format(date, 'yyyy-MM-dd');
 
-      // Fetch booked appointments
+      // Fetch booked appointments WITH total_duration to calculate blocked slots
       const { data: appointments, error: aptError } = await supabase
         .from('appointments')
-        .select('appointment_time')
+        .select('appointment_time, total_duration')
         .eq('appointment_date', dateStr)
         .in('status', ['pending', 'confirmed']);
 
@@ -568,12 +587,20 @@ export function useBookedSlots(date: Date | undefined) {
         console.error('Error fetching blocked slots:', blockedError);
       }
 
-      // Combine both - blocked slots and booked appointments
-      const bookedTimes = appointments?.map(a => a.appointment_time) || [];
+      // Calculate all blocked times based on appointment duration
+      const allBookedTimes: string[] = [];
+      
+      for (const apt of appointments || []) {
+        const duration = apt.total_duration || 30; // Default to 30 minutes if not set
+        const blockedForAppointment = calculateBlockedSlots(apt.appointment_time, duration);
+        allBookedTimes.push(...blockedForAppointment);
+      }
+      
+      // Add manually blocked slots
       const blockedTimes = blockedSlots?.map(b => b.blocked_time) || [];
       
       // Merge and deduplicate
-      const allBlockedSlots = [...new Set([...bookedTimes, ...blockedTimes])];
+      const allBlockedSlots = [...new Set([...allBookedTimes, ...blockedTimes])];
       setBookedSlots(allBlockedSlots);
     }
 
