@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Clock, FileText, Check, Banknote, CreditCard, Crown } from 'lucide-react';
+import { Calendar, Clock, FileText, Check, Banknote, CreditCard, Crown, Ban } from 'lucide-react';
 import { Service } from '@/hooks/useAppointments';
+import { Badge } from '@/components/ui/badge';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,9 @@ export function AppointmentSummary({
   
   const finalPrice = calculateFinalPrice();
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
+  
+  // Calculate how many 30-minute slots will be blocked
+  const slotsBlocked = Math.ceil(totalDuration / 30);
 
   // Reset payment method if subscriber option becomes unavailable
   useEffect(() => {
@@ -326,7 +330,7 @@ export function AppointmentSummary({
         "rounded-2xl p-4",
         selectedPayment === 'subscriber' ? "bg-yellow-500/10" : "bg-primary/10"
       )}>
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-3">
           <div>
             <p className="text-xs text-muted-foreground">Duração</p>
             <p className="text-foreground font-medium">{totalDuration} min</p>
@@ -349,9 +353,19 @@ export function AppointmentSummary({
             )}
           </div>
         </div>
+        
+        {/* Slots blocked info */}
+        <div className="flex items-center justify-center gap-2 pt-3 border-t border-border/50">
+          <Ban className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">
+            {slotsBlocked === 1 ? (
+              <>Este agendamento reserva <Badge variant="secondary" className="mx-1 px-1.5 py-0">1 horário</Badge></>
+            ) : (
+              <>Este agendamento reserva <Badge variant="secondary" className="mx-1 px-1.5 py-0">{slotsBlocked} horários</Badge> consecutivos</>
+            )}
+          </span>
+        </div>
       </div>
-
-      {/* Confirm Button */}
       <motion.div whileTap={{ scale: 0.98 }}>
         <Button
           onClick={() => onConfirm(selectedPayment)}
