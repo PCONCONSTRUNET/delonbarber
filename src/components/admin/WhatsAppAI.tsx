@@ -199,54 +199,52 @@ export function WhatsAppAI() {
   const canCreate = parsed && parsed.date && parsed.time;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 w-full max-w-full overflow-hidden px-1">
       {/* Header Card */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-500/20 via-green-600/10 to-emerald-500/20 border border-green-500/30 p-5"
+        className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-500/20 via-green-600/10 to-emerald-500/20 border border-green-500/30 p-4"
       >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl" />
+        <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-20 h-20 bg-emerald-500/10 rounded-full blur-2xl" />
         
-        <div className="relative flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-white/10 border border-green-500/30">
-            <WhatsAppIcon size={28} />
+        <div className="relative flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-white/10 border border-green-500/30 flex-shrink-0">
+            <WhatsAppIcon size={24} />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-foreground">Assistente WhatsApp</h2>
-            <p className="text-sm text-muted-foreground">
-              Cole a mensagem do cliente e deixe a IA extrair os dados
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-bold text-foreground">Assistente WhatsApp</h2>
+            <p className="text-xs text-muted-foreground truncate">
+              Cole a mensagem e extraia os dados
             </p>
           </div>
-          <div className="ml-auto">
-            <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
-              <Sparkles className="h-3 w-3 mr-1" />
-              IA
-            </Badge>
-          </div>
+          <Badge className="bg-green-500/20 text-green-500 border-green-500/30 flex-shrink-0">
+            <Sparkles className="h-3 w-3 mr-1" />
+            IA
+          </Badge>
         </div>
       </motion.div>
 
       {/* Chat-like Interface */}
-      <div className="rounded-2xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden">
+      <div className="rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden">
         {/* Input Area - Chat Style */}
-        <div className="p-4 border-b border-border bg-muted/30">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-              <MessageCircle className="h-5 w-5 text-green-500" />
+        <div className="p-3 border-b border-border bg-muted/30">
+          <div className="flex items-start gap-2">
+            <div className="w-9 h-9 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+              <MessageCircle className="h-4 w-4 text-green-500" />
             </div>
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 min-w-0 space-y-2">
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Cole a mensagem do WhatsApp aqui...
 
-Ex: João Silva - 48999001234
-Quero corte + barba
-Sábado dia 18 às 10h"
-                rows={4}
-                className="resize-none border-0 bg-background/80 focus-visible:ring-green-500/50 rounded-xl text-sm"
+Ex: João Silva
+Corte + barba
+Sábado 18 às 10h"
+                rows={3}
+                className="resize-none border-0 bg-background/80 focus-visible:ring-green-500/50 rounded-lg text-sm w-full"
               />
               
               <div className="flex items-center gap-2">
@@ -254,7 +252,7 @@ Sábado dia 18 às 10h"
                   variant="outline"
                   size="sm"
                   onClick={pasteFromClipboard}
-                  className="text-xs gap-1.5 rounded-lg"
+                  className="text-xs gap-1.5 rounded-lg h-8 px-2.5"
                 >
                   <Copy className="h-3.5 w-3.5" />
                   Colar
@@ -266,18 +264,14 @@ Sábado dia 18 às 10h"
                   onClick={parseMessage} 
                   disabled={loading || !message.trim()}
                   size="sm"
-                  className="gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white"
+                  className="gap-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white h-8 px-3"
                 >
                   {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="hidden sm:inline">Analisando...</span>
-                    </>
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <>
                       <Wand2 className="h-4 w-4" />
-                      <span className="hidden sm:inline">Interpretar</span>
-                      <Send className="h-4 w-4 sm:hidden" />
+                      <Send className="h-3.5 w-3.5" />
                     </>
                   )}
                 </Button>
@@ -323,16 +317,16 @@ Sábado dia 18 às 10h"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-4"
+              className="p-3"
             >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="h-5 w-5 text-primary" />
+              <div className="flex items-start gap-2">
+                <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="h-4 w-4 text-primary" />
                 </div>
-                <div className="flex-1 space-y-3">
+                <div className="flex-1 min-w-0 space-y-2">
                   {/* Success Header */}
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-green-500/20 text-green-600 border-green-500/30">
+                  <div className="flex items-center">
+                    <Badge className="bg-green-500/20 text-green-600 border-green-500/30 text-xs">
                       <Check className="h-3 w-3 mr-1" />
                       Dados extraídos
                     </Badge>
@@ -341,18 +335,18 @@ Sábado dia 18 às 10h"
                   {/* Extracted Data Cards */}
                   <div className="grid gap-2">
                     {parsed.client_name && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border"
+                        className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/50 border border-border"
                       >
-                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                          <User className="h-4 w-4 text-blue-500" />
+                        <div className="w-7 h-7 rounded-md bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                          <User className="h-3.5 w-3.5 text-blue-500" />
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Cliente</p>
-                          <p className="font-medium text-sm">{parsed.client_name}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-muted-foreground">Cliente</p>
+                          <p className="font-medium text-sm truncate">{parsed.client_name}</p>
                         </div>
                       </motion.div>
                     )}
@@ -362,14 +356,14 @@ Sábado dia 18 às 10h"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.15 }}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border"
+                        className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/50 border border-border"
                       >
-                        <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-                          <Phone className="h-4 w-4 text-green-500" />
+                        <div className="w-7 h-7 rounded-md bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                          <Phone className="h-3.5 w-3.5 text-green-500" />
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">WhatsApp</p>
-                          <p className="font-medium text-sm text-green-600">{parsed.client_phone}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] text-muted-foreground">WhatsApp</p>
+                          <p className="font-medium text-sm text-green-600 truncate">{parsed.client_phone}</p>
                         </div>
                       </motion.div>
                     )}
@@ -380,14 +374,14 @@ Sábado dia 18 às 10h"
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.2 }}
-                          className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border"
+                          className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/50 border border-border"
                         >
-                          <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                            <Calendar className="h-4 w-4 text-orange-500" />
+                          <div className="w-7 h-7 rounded-md bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                            <Calendar className="h-3.5 w-3.5 text-orange-500" />
                           </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Data</p>
-                            <p className="font-medium text-sm">{parsed.date}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] text-muted-foreground">Data</p>
+                            <p className="font-medium text-xs">{parsed.date}</p>
                           </div>
                         </motion.div>
                       )}
@@ -397,14 +391,14 @@ Sábado dia 18 às 10h"
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.25 }}
-                          className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border"
+                          className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/50 border border-border"
                         >
-                          <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                            <Clock className="h-4 w-4 text-purple-500" />
+                          <div className="w-7 h-7 rounded-md bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                            <Clock className="h-3.5 w-3.5 text-purple-500" />
                           </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Horário</p>
-                            <p className="font-medium text-sm">{parsed.time}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] text-muted-foreground">Horário</p>
+                            <p className="font-medium text-xs">{parsed.time}</p>
                           </div>
                         </motion.div>
                       )}
@@ -415,17 +409,17 @@ Sábado dia 18 às 10h"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="p-3 rounded-xl bg-muted/50 border border-border"
+                        className="p-2.5 rounded-lg bg-muted/50 border border-border"
                       >
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                            <Scissors className="h-4 w-4 text-primary" />
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <div className="w-7 h-7 rounded-md bg-primary/20 flex items-center justify-center flex-shrink-0">
+                            <Scissors className="h-3.5 w-3.5 text-primary" />
                           </div>
-                          <p className="text-xs text-muted-foreground">Serviços</p>
+                          <p className="text-[10px] text-muted-foreground">Serviços</p>
                         </div>
-                        <div className="flex flex-wrap gap-1.5 ml-10">
+                        <div className="flex flex-wrap gap-1 ml-9">
                           {parsed.services.map((service, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">
+                            <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0.5">
                               {service}
                             </Badge>
                           ))}
@@ -434,14 +428,14 @@ Sábado dia 18 às 10h"
                     )}
 
                     {parsed.notes && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.35 }}
-                        className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30"
+                        className="p-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/30"
                       >
-                        <p className="text-xs text-yellow-600 font-medium mb-1">📝 Observações</p>
-                        <p className="text-sm">{parsed.notes}</p>
+                        <p className="text-[10px] text-yellow-600 font-medium mb-0.5">📝 Observações</p>
+                        <p className="text-xs">{parsed.notes}</p>
                       </motion.div>
                     )}
                   </div>
@@ -451,10 +445,10 @@ Sábado dia 18 às 10h"
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30"
+                      className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30"
                     >
-                      <p className="text-sm text-amber-600">
-                        ⚠️ Data e horário são obrigatórios para criar o agendamento.
+                      <p className="text-xs text-amber-600">
+                        ⚠️ Data e horário são obrigatórios.
                       </p>
                     </motion.div>
                   )}
@@ -464,31 +458,31 @@ Sábado dia 18 às 10h"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="flex gap-2 pt-2"
+                    className="flex gap-2 pt-1"
                   >
                     <Button 
                       variant="outline" 
                       onClick={clearResult} 
                       size="sm"
-                      className="gap-2 rounded-lg"
+                      className="gap-1.5 rounded-lg h-8 text-xs px-2.5"
                     >
-                      <RefreshCw className="h-4 w-4" />
+                      <RefreshCw className="h-3.5 w-3.5" />
                       Nova mensagem
                     </Button>
                     <Button 
                       onClick={createAppointment}
                       disabled={!canCreate || creating}
                       size="sm"
-                      className="flex-1 gap-2 rounded-lg bg-primary hover:bg-primary/90"
+                      className="flex-1 gap-1.5 rounded-lg bg-primary hover:bg-primary/90 h-8 text-xs"
                     >
                       {creating ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           Criando...
                         </>
                       ) : (
                         <>
-                          <Check className="h-4 w-4" />
+                          <Check className="h-3.5 w-3.5" />
                           Criar Agendamento
                         </>
                       )}
@@ -505,19 +499,19 @@ Sábado dia 18 às 10h"
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="p-6 text-center"
+            className="p-4 text-center"
           >
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
-              <Wand2 className="h-8 w-8 text-muted-foreground" />
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-muted/50 flex items-center justify-center">
+              <Wand2 className="h-6 w-6 text-muted-foreground" />
             </div>
-            <h4 className="font-medium text-foreground mb-2">Como funciona?</h4>
-            <div className="text-sm text-muted-foreground space-y-1 max-w-xs mx-auto">
-              <p>1️⃣ Copie a mensagem do cliente no WhatsApp</p>
-              <p>2️⃣ Cole no campo acima e clique em Interpretar</p>
-              <p>3️⃣ Revise os dados e crie o agendamento</p>
+            <h4 className="font-medium text-foreground text-sm mb-1.5">Como funciona?</h4>
+            <div className="text-xs text-muted-foreground space-y-0.5 max-w-xs mx-auto">
+              <p>1️⃣ Copie a mensagem do cliente</p>
+              <p>2️⃣ Cole acima e clique Interpretar</p>
+              <p>3️⃣ Revise e crie o agendamento</p>
             </div>
-            <div className="mt-4 p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-xs text-green-600 max-w-xs mx-auto">
-              💡 A IA extrai automaticamente nome, telefone, data, horário e serviços!
+            <div className="mt-3 p-2.5 rounded-lg bg-green-500/10 border border-green-500/20 text-[10px] text-green-600 max-w-xs mx-auto">
+              💡 A IA extrai nome, telefone, data, horário e serviços!
             </div>
           </motion.div>
         )}
