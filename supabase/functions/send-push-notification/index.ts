@@ -1,13 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import webpush from "web-push";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// VAPID keys for Web Push (generated for this project)
-const VAPID_PUBLIC_KEY = 'BLBz1p2s4P9kX7nF8mQ3wR6tY5vC8bN2aM4jK9hL0xS3fG6dE7cV0bA1wZ5yT8uI';
+// Your VAPID keys
+const VAPID_PUBLIC_KEY = 'BGRtVBkdFsaKRPhrU_7OZHdSUvQZb-WiwmV3-M9AGuZhR8sUn9xr2LwJG0aOlZgTXj-oUeN2pvtmw2EFSoslGvg';
+const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!;
+const VAPID_SUBJECT = 'mailto:lucaspereirabn10@gmail.com';
+
+// Configure web-push with VAPID details
+webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -50,17 +56,49 @@ serve(async (req) => {
 
     console.log(`Found ${subscriptions?.length || 0} subscriptions`);
 
-    // For background push, we need to trigger notification via stored subscription info
-    // Since full Web Push crypto is complex, we'll store the notification for the service worker to check
-    const payload = {
-      title,
-      body,
+    const payload = JSON.stringify({
+      title: title || 'Barbearia Alan Delon',
+      body: body || '',
       url: url || '/admin/agenda',
       tag: 'appointment-notification',
       timestamp: new Date().toISOString(),
-    };
+    });
 
-    // Create notifications in database for all admin users
+    // Send real push notifications to all subscriptions
+    const pushPromises = (subscriptions || []).map(async (sub: { endpoint: string; p256dh: string; auth: string; user_id: string }) => {
+      try {
+        const pushSubscription = {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        };
+
+        await webpush.sendNotification(pushSubscription, payload);
+        console.log(`Push sent to user ${sub.user_id}`);
+        return { success: true, userId: sub.user_id };
+      } catch (pushError: unknown) {
+        const err = pushError as { statusCode?: number; message?: string };
+        console.error(`Failed to send push to ${sub.user_id}:`, err);
+        
+        // If subscription is expired/invalid, remove it
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await supabase
+            .from('push_subscriptions')
+            .delete()
+            .eq('endpoint', sub.endpoint);
+          console.log(`Removed expired subscription for user ${sub.user_id}`);
+        }
+        
+        return { success: false, userId: sub.user_id, error: err.message || 'Unknown error' };
+      }
+    });
+
+    const results = await Promise.all(pushPromises);
+    const successCount = results.filter(r => r.success).length;
+
+    // Also create notifications in database as fallback
     const notifications = (subscriptions || []).map((sub: { user_id: string }) => ({
       user_id: sub.user_id,
       title,
@@ -79,13 +117,14 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Created ${notifications.length} notifications`);
+    console.log(`Push notifications sent: ${successCount}/${subscriptions?.length || 0}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        notified: notifications.length,
-        payload,
+        pushSent: successCount,
+        total: subscriptions?.length || 0,
+        results,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
