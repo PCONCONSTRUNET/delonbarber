@@ -49,37 +49,36 @@ export async function subscribeToPushNotifications(): Promise<boolean> {
       });
     }
 
+    // Get current user
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      console.log('User not logged in');
+      return false;
+    }
+
     // Extract subscription keys
     const subscriptionJson = subscription.toJSON();
     const keys = subscriptionJson.keys as { p256dh: string; auth: string };
 
-    // Get auth token for the edge function
-    const { data: { session } } = await supabase.auth.getSession();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
-    }
-
-    // Save subscription via Edge Function (more secure)
-    const { error } = await supabase.functions.invoke('save-subscription', {
-      body: {
+    // Save subscription to database
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .upsert({
+        user_id: session.user.id,
         endpoint: subscription.endpoint,
-        keys: {
-          p256dh: keys.p256dh,
-          auth: keys.auth,
-        },
-      },
-    });
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id',
+      });
 
     if (error) {
       console.error('Error saving subscription:', error);
       return false;
     }
 
-    console.log('Push subscription saved successfully via Edge Function');
+    console.log('Push subscription saved successfully');
     return true;
 
   } catch (error) {
