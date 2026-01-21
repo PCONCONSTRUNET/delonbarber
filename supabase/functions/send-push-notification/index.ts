@@ -7,8 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Valid VAPID keys (P-256 curve)
-const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+// Valid VAPID keys from vapidkeys.com
+const VAPID_PUBLIC_KEY = 'BHJ-Q8DU_w5SVtAb_88tc1sY151Rj6D7kr2iNTSNvenIZIDOxnSCRN97OPCV4sGj22-zH7hWr2Mfnlj36qSx2mI';
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!;
 const VAPID_SUBJECT = 'mailto:lucaspereirabn10@gmail.com';
 
