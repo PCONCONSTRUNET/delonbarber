@@ -203,30 +203,78 @@ export function useAdminAppointments() {
   }
 
   async function deleteAppointment(id: string) {
-    // First delete related services
-    const { error: servicesError } = await supabase
-      .from('appointment_services')
-      .delete()
-      .eq('appointment_id', id);
+    try {
+      // First delete related records in order
+      // 1. Delete blocked_slots referencing this appointment
+      await supabase
+        .from('blocked_slots')
+        .delete()
+        .eq('appointment_id', id);
 
-    if (servicesError) {
-      console.error('Error deleting appointment services:', servicesError);
-    }
+      // 2. Delete client_package_usage referencing this appointment
+      await supabase
+        .from('client_package_usage')
+        .delete()
+        .eq('appointment_id', id);
 
-    // Then delete the appointment
-    const { error } = await supabase
-      .from('appointments')
-      .delete()
-      .eq('id', id);
+      // 3. Delete loyalty_rewards referencing this appointment
+      await supabase
+        .from('loyalty_rewards')
+        .delete()
+        .eq('appointment_id', id);
 
-    if (error) {
-      toast({ title: "Erro", description: "Não foi possível excluir.", variant: "destructive" });
+      // 4. Delete ratings referencing this appointment
+      await supabase
+        .from('ratings')
+        .delete()
+        .eq('appointment_id', id);
+
+      // 5. Delete notifications referencing this appointment
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('appointment_id', id);
+
+      // 6. Delete appointment_services
+      const { error: servicesError } = await supabase
+        .from('appointment_services')
+        .delete()
+        .eq('appointment_id', id);
+
+      if (servicesError) {
+        console.error('Error deleting appointment services:', servicesError);
+        toast({ title: "Erro", description: "Não foi possível excluir serviços do agendamento.", variant: "destructive" });
+        return false;
+      }
+
+      // 7. Finally delete the appointment
+      const { error, data } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', id)
+        .select();
+
+      if (error) {
+        console.error('Error deleting appointment:', error);
+        toast({ title: "Erro", description: error.message || "Não foi possível excluir.", variant: "destructive" });
+        return false;
+      }
+
+      // Check if anything was actually deleted
+      if (!data || data.length === 0) {
+        console.error('No appointment deleted - may not have permission');
+        toast({ title: "Erro", description: "Agendamento não encontrado ou sem permissão.", variant: "destructive" });
+        return false;
+      }
+
+      toast({ title: "Excluído!", description: "Agendamento removido." });
+      fetchAppointments();
+      return true;
+    } catch (err) {
+      console.error('Unexpected error deleting appointment:', err);
+      toast({ title: "Erro", description: "Erro inesperado ao excluir.", variant: "destructive" });
       return false;
     }
-
-    toast({ title: "Excluído!", description: "Agendamento removido." });
-    fetchAppointments();
-    return true;
   }
 
   return { appointments, loading, fetchAppointments, updateAppointmentStatus, updatePaymentStatus, deleteAppointment };
