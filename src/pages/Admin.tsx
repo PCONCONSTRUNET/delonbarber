@@ -17,6 +17,7 @@ import { ClientPackagesList } from '@/components/admin/ClientPackagesList';
 import { BlockedSlotsManager } from '@/components/admin/BlockedSlotsManager';
 import { RatingsManager } from '@/components/admin/RatingsManager';
 import { LoyaltyManager } from '@/components/admin/LoyaltyManager';
+import { PushNotificationSetup } from '@/components/admin/PushNotificationSetup';
 import { useIsAdmin, useAdminAppointments, useAdminClients, useAdminServices, useBusinessStatus } from '@/hooks/useAdmin';
 import { useAdminPackages, useClientPackages } from '@/hooks/usePackages';
 import { useAdminNotifications } from '@/hooks/useNotifications';
@@ -85,6 +86,9 @@ export function AdminDashboard() {
             <Switch checked={isOpen} onCheckedChange={toggleStatus} />
           </div>
         </div>
+        
+        {/* Push Notification Setup Card */}
+        <PushNotificationSetup />
         
         <DashboardStats appointments={appointments} />
         
