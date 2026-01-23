@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Crown, Check, ArrowLeft, Star, Clock, Loader2, Gift, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Crown, Check, ArrowLeft, Star, Clock, Loader2, Gift, CheckCircle, QrCode, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -16,10 +16,77 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
+import { PixQRCode } from '@/components/payments/PixQRCode';
+import { PixIcon } from '@/components/icons/PixIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { User } from '@supabase/supabase-js';
 import { format, addDays } from 'date-fns';
+
+// Componente para opção de pagamento PIX do pacote
+function PackagePixPayment({ packageName, amount }: { packageName: string; amount: number }) {
+  const [showQR, setShowQR] = useState(false);
+  const transactionId = `PKG${Date.now().toString(36).toUpperCase()}`;
+
+  return (
+    <div className="px-4 sm:px-6 py-4">
+      <div className="bg-primary/5 border border-primary/20 rounded-2xl overflow-hidden">
+        {/* Header clicável */}
+        <button
+          onClick={() => setShowQR(!showQR)}
+          className="w-full p-4 flex items-center justify-between hover:bg-primary/10 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <PixIcon size={24} />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-medium text-foreground">
+                Pagar via PIX
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {showQR ? 'Escaneie para pagar agora' : 'Clique para pagar antecipado (opcional)'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-primary">
+            <QrCode className="h-4 w-4" />
+            {showQR ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </div>
+        </button>
+
+        {/* QR Code expandido */}
+        <AnimatePresence>
+          {showQR && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="px-4 pb-4 pt-0 space-y-3">
+                <div className="border-t border-primary/20 pt-4">
+                  <PixQRCode
+                    amount={amount}
+                    transactionId={transactionId}
+                    clientName={packageName}
+                  />
+                </div>
+                <p className="text-[10px] text-center text-muted-foreground">
+                  Opcional: pague agora ou no local
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
 
 interface PackageWithBenefits {
   id: string;
@@ -394,9 +461,9 @@ const Pacotes = () => {
         </motion.p>
       </main>
 
-      {/* Success Modal - No QR Code */}
+      {/* Success Modal - com opção de QR Code PIX */}
       <Dialog open={paymentModal.open} onOpenChange={(open) => !open && handleClosePayment()}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col max-h-[90vh]">
           {/* Header */}
           <div className="bg-primary/10 p-6 sm:p-8 text-center flex-shrink-0">
             <motion.div
@@ -433,22 +500,33 @@ const Pacotes = () => {
             </motion.p>
           </div>
 
-          {/* Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="p-4 sm:p-6 text-center"
-          >
-            <div className="bg-muted/50 rounded-xl p-4">
-              <p className="text-sm text-muted-foreground">
-                Sua assinatura VIP foi ativada com sucesso!
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Você já pode aproveitar todos os benefícios do seu pacote.
-              </p>
-            </div>
-          </motion.div>
+          {/* Scrollable content */}
+          <div className="overflow-y-auto flex-1">
+            {/* PIX Payment Option */}
+            {paymentModal.package && (
+              <PackagePixPayment 
+                packageName={paymentModal.package.name}
+                amount={paymentModal.package.price}
+              />
+            )}
+
+            {/* Info */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="px-4 sm:px-6 pb-4"
+            >
+              <div className="bg-muted/50 rounded-xl p-4">
+                <p className="text-sm text-muted-foreground">
+                  Sua assinatura VIP foi ativada com sucesso!
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Você já pode aproveitar todos os benefícios do seu pacote.
+                </p>
+              </div>
+            </motion.div>
+          </div>
 
           {/* Button */}
           <div className="p-4 sm:p-6 pt-0 flex-shrink-0">

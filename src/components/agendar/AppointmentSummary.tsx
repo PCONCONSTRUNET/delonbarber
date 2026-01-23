@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Clock, FileText, Check, Banknote, CreditCard, Crown, Ban } from 'lucide-react';
+import { Calendar, Clock, FileText, Check, Banknote, CreditCard, Crown, Ban, ChevronDown, ChevronUp, QrCode } from 'lucide-react';
 import { Service } from '@/hooks/useAppointments';
 import { Badge } from '@/components/ui/badge';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { PixIcon } from '@/components/icons/PixIcon';
+import { PixQRCode } from '@/components/payments/PixQRCode';
 import { cn } from '@/lib/utils';
 
 export type PaymentMethod = 'pix' | 'cash' | 'card' | 'subscriber';
@@ -30,6 +31,69 @@ interface PaymentMethodConfig {
   iconColor: string;
   isPix?: boolean;
   isSubscriber?: boolean;
+}
+
+// Componente para opção de pagamento PIX com QR Code opcional
+function PixPaymentOption({ amount }: { amount: number }) {
+  const [showQR, setShowQR] = useState(false);
+  const transactionId = `CORTE${Date.now().toString(36).toUpperCase()}`;
+
+  return (
+    <div className="bg-primary/5 border border-primary/20 rounded-2xl overflow-hidden">
+      {/* Header clicável */}
+      <button
+        onClick={() => setShowQR(!showQR)}
+        className="w-full p-4 flex items-center justify-between hover:bg-primary/10 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <PixIcon size={24} />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-medium text-foreground">
+              Pagamento via PIX
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {showQR ? 'Escaneie para pagar agora' : 'Clique para pagar antecipado'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-primary">
+          <QrCode className="h-4 w-4" />
+          {showQR ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </div>
+      </button>
+
+      {/* QR Code expandido */}
+      <AnimatePresence>
+        {showQR && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 pt-0 space-y-3">
+              <div className="border-t border-primary/20 pt-4">
+                <PixQRCode
+                  amount={amount}
+                  transactionId={transactionId}
+                  clientName="Cliente"
+                />
+              </div>
+              <p className="text-[10px] text-center text-muted-foreground">
+                Opcional: pague agora ou no local no dia do atendimento
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 export function AppointmentSummary({
@@ -297,7 +361,7 @@ export function AppointmentSummary({
         )}
       </AnimatePresence>
 
-      {/* PIX Info - sem QR Code */}
+      {/* PIX Info com opção de QR Code */}
       <AnimatePresence>
         {selectedPayment === 'pix' && originalTotal > 0 && (
           <motion.div
@@ -306,21 +370,7 @@ export function AppointmentSummary({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <PixIcon size={24} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    Pagamento via PIX
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Pague no local no dia do atendimento
-                  </p>
-                </div>
-              </div>
-            </div>
+            <PixPaymentOption amount={originalTotal} />
           </motion.div>
         )}
       </AnimatePresence>
