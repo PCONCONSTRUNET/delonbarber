@@ -30,31 +30,39 @@ function PackagePixPayment({ packageName, amount }: { packageName: string; amoun
 
   return (
     <div className="px-4 sm:px-6 py-4">
-      <div className="bg-primary/5 border border-primary/20 rounded-2xl overflow-hidden">
+      <div className={`rounded-2xl overflow-hidden transition-all ${showQR ? 'bg-primary/10 border-2 border-primary' : 'bg-primary/5 border-2 border-primary/30'}`}>
         {/* Header clicável */}
         <button
           onClick={() => setShowQR(!showQR)}
-          className="w-full p-4 flex items-center justify-between hover:bg-primary/10 transition-colors"
+          className="w-full p-4 flex items-center justify-between hover:bg-primary/15 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <PixIcon size={24} />
+            <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <PixIcon size={28} />
             </div>
             <div className="text-left">
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-sm font-semibold text-foreground">
                 Pagar via PIX
               </p>
-              <p className="text-xs text-muted-foreground">
-                {showQR ? 'Escaneie para pagar agora' : 'Clique para pagar antecipado (opcional)'}
-              </p>
+              {showQR ? (
+                <p className="text-xs text-primary font-medium">
+                  ✅ Escaneie o QR Code abaixo
+                </p>
+              ) : (
+                <p className="text-xs font-bold text-primary animate-pulse">
+                  👆 CLIQUE PARA PAGAR ANTECIPADO
+                </p>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2 text-primary">
-            <QrCode className="h-4 w-4" />
+          <div className="flex items-center gap-2">
+            <div className={`p-2 rounded-full ${showQR ? 'bg-primary text-primary-foreground' : 'bg-primary/20 text-primary'}`}>
+              <QrCode className="h-5 w-5" />
+            </div>
             {showQR ? (
-              <ChevronUp className="h-4 w-4" />
+              <ChevronUp className="h-5 w-5 text-primary" />
             ) : (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-5 w-5 text-primary" />
             )}
           </div>
         </button>
