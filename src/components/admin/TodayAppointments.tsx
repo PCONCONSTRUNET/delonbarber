@@ -129,6 +129,16 @@ Qualquer dúvida, estamos à disposição! 💈`;
           // Show as subscriber if payment method is 'subscriber' OR if price is 0 (benefits were used)
           const isSubscriber = paymentMethod === 'subscriber' || Number(apt.total_price) === 0;
           
+          // Calculate end time based on duration
+          const startTime = apt.appointment_time.slice(0, 5);
+          const duration = apt.total_duration || 30;
+          const [startHour, startMin] = startTime.split(':').map(Number);
+          const totalMinutes = startHour * 60 + startMin + duration;
+          const endHour = Math.floor(totalMinutes / 60);
+          const endMin = totalMinutes % 60;
+          const endTime = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+          const slotsBlocked = Math.ceil(duration / 30);
+          
           return (
             <motion.div
               key={apt.id}
@@ -141,7 +151,10 @@ Qualquer dúvida, estamos à disposição! 💈`;
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1 md:mb-2">
                     <Clock className="h-3 md:h-4 w-3 md:w-4 text-primary shrink-0" />
-                    <span className="font-bold text-sm md:text-lg">{apt.appointment_time.slice(0, 5)}</span>
+                    <span className="font-bold text-sm md:text-lg">{startTime} - {endTime}</span>
+                    <Badge className="bg-primary/20 text-primary text-[9px] md:text-xs px-1 py-0">
+                      {duration}min
+                    </Badge>
                     <Badge className={cn("text-[9px] md:text-xs px-1 md:px-2 py-0", statusColors[apt.status])}>
                       {statusLabels[apt.status]}
                     </Badge>
