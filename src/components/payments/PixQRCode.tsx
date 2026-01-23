@@ -14,7 +14,7 @@ interface PixQRCodeProps {
 
 // PIX configuration
 const PIX_CONFIG = {
-  pixKey: '+5548999520220',
+  pixKey: '64474446000130',
   merchantName: 'BARBEARIA ALAN DELON',
   merchantCity: 'FLORIANOPOLIS',
 };
