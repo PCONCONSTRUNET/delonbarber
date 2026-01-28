@@ -6,6 +6,9 @@ import { DashboardStats } from '@/components/admin/DashboardStats';
 import { DashboardCharts } from '@/components/admin/DashboardCharts';
 import { TodayAppointments } from '@/components/admin/TodayAppointments';
 import { CalendarView } from '@/components/admin/CalendarView';
+import { TimelineAppointments } from '@/components/admin/agenda/TimelineAppointments';
+import { CompactCalendar } from '@/components/admin/agenda/CompactCalendar';
+import { AgendaHeader } from '@/components/admin/agenda/AgendaHeader';
 import { ServiceForm } from '@/components/admin/ServiceForm';
 import { ClientList } from '@/components/admin/ClientList';
 import { FinancialReport } from '@/components/admin/FinancialReport';
@@ -26,11 +29,10 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, Pencil, Trash2, Bell, Crown, Download, Search, CalendarPlus } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Bell, Crown, Download, Search, Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { createAppointmentEvent, downloadMultipleICS } from '@/lib/calendar';
-import { toast } from 'sonner';
-import { AdminAppointment } from '@/hooks/useAdmin';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -125,6 +127,7 @@ export function AdminAgenda() {
   const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment } = useAdminAppointments();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('agendamentos');
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!isAdmin) return <Navigate to="/login" replace />;
@@ -134,37 +137,69 @@ export function AdminAgenda() {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between gap-3 mb-4 md:mb-6">
-        <h1 className="font-display text-2xl md:text-3xl font-bold">Agenda</h1>
-        <CalendarSubscription />
-      </div>
-      
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4 md:mb-6 h-10 md:h-11">
-          <TabsTrigger value="agendamentos" className="text-xs md:text-sm">Agendamentos</TabsTrigger>
-          <TabsTrigger value="horarios" className="text-xs md:text-sm">Bloquear</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <TabsList className="grid grid-cols-2 h-9">
+            <TabsTrigger value="agendamentos" className="text-xs px-3">Agenda</TabsTrigger>
+            <TabsTrigger value="horarios" className="text-xs px-3">Bloquear</TabsTrigger>
+          </TabsList>
+          
+          <div className="flex items-center gap-2">
+            {/* Calendar button - opens sheet with full calendar */}
+            <Sheet open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <Calendar className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-2xl">
+                <div className="pt-2 pb-6">
+                  <h3 className="font-semibold text-center mb-4">Selecionar Data</h3>
+                  <CompactCalendar
+                    appointments={appointments}
+                    selectedDate={selectedDate}
+                    onSelectDate={(date) => {
+                      setSelectedDate(date);
+                      setCalendarOpen(false);
+                    }}
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
+            
+            <CalendarSubscription />
+          </div>
+        </div>
 
-        <TabsContent value="agendamentos">
-          <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-            <CalendarView appointments={appointments} view="month" onSelectDate={setSelectedDate} selectedDate={selectedDate} />
-            <div>
-              <h2 className="font-semibold mb-3 md:mb-4 text-sm md:text-base">
-                {selectedDate.toLocaleDateString('pt-BR', { dateStyle: 'long' })}
-              </h2>
-              {loading ? <Loader2 className="animate-spin" /> : (
-                <TodayAppointments 
-                  appointments={dayAppointments.length ? dayAppointments.map(a => ({ ...a, appointment_date: dateStr })) : []}
+        <TabsContent value="agendamentos" className="mt-0">
+          {/* Clean iPhone-style agenda */}
+          <div className="space-y-4">
+            {/* Date navigation header */}
+            <AgendaHeader
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              appointmentCount={dayAppointments.length}
+            />
+
+            {/* Timeline appointments */}
+            <ScrollArea className="h-[calc(100vh-280px)] md:h-[calc(100vh-240px)]">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin h-6 w-6 text-primary" />
+                </div>
+              ) : (
+                <TimelineAppointments
+                  appointments={dayAppointments}
                   onUpdateStatus={(id, status) => updateAppointmentStatus(id, status as any)}
                   onUpdatePayment={updatePaymentStatus}
                   onDelete={deleteAppointment}
                 />
               )}
-            </div>
+            </ScrollArea>
           </div>
         </TabsContent>
 
-        <TabsContent value="horarios">
+        <TabsContent value="horarios" className="mt-0">
           <BlockedSlotsManager />
         </TabsContent>
       </Tabs>
