@@ -1,11 +1,11 @@
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { X, CheckCircle, AlertCircle, History } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, History, CalendarPlus } from 'lucide-react';
 import { Appointment } from '@/hooks/useAppointments';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
+import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 interface AppointmentHistoryProps {
   appointments: Appointment[];
   onCancel: (id: string) => void;
@@ -121,18 +121,33 @@ export function AppointmentHistory({ appointments, onCancel }: AppointmentHistor
               </p>
             )}
 
-            {/* Cancel button */}
-            {canCancel && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onCancel(appointment.id)}
-                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancelar
-              </Button>
-            )}
+            {/* Actions */}
+            <div className="flex gap-2">
+              {/* Add to Calendar - only for pending/confirmed */}
+              {canCancel && (
+                <AddToCalendarButton
+                  appointmentId={appointment.id}
+                  date={appointment.appointment_date}
+                  time={appointment.appointment_time}
+                  durationMinutes={appointment.total_duration || 30}
+                  services={appointment.services.map(s => s.name)}
+                  variant="default"
+                  className="flex-1"
+                />
+              )}
+              
+              {/* Cancel button */}
+              {canCancel && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onCancel(appointment.id)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl px-4"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </motion.div>
         );
       })}
