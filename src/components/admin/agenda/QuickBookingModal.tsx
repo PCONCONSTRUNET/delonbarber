@@ -211,96 +211,99 @@ export function QuickBookingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Scissors className="h-5 w-5 text-primary" />
+      <DialogContent className="max-w-[95vw] sm:max-w-md p-3 sm:p-6">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Scissors className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             Novo Agendamento
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3 overflow-y-auto flex-1">
           {/* Time info */}
-          <div className="p-3 rounded-lg bg-muted/50 flex items-center gap-3">
-            <Clock className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-sm font-medium">
+          <div className="p-2 sm:p-3 rounded-lg bg-muted/50 flex items-center gap-2 sm:gap-3">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-medium">
                 {formatDate(selectedDate)} às {selectedTime}
               </p>
               {totalDuration > 0 && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   Término: {calculateEndTime()} ({totalDuration}min)
                 </p>
               )}
             </div>
           </div>
 
-          {/* Client info */}
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="clientName" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Nome do Cliente *
+          {/* Client info - grid on mobile */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="clientName" className="flex items-center gap-1 text-xs sm:text-sm">
+                <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                Nome *
               </Label>
               <Input
                 id="clientName"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
-                placeholder="Ex: João Silva"
+                placeholder="João Silva"
+                className="h-8 sm:h-10 text-sm"
                 autoFocus
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="clientPhone" className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                Telefone (opcional)
+            <div className="space-y-1">
+              <Label htmlFor="clientPhone" className="flex items-center gap-1 text-xs sm:text-sm">
+                <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
+                Telefone
               </Label>
               <Input
                 id="clientPhone"
                 value={clientPhone}
                 onChange={(e) => setClientPhone(e.target.value)}
-                placeholder="Ex: 11999999999"
+                placeholder="11999999999"
+                className="h-8 sm:h-10 text-sm"
               />
             </div>
           </div>
 
           {/* Services selection */}
-          <div className="space-y-2">
-            <Label>Serviços *</Label>
-            <ScrollArea className="h-[180px] border rounded-lg p-2">
+          <div className="space-y-1">
+            <Label className="text-xs sm:text-sm">Serviços *</Label>
+            <ScrollArea className="h-[120px] sm:h-[160px] border rounded-lg p-1.5 sm:p-2">
               {loadingServices ? (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-muted-foreground">Carregando...</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Carregando...</p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {services.map((service) => (
                     <div
                       key={service.id}
                       className={cn(
-                        'flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors',
+                        'flex items-center gap-2 p-1.5 sm:p-2 rounded-lg cursor-pointer transition-colors',
                         selectedServices.includes(service.id)
                           ? 'bg-primary/10 border border-primary/30'
-                          : 'hover:bg-muted/50'
+                          : 'hover:bg-muted/50 active:bg-muted/70'
                       )}
                       onClick={() => toggleService(service.id)}
                     >
                       <Checkbox
                         checked={selectedServices.includes(service.id)}
                         onCheckedChange={() => toggleService(service.id)}
+                        className="h-4 w-4"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{service.name}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs sm:text-sm font-medium truncate">{service.name}</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
                           {service.duration_minutes}min
                         </p>
                       </div>
                       <span className={cn(
-                        "text-sm font-semibold",
+                        "text-xs sm:text-sm font-semibold flex-shrink-0",
                         service.price === 0 ? "text-primary" : "text-foreground"
                       )}>
-                        {service.price === 0 ? 'VIP' : `R$ ${service.price}`}
+                        {service.price === 0 ? 'VIP' : `R$${service.price}`}
                       </span>
                     </div>
                   ))}
@@ -309,32 +312,32 @@ export function QuickBookingModal({
             </ScrollArea>
           </div>
 
-          {/* Summary */}
+          {/* Summary - compact */}
           {selectedServices.length > 0 && (
-            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 space-y-2">
+            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 space-y-1">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Duração total:</span>
-                <Badge variant="secondary">{totalDuration}min</Badge>
+                <span className="text-xs sm:text-sm">Duração:</span>
+                <Badge variant="secondary" className="text-[10px] sm:text-xs h-5">{totalDuration}min</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Valor total:</span>
-                <span className="font-bold text-primary">R$ {totalPrice}</span>
+                <span className="text-xs sm:text-sm">Total:</span>
+                <span className="font-bold text-primary text-sm sm:text-base">R$ {totalPrice}</span>
               </div>
               {slotsNeeded > 1 && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <AlertCircle className="h-3 w-3" />
-                  <span>Bloqueará {slotsNeeded} horários consecutivos</span>
+                <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                  <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                  <span>Bloqueará {slotsNeeded} horários</span>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+        <DialogFooter className="gap-2 pt-2 flex-shrink-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading} size="sm" className="flex-1 sm:flex-none">
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || selectedServices.length === 0}>
+          <Button onClick={handleSubmit} disabled={loading || selectedServices.length === 0} size="sm" className="flex-1 sm:flex-none">
             {loading ? 'Salvando...' : 'Confirmar'}
           </Button>
         </DialogFooter>
