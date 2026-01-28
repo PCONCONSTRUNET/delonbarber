@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Navigate } from 'react-router-dom';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { MobileAdminNav } from '@/components/admin/MobileAdminNav';
@@ -129,12 +130,29 @@ export function AdminAgenda() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('agendamentos');
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [businessHours, setBusinessHours] = useState<any[]>([]);
+
+  // Fetch business hours
+  useEffect(() => {
+    async function fetchHours() {
+      const { data } = await supabase
+        .from('business_hours')
+        .select('*')
+        .order('day_of_week', { ascending: true });
+      if (data) setBusinessHours(data);
+    }
+    fetchHours();
+  }, []);
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!isAdmin) return <Navigate to="/login" replace />;
 
   const dateStr = selectedDate.toISOString().split('T')[0];
   const dayAppointments = appointments.filter(a => a.appointment_date === dateStr);
+  
+  // Get business hours for the selected day (0=Sunday, 1=Monday, etc.)
+  const dayOfWeek = selectedDate.getDay();
+  const todayHours = businessHours.find(h => h.day_of_week === dayOfWeek);
 
   return (
     <AdminLayout>
@@ -195,6 +213,7 @@ export function AdminAgenda() {
                   onUpdateStatus={(id, status) => updateAppointmentStatus(id, status as any)}
                   onUpdatePayment={updatePaymentStatus}
                   onDelete={deleteAppointment}
+                  businessHours={todayHours}
                 />
               )}
             </ScrollArea>
