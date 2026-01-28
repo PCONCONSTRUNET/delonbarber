@@ -41,9 +41,8 @@ export function CalendarSubscription() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" size="sm" className="gap-2">
-          <Calendar className="h-4 w-4" />
-          <span className="hidden sm:inline">Sincronizar</span> iPhone
+        <Button variant="outline" size="icon" className="h-9 w-9" title="Sincronizar iPhone">
+          <Smartphone className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
