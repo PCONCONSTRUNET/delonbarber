@@ -1,42 +1,15 @@
-import { Crown, Scissors, Calendar, AlertTriangle, Clock, CalendarDays, RefreshCw } from 'lucide-react';
+import { Crown, Scissors, Calendar, CalendarDays, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useMyPackages, MyPackage } from '@/hooks/useMyPackages';
-import { format, differenceInDays, endOfMonth, startOfMonth, isWithinInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 interface MyPackagesBenefitsProps {
   compact?: boolean;
-}
-
-const EXPIRY_WARNING_DAYS = 7;
-
-function getDaysUntilExpiry(endDate: string): number {
-  return differenceInDays(new Date(endDate + 'T23:59:59'), new Date());
-}
-
-function getDaysUntilMonthEnd(startDate: string): number {
-  const packageStart = new Date(startDate + 'T00:00:00');
-  const monthEnd = endOfMonth(packageStart);
-  return differenceInDays(monthEnd, new Date());
-}
-
-function getPackageMonthInfo(startDate: string): { monthStart: Date; monthEnd: Date; monthName: string } {
-  const packageStart = new Date(startDate + 'T00:00:00');
-  const monthStart = startOfMonth(packageStart);
-  const monthEnd = endOfMonth(packageStart);
-  const monthName = format(packageStart, 'MMMM/yyyy', { locale: ptBR });
-  return { monthStart, monthEnd, monthName };
-}
-
-function getExpiryStatus(endDate: string): 'ok' | 'warning' | 'critical' {
-  const days = getDaysUntilExpiry(endDate);
-  if (days <= 3) return 'critical';
-  if (days <= EXPIRY_WARNING_DAYS) return 'warning';
-  return 'ok';
 }
 
 export function MyPackagesBenefits({ compact = false }: MyPackagesBenefitsProps) {
@@ -68,9 +41,6 @@ export function MyPackagesBenefits({ compact = false }: MyPackagesBenefitsProps)
 }
 
 function CompactView({ packages }: { packages: MyPackage[] }) {
-  // Check for expiring packages
-  const expiringPackages = packages.filter(p => getDaysUntilExpiry(p.end_date) <= EXPIRY_WARNING_DAYS);
-  
   // Show a summary of all available benefits
   const allBenefits = packages.flatMap(p => 
     p.benefits.filter(b => b.remaining > 0).map(b => ({
@@ -79,57 +49,13 @@ function CompactView({ packages }: { packages: MyPackage[] }) {
     }))
   );
 
-  if (allBenefits.length === 0 && expiringPackages.length === 0) {
+  if (allBenefits.length === 0) {
     return null;
   }
 
   return (
     <div className="space-y-3 mb-4">
-      {/* Expiry Warning */}
-      {expiringPackages.map(pkg => {
-        const daysUntilMonthEnd = getDaysUntilMonthEnd(pkg.start_date);
-        const { monthName } = getPackageMonthInfo(pkg.start_date);
-        const status = daysUntilMonthEnd <= 3 ? 'critical' : daysUntilMonthEnd <= 7 ? 'warning' : 'ok';
-
-        if (status === 'ok') return null;
-
-        return (
-          <motion.div
-            key={`expiry-${pkg.id}`}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={`p-3 rounded-2xl flex items-center gap-3 ${
-              status === 'critical' 
-                ? 'bg-destructive/10 border border-destructive/30' 
-                : 'bg-orange-500/10 border border-orange-500/30'
-            }`}
-          >
-            <div className={`p-2 rounded-xl ${
-              status === 'critical' ? 'bg-destructive/20' : 'bg-orange-500/20'
-            }`}>
-              <AlertTriangle className={`h-4 w-4 ${
-                status === 'critical' ? 'text-destructive' : 'text-orange-500'
-              }`} />
-            </div>
-            <div className="flex-1">
-              <p className={`text-sm font-medium ${
-                status === 'critical' ? 'text-destructive' : 'text-orange-600'
-              }`}>
-                {daysUntilMonthEnd === 0 
-                  ? 'Último dia para usar seu pacote!' 
-                  : daysUntilMonthEnd === 1 
-                    ? 'Seu pacote expira amanhã!' 
-                    : `Seu pacote expira em ${daysUntilMonthEnd} dias`}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {pkg.package.name} • Válido somente em {monthName}
-              </p>
-            </div>
-          </motion.div>
-        );
-      })}
-
-      {/* Benefits with expiry info */}
+      {/* Benefits summary */}
       {packages.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -141,17 +67,9 @@ function CompactView({ packages }: { packages: MyPackage[] }) {
               <Crown className="h-4 w-4 text-yellow-500" />
               <span className="text-sm font-medium">Seus Benefícios VIP</span>
             </div>
-            {packages[0] && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <CalendarDays className="h-3 w-3" />
-                <span>
-                  {getDaysUntilMonthEnd(packages[0].start_date) > 0 
-                    ? `${getDaysUntilMonthEnd(packages[0].start_date)} dias restantes`
-                    : 'Último dia!'
-                  }
-                </span>
-              </div>
-            )}
+            <Badge className="bg-green-500/20 text-green-500 border-green-500/30 text-xs">
+              Ativo
+            </Badge>
           </div>
           
           {allBenefits.length > 0 ? (
@@ -173,7 +91,7 @@ function CompactView({ packages }: { packages: MyPackage[] }) {
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Todos os benefícios foram utilizados este mês
+              Todos os benefícios foram utilizados
             </p>
           )}
         </motion.div>
@@ -186,105 +104,33 @@ function FullView({ packages }: { packages: MyPackage[] }) {
   return (
     <div className="space-y-4">
       {packages.map((pkg) => {
-        const daysUntilMonthEnd = getDaysUntilMonthEnd(pkg.start_date);
-        const { monthName, monthEnd } = getPackageMonthInfo(pkg.start_date);
-        const status = daysUntilMonthEnd <= 3 ? 'critical' : daysUntilMonthEnd <= 7 ? 'warning' : 'ok';
-        const isExpiring = status !== 'ok';
+        const endDate = new Date(pkg.end_date + 'T23:59:59');
 
         return (
           <motion.div
             key={pkg.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`p-5 rounded-2xl glass-effect border ${
-              status === 'critical' 
-                ? 'border-destructive/50' 
-                : status === 'warning' 
-                  ? 'border-orange-500/50' 
-                  : 'border-yellow-500/20'
-            }`}
+            className="p-5 rounded-2xl glass-effect border border-yellow-500/20"
           >
-            {/* Expiry Warning Banner */}
-            {isExpiring && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className={`-mx-5 -mt-5 mb-4 p-3 rounded-t-2xl flex items-center gap-3 ${
-                  status === 'critical' 
-                    ? 'bg-destructive/10' 
-                    : 'bg-orange-500/10'
-                }`}
-              >
-                <AlertTriangle className={`h-5 w-5 ${
-                  status === 'critical' ? 'text-destructive' : 'text-orange-500'
-                }`} />
-                <div className="flex-1">
-                  <p className={`text-sm font-semibold ${
-                    status === 'critical' ? 'text-destructive' : 'text-orange-600'
-                  }`}>
-                    {daysUntilMonthEnd === 0 
-                      ? '⚠️ Último dia para usar!' 
-                      : daysUntilMonthEnd === 1 
-                        ? '⚠️ Expira amanhã!' 
-                        : `⚠️ Expira em ${daysUntilMonthEnd} dias`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Use seus benefícios até o fim do mês
-                  </p>
-                </div>
-                <Clock className={`h-4 w-4 ${
-                  status === 'critical' ? 'text-destructive' : 'text-orange-500'
-                }`} />
-              </motion.div>
-            )}
-
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${
-                  isExpiring 
-                    ? status === 'critical' 
-                      ? 'bg-destructive/20' 
-                      : 'bg-orange-500/20'
-                    : 'bg-gradient-to-br from-yellow-500/20 to-amber-500/20'
-                }`}>
-                  <Crown className={`h-6 w-6 ${
-                    isExpiring 
-                      ? status === 'critical' 
-                        ? 'text-destructive' 
-                        : 'text-orange-500'
-                      : 'text-yellow-500'
-                  }`} />
+                <div className="p-2 rounded-xl bg-gradient-to-br from-yellow-500/20 to-amber-500/20">
+                  <Crown className="h-6 w-6 text-yellow-500" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg">{pkg.package.name}</h3>
-                  <div className={`flex items-center gap-2 text-sm ${
-                    isExpiring 
-                      ? status === 'critical' 
-                        ? 'text-destructive' 
-                        : 'text-orange-500'
-                      : 'text-muted-foreground'
-                  }`}>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     <span>
-                      Válido em {monthName}
+                      Válido até {format(endDate, "dd 'de' MMMM", { locale: ptBR })}
                     </span>
                   </div>
                 </div>
               </div>
-              <Badge className={
-                isExpiring 
-                  ? status === 'critical'
-                    ? 'bg-destructive/20 text-destructive border-destructive/30'
-                    : 'bg-orange-500/20 text-orange-500 border-orange-500/30'
-                  : 'bg-green-500/20 text-green-500 border-green-500/30'
-              }>
-                {isExpiring 
-                  ? daysUntilMonthEnd === 0 
-                    ? 'Último dia!' 
-                    : `${daysUntilMonthEnd} dias`
-                  : 'Ativo'
-                }
+              <Badge className="bg-green-500/20 text-green-500 border-green-500/30">
+                Ativo
               </Badge>
             </div>
 
@@ -296,18 +142,8 @@ function FullView({ packages }: { packages: MyPackage[] }) {
                   <span className="text-sm font-medium">Validade do Pacote</span>
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  até {format(monthEnd, "dd 'de' MMMM", { locale: ptBR })}
+                  até {format(endDate, "dd 'de' MMMM", { locale: ptBR })}
                 </span>
-              </div>
-              <div className="mt-2">
-                <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                  <span>Tempo restante</span>
-                  <span>{daysUntilMonthEnd > 0 ? `${daysUntilMonthEnd} dias` : 'Último dia'}</span>
-                </div>
-                <Progress 
-                  value={Math.max(0, (daysUntilMonthEnd / 30) * 100)} 
-                  className="h-2"
-                />
               </div>
             </div>
 
@@ -373,7 +209,7 @@ function FullView({ packages }: { packages: MyPackage[] }) {
             )}
 
             {/* Renew Button */}
-            <RenewButton daysRemaining={daysUntilMonthEnd} />
+            <RenewButton />
           </motion.div>
         );
       })}
@@ -381,9 +217,8 @@ function FullView({ packages }: { packages: MyPackage[] }) {
   );
 }
 
-function RenewButton({ daysRemaining }: { daysRemaining: number }) {
+function RenewButton() {
   const navigate = useNavigate();
-  const isUrgent = daysRemaining <= 7;
   
   return (
     <motion.div 
@@ -393,20 +228,11 @@ function RenewButton({ daysRemaining }: { daysRemaining: number }) {
     >
       <Button
         onClick={() => navigate('/pacotes')}
-        className={`w-full gap-2 rounded-xl ${
-          isUrgent 
-            ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white' 
-            : 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black'
-        }`}
+        className="w-full gap-2 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black"
       >
         <RefreshCw className="h-4 w-4" />
-        {isUrgent ? 'Renovar Agora!' : 'Renovar Pacote VIP'}
+        Renovar Pacote VIP
       </Button>
-      {isUrgent && (
-        <p className="text-xs text-center text-muted-foreground mt-2">
-          ⚡ Renove antes do fim do mês para não perder seus benefícios
-        </p>
-      )}
     </motion.div>
   );
 }
