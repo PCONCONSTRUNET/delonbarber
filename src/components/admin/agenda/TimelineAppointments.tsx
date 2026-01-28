@@ -8,11 +8,20 @@ import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { toast } from 'sonner';
 
+interface BusinessHour {
+  open_time: string;
+  close_time: string;
+  is_open: boolean;
+  lunch_start: string | null;
+  lunch_end: string | null;
+}
+
 interface TimelineAppointmentsProps {
   appointments: AdminAppointment[];
   onUpdateStatus: (id: string, status: string) => void;
   onUpdatePayment: (id: string, status: string, method?: string) => void;
   onDelete?: (id: string) => void;
+  businessHours?: BusinessHour | null;
 }
 
 const statusConfig = {
@@ -22,40 +31,62 @@ const statusConfig = {
   cancelled: { label: 'Cancelado', bg: 'bg-destructive/50', border: 'border-l-destructive' },
 };
 
-// Generate time slots from 8:00 to 20:00
-const generateTimeSlots = () => {
+// Generate time slots based on business hours
+const generateTimeSlots = (businessHours?: BusinessHour | null) => {
   const slots: string[] = [];
-  for (let hour = 8; hour <= 20; hour++) {
+  
+  // Default hours if no business hours provided
+  let startHour = 8;
+  let endHour = 18;
+  
+  if (businessHours && businessHours.is_open) {
+    startHour = parseInt(businessHours.open_time.slice(0, 2));
+    endHour = parseInt(businessHours.close_time.slice(0, 2));
+  }
+  
+  for (let hour = startHour; hour <= endHour; hour++) {
     slots.push(`${String(hour).padStart(2, '0')}:00`);
+    // Add half hour slots
+    if (hour < endHour) {
+      slots.push(`${String(hour).padStart(2, '0')}:30`);
+    }
   }
   return slots;
 };
-
-const TIME_SLOTS = generateTimeSlots();
 
 export function TimelineAppointments({
   appointments,
   onUpdateStatus,
   onUpdatePayment,
   onDelete,
+  businessHours,
 }: TimelineAppointmentsProps) {
   const [paymentModal, setPaymentModal] = useState<{
     open: boolean;
     appointment: AdminAppointment | null;
   }>({ open: false, appointment: null });
 
+  // Generate time slots based on business hours
+  const timeSlots = generateTimeSlots(businessHours);
+
   const sortedAppts = [...appointments].sort((a, b) =>
     a.appointment_time.localeCompare(b.appointment_time)
   );
 
-  // Group appointments by hour for timeline display
-  const appointmentsByHour = new Map<string, AdminAppointment[]>();
+  // Group appointments by time slot for timeline display
+  const appointmentsBySlot = new Map<string, AdminAppointment[]>();
   sortedAppts.forEach((apt) => {
-    const hour = apt.appointment_time.slice(0, 2) + ':00';
-    if (!appointmentsByHour.has(hour)) {
-      appointmentsByHour.set(hour, []);
+    // Find the matching slot (round down to nearest slot)
+    const aptTime = apt.appointment_time.slice(0, 5);
+    const aptHour = parseInt(aptTime.slice(0, 2));
+    const aptMin = parseInt(aptTime.slice(3, 5));
+    const slotMin = aptMin >= 30 ? 30 : 0;
+    const slotKey = `${String(aptHour).padStart(2, '0')}:${String(slotMin).padStart(2, '0')}`;
+    
+    if (!appointmentsBySlot.has(slotKey)) {
+      appointmentsBySlot.set(slotKey, []);
     }
-    appointmentsByHour.get(hour)!.push(apt);
+    appointmentsBySlot.get(slotKey)!.push(apt);
   });
 
   const handleConfirmPayment = async (method: PaymentMethod) => {
@@ -80,9 +111,7 @@ export function TimelineAppointments({
 
   // Find current hour to auto-scroll
   const currentHour = new Date().getHours();
-  const currentSlotIndex = TIME_SLOTS.findIndex(
-    (slot) => parseInt(slot) >= currentHour
-  );
+  const currentMin = new Date().getMinutes();
 
   if (sortedAppts.length === 0) {
     return (
@@ -101,10 +130,12 @@ export function TimelineAppointments({
       <div className="relative">
         {/* Timeline */}
         <div className="space-y-0">
-          {TIME_SLOTS.map((timeSlot, index) => {
-            const hourAppts = appointmentsByHour.get(timeSlot) || [];
-            const hasAppointments = hourAppts.length > 0;
-            const isPast = parseInt(timeSlot) < currentHour;
+          {timeSlots.map((timeSlot, index) => {
+            const slotAppts = appointmentsBySlot.get(timeSlot) || [];
+            const hasAppointments = slotAppts.length > 0;
+            const slotHour = parseInt(timeSlot.slice(0, 2));
+            const slotMin = parseInt(timeSlot.slice(3, 5));
+            const isPast = slotHour < currentHour || (slotHour === currentHour && slotMin < currentMin);
 
             return (
               <div key={timeSlot} className="relative flex">
@@ -124,7 +155,7 @@ export function TimelineAppointments({
                 {/* Content area */}
                 <div className="flex-1 pl-4 min-h-[48px] py-1">
                   <AnimatePresence mode="popLayout">
-                    {hourAppts.map((apt) => (
+                    {slotAppts.map((apt) => (
                       <SwipeableAppointmentCard
                         key={apt.id}
                         appointment={apt}
