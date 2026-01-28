@@ -45,13 +45,13 @@ export function CompactCalendar({
   const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
   return (
-    <div className="bg-card rounded-2xl p-3 border border-border/50">
+    <div className="bg-card rounded-2xl p-2 border border-border/50 max-w-sm mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-7 w-7"
           onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -62,7 +62,7 @@ export function CompactCalendar({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-7 w-7"
           onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
         >
           <ChevronRight className="h-4 w-4" />
@@ -70,11 +70,11 @@ export function CompactCalendar({
       </div>
 
       {/* Week days header */}
-      <div className="grid grid-cols-7 gap-1 mb-1">
+      <div className="grid grid-cols-7 gap-0.5 mb-0.5">
         {weekDays.map((day, i) => (
           <div
             key={i}
-            className="text-center text-[10px] font-medium text-muted-foreground py-1"
+            className="text-center text-[10px] font-medium text-muted-foreground py-0.5"
           >
             {day}
           </div>
@@ -82,7 +82,7 @@ export function CompactCalendar({
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5">
         {days.map((day) => {
           const dayAppointments = getAppointmentsForDay(day);
           const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
@@ -100,10 +100,10 @@ export function CompactCalendar({
               key={day.toISOString()}
               onClick={() => onSelectDate(day)}
               className={cn(
-                'relative aspect-square rounded-lg text-xs flex flex-col items-center justify-center transition-all',
+                'relative h-9 w-full rounded-md text-xs flex flex-col items-center justify-center transition-all',
                 !isCurrentMonth && 'text-muted-foreground/30',
                 isSelected &&
-                  'bg-primary text-primary-foreground font-bold ring-2 ring-primary ring-offset-2 ring-offset-background',
+                  'bg-primary text-primary-foreground font-bold ring-2 ring-primary ring-offset-1 ring-offset-background',
                 !isSelected && isToday(day) && 'ring-1 ring-primary',
                 !isSelected &&
                   hasAppointments &&
