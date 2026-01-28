@@ -243,7 +243,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium">
-                              {format(new Date(apt.appointment_date), "dd/MM/yyyy")}
+                              {format(new Date(apt.appointment_date + 'T00:00:00'), "dd/MM/yyyy")}
                             </span>
                             <span className="text-muted-foreground">•</span>
                             <span className="text-muted-foreground">
@@ -313,7 +313,7 @@ export function ClientDetailsModal({ client, open, onClose }: ClientDetailsModal
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(pkg.start_date), "dd/MM/yyyy")} - {format(new Date(pkg.end_date), "dd/MM/yyyy")}
+                            {format(new Date(pkg.start_date + 'T00:00:00'), "dd/MM/yyyy")} - {format(new Date(pkg.end_date + 'T00:00:00'), "dd/MM/yyyy")}
                           </p>
                           <div className="flex items-center gap-3 mt-2 text-xs">
                             <span className="flex items-center gap-1">
