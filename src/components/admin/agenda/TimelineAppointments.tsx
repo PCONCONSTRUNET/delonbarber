@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
-import { Check, X, Trash2, Crown, DollarSign, CheckCheck } from 'lucide-react';
+import { Check, X, Trash2, Crown, DollarSign, Scissors, CreditCard } from 'lucide-react';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
@@ -64,11 +64,6 @@ export function TimelineAppointments({
     }
   };
 
-  const handleCompleteAndPay = async (apt: AdminAppointment) => {
-    // First complete, then open payment modal
-    await onUpdateStatus(apt.id, 'completed');
-    setPaymentModal({ open: true, appointment: apt });
-  };
 
   const handleWhatsApp = (apt: AdminAppointment) => {
     const phone = (apt.guest_phone || apt.profile?.phone)?.replace(/\D/g, '');
@@ -137,7 +132,6 @@ export function TimelineAppointments({
                         onOpenPayment={() =>
                           setPaymentModal({ open: true, appointment: apt })
                         }
-                        onCompleteAndPay={() => handleCompleteAndPay(apt)}
                         onDelete={onDelete}
                         onWhatsApp={() => handleWhatsApp(apt)}
                       />
@@ -168,7 +162,6 @@ interface SwipeableCardProps {
   appointment: AdminAppointment;
   onUpdateStatus: (id: string, status: string) => void;
   onOpenPayment: () => void;
-  onCompleteAndPay: () => void;
   onDelete?: (id: string) => void;
   onWhatsApp: () => void;
 }
@@ -177,7 +170,6 @@ function SwipeableAppointmentCard({
   appointment: apt,
   onUpdateStatus,
   onOpenPayment,
-  onCompleteAndPay,
   onDelete,
   onWhatsApp,
 }: SwipeableCardProps) {
@@ -228,62 +220,70 @@ function SwipeableAppointmentCard({
       <div className="absolute inset-y-0 right-0 flex items-stretch">
         <motion.div
           style={{ opacity: actionsOpacity }}
-          className="flex items-center gap-1 px-2 bg-card"
+          className="flex items-center gap-1.5 px-2 bg-card"
         >
+          {/* PENDENTE: Confirmar ou Cancelar */}
           {apt.status === 'pending' && (
-              <>
+            <>
               <button
                 onClick={() => onUpdateStatus(apt.id, 'confirmed')}
-                className="h-10 w-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-transform"
+                className="h-10 px-3 rounded-lg bg-primary text-primary-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
               >
-                <Check className="h-5 w-5" />
+                <Check className="h-4 w-4" />
+                <span className="text-xs font-medium">Aceitar</span>
               </button>
               <button
                 onClick={() => onUpdateStatus(apt.id, 'cancelled')}
-                className="h-10 w-10 rounded-lg bg-destructive text-destructive-foreground flex items-center justify-center active:scale-95 transition-transform"
+                className="h-10 px-3 rounded-lg bg-destructive text-destructive-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
+                <span className="text-xs font-medium">Recusar</span>
               </button>
             </>
           )}
+
+          {/* CONFIRMADO: Concluir Corte e/ou Registrar Pagamento */}
           {apt.status === 'confirmed' && (
             <>
-              {/* Concluído + Pago (ação combinada) */}
-              {!isPaid && (
-                <button
-                  onClick={onCompleteAndPay}
-                  className="h-10 px-3 rounded-lg bg-success text-success-foreground flex items-center justify-center gap-1 active:scale-95 transition-transform text-xs font-medium"
-                  title="Concluído + Pago"
-                >
-                  <CheckCheck className="h-4 w-4" />
-                  <span>OK+$</span>
-                </button>
-              )}
-              {/* Apenas concluir */}
+              {/* Concluir o corte */}
               <button
                 onClick={() => onUpdateStatus(apt.id, 'completed')}
-                className="h-10 w-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-transform"
-                title="Apenas concluir"
+                className="h-10 px-3 rounded-lg bg-primary text-primary-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
               >
-                <Check className="h-5 w-5" />
+                <Scissors className="h-4 w-4" />
+                <span className="text-xs font-medium">Concluir</span>
               </button>
+              {/* Registrar pagamento (independente) */}
+              {!isPaid && (
+                <button
+                  onClick={onOpenPayment}
+                  className="h-10 px-3 rounded-lg bg-success text-success-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  <span className="text-xs font-medium">Pagar</span>
+                </button>
+              )}
             </>
           )}
+
+          {/* CONCLUÍDO: Apenas Registrar Pagamento se não pago */}
           {apt.status === 'completed' && !isPaid && (
             <button
               onClick={onOpenPayment}
-              className="h-10 w-10 rounded-lg bg-success text-success-foreground flex items-center justify-center active:scale-95 transition-transform"
-              title="Registrar pagamento"
+              className="h-10 px-3 rounded-lg bg-success text-success-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
             >
-              <DollarSign className="h-5 w-5" />
+              <CreditCard className="h-4 w-4" />
+              <span className="text-xs font-medium">Pagar</span>
             </button>
           )}
+
+          {/* Excluir (sempre disponível) */}
           {onDelete && (
             <button
               onClick={() => onDelete(apt.id)}
-              className="h-10 w-10 rounded-lg bg-destructive text-destructive-foreground flex items-center justify-center active:scale-95 transition-transform"
+              className="h-10 w-10 rounded-lg bg-destructive/80 text-destructive-foreground flex items-center justify-center active:scale-95 transition-transform"
             >
-              <Trash2 className="h-5 w-5" />
+              <Trash2 className="h-4 w-4" />
             </button>
           )}
         </motion.div>
