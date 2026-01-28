@@ -126,7 +126,7 @@ export function AdminDashboard() {
 
 export function AdminAgenda() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment } = useAdminAppointments();
+  const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment, fetchAppointments } = useAdminAppointments();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('agendamentos');
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -214,6 +214,8 @@ export function AdminAgenda() {
                   onUpdatePayment={updatePaymentStatus}
                   onDelete={deleteAppointment}
                   businessHours={todayHours}
+                  selectedDate={selectedDate.toISOString().split('T')[0]}
+                  onRefresh={fetchAppointments}
                 />
               )}
             </ScrollArea>
