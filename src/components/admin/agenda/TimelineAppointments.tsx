@@ -2,10 +2,11 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
-import { Check, X, Trash2, Crown, DollarSign, Scissors, CreditCard } from 'lucide-react';
+import { Check, X, Trash2, Crown, DollarSign, Scissors, CreditCard, Plus } from 'lucide-react';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
+import { QuickBookingModal } from './QuickBookingModal';
 import { toast } from 'sonner';
 
 interface BusinessHour {
@@ -22,6 +23,8 @@ interface TimelineAppointmentsProps {
   onUpdatePayment: (id: string, status: string, method?: string) => void;
   onDelete?: (id: string) => void;
   businessHours?: BusinessHour | null;
+  selectedDate: string;
+  onRefresh?: () => void;
 }
 
 const statusConfig = {
@@ -60,11 +63,18 @@ export function TimelineAppointments({
   onUpdatePayment,
   onDelete,
   businessHours,
+  selectedDate,
+  onRefresh,
 }: TimelineAppointmentsProps) {
   const [paymentModal, setPaymentModal] = useState<{
     open: boolean;
     appointment: AdminAppointment | null;
   }>({ open: false, appointment: null });
+
+  const [quickBookingModal, setQuickBookingModal] = useState<{
+    open: boolean;
+    time: string;
+  }>({ open: false, time: '' });
 
   // Generate time slots based on business hours
   const timeSlots = generateTimeSlots(businessHours);
@@ -75,6 +85,10 @@ export function TimelineAppointments({
 
   // Group appointments by time slot for timeline display
   const appointmentsBySlot = new Map<string, AdminAppointment[]>();
+  
+  // Also track which slots are blocked by appointments (including multi-slot ones)
+  const blockedSlots = new Set<string>();
+  
   sortedAppts.forEach((apt) => {
     // Find the matching slot (round down to nearest slot)
     const aptTime = apt.appointment_time.slice(0, 5);
@@ -87,6 +101,19 @@ export function TimelineAppointments({
       appointmentsBySlot.set(slotKey, []);
     }
     appointmentsBySlot.get(slotKey)!.push(apt);
+    
+    // Mark all slots this appointment occupies as blocked (only if not cancelled)
+    if (apt.status !== 'cancelled') {
+      const duration = apt.total_duration || 30;
+      const slotsNeeded = Math.ceil(duration / 30);
+      for (let i = 0; i < slotsNeeded; i++) {
+        const blockedMinutes = (aptHour * 60) + slotMin + (i * 30);
+        const blockedHour = Math.floor(blockedMinutes / 60);
+        const blockedMin = blockedMinutes % 60;
+        const blockedKey = `${String(blockedHour).padStart(2, '0')}:${String(blockedMin).padStart(2, '0')}`;
+        blockedSlots.add(blockedKey);
+      }
+    }
   });
 
   const handleConfirmPayment = async (method: PaymentMethod) => {
@@ -94,7 +121,6 @@ export function TimelineAppointments({
       await onUpdatePayment(paymentModal.appointment.id, 'paid', method);
     }
   };
-
 
   const handleWhatsApp = (apt: AdminAppointment) => {
     const phone = (apt.guest_phone || apt.profile?.phone)?.replace(/\D/g, '');
@@ -109,21 +135,19 @@ export function TimelineAppointments({
     toast.success('Abrindo WhatsApp...');
   };
 
+  const handleSlotClick = (timeSlot: string) => {
+    setQuickBookingModal({ open: true, time: timeSlot });
+  };
+
+  const handleBookingSuccess = () => {
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
   // Find current hour to auto-scroll
   const currentHour = new Date().getHours();
   const currentMin = new Date().getMinutes();
-
-  if (sortedAppts.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-          <span className="text-2xl">📅</span>
-        </div>
-        <p className="text-muted-foreground text-sm">Nenhum agendamento</p>
-        <p className="text-muted-foreground/60 text-xs mt-1">Este dia está livre</p>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -133,9 +157,11 @@ export function TimelineAppointments({
           {timeSlots.map((timeSlot, index) => {
             const slotAppts = appointmentsBySlot.get(timeSlot) || [];
             const hasAppointments = slotAppts.length > 0;
+            const isBlocked = blockedSlots.has(timeSlot);
             const slotHour = parseInt(timeSlot.slice(0, 2));
             const slotMin = parseInt(timeSlot.slice(3, 5));
             const isPast = slotHour < currentHour || (slotHour === currentHour && slotMin < currentMin);
+            const isFreeSlot = !hasAppointments && !isBlocked && !isPast;
 
             return (
               <div key={timeSlot} className="relative flex">
@@ -168,6 +194,26 @@ export function TimelineAppointments({
                       />
                     ))}
                   </AnimatePresence>
+                  
+                  {/* Clickable free slot */}
+                  {isFreeSlot && (
+                    <button
+                      onClick={() => handleSlotClick(timeSlot)}
+                      className="w-full h-10 rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 group"
+                    >
+                      <Plus className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary/70 transition-colors" />
+                      <span className="text-xs text-muted-foreground/40 group-hover:text-primary/70 transition-colors">
+                        Agendar
+                      </span>
+                    </button>
+                  )}
+                  
+                  {/* Blocked indicator (occupied by another appointment but not the start slot) */}
+                  {!hasAppointments && isBlocked && !isPast && (
+                    <div className="w-full h-10 rounded-lg bg-muted/30 flex items-center justify-center">
+                      <span className="text-xs text-muted-foreground/50">Ocupado</span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -184,6 +230,14 @@ export function TimelineAppointments({
         amount={Number(paymentModal.appointment?.total_price || 0)}
         clientName={paymentModal.appointment?.guest_name || paymentModal.appointment?.profile?.name}
         onConfirmPayment={handleConfirmPayment}
+      />
+
+      <QuickBookingModal
+        open={quickBookingModal.open}
+        onOpenChange={(open) => setQuickBookingModal({ open, time: open ? quickBookingModal.time : '' })}
+        selectedDate={selectedDate}
+        selectedTime={quickBookingModal.time}
+        onSuccess={handleBookingSuccess}
       />
     </>
   );
