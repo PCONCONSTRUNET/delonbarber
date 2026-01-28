@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone, Crown, CalendarPlus } from 'lucide-react';
+import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { PixIcon } from '@/components/icons/PixIcon';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { toast } from 'sonner';
-import { downloadICS, createAppointmentEvent } from '@/lib/calendar';
 
 interface TodayAppointmentsProps {
   appointments: AdminAppointment[];
@@ -113,30 +112,6 @@ Qualquer dúvida, estamos à disposição! 💈`;
     toast.success('Abrindo WhatsApp...');
   };
 
-  const handleAddToCalendar = (apt: AdminAppointment) => {
-    const clientName = apt.guest_name || apt.profile?.name || 'Cliente';
-    const services = apt.services.map(s => s.name);
-    const duration = apt.total_duration || 30;
-
-    const event = createAppointmentEvent(
-      apt.appointment_date,
-      apt.appointment_time,
-      duration,
-      services,
-      apt.id
-    );
-
-    // Override title to include client name for admin
-    event.title = `✂️ ${clientName} - ${services.join(', ')}`;
-    event.description = `Cliente: ${clientName}\nServiços: ${services.join(', ')}\nValor: R$ ${Number(apt.total_price).toFixed(0)}\nDuração: ${duration} min`;
-
-    downloadICS(event, `agendamento-${clientName.replace(/\s+/g, '-').toLowerCase()}-${apt.appointment_date}.ics`);
-    
-    toast.success('Evento baixado!', {
-      description: 'Abra o arquivo para adicionar ao calendário.',
-    });
-  };
-
   if (sortedAppts.length === 0) {
     return (
       <div className="p-4 md:p-6 rounded-xl md:rounded-2xl glass-effect text-center">
@@ -196,14 +171,6 @@ Qualquer dúvida, estamos à disposição! 💈`;
                     <span className={cn("truncate max-w-[120px] md:max-w-none", apt.guest_name ? "text-amber-400 font-medium" : "")}>
                       {apt.guest_name || apt.profile?.name || 'Cliente'}
                     </span>
-                    {/* Calendar button */}
-                    <button
-                      onClick={() => handleAddToCalendar(apt)}
-                      className="p-0.5 rounded-full hover:bg-primary/20 transition-colors group shrink-0"
-                      title="Adicionar ao Calendário"
-                    >
-                      <CalendarPlus className="h-3 w-3 md:h-3.5 md:w-3.5 text-primary group-hover:scale-110 transition-transform" />
-                    </button>
                     {/* WhatsApp button */}
                     {(apt.guest_phone || apt.profile?.phone) && (
                       <button

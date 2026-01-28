@@ -8,31 +8,26 @@ export interface CalendarEvent {
   uid?: string;
 }
 
-export function generateICS(event: CalendarEvent): string {
-  const formatDate = (date: Date): string => {
-    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  };
+function formatICSDate(date: Date): string {
+  return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+}
 
-  const escapeText = (text: string): string => {
-    return text.replace(/[\\;,\n]/g, (match) => {
-      if (match === '\n') return '\\n';
-      return '\\' + match;
-    });
-  };
+function escapeText(text: string): string {
+  return text.replace(/[\\;,\n]/g, (match) => {
+    if (match === '\n') return '\\n';
+    return '\\' + match;
+  });
+}
 
+function generateEventBlock(event: CalendarEvent): string {
   const uid = event.uid || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}@delonbarber.lovable.app`;
 
-  const icsContent = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Delon Barber//Agendamento//PT',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
+  return [
     'BEGIN:VEVENT',
     `UID:${uid}`,
-    `DTSTAMP:${formatDate(new Date())}`,
-    `DTSTART:${formatDate(event.startDate)}`,
-    `DTEND:${formatDate(event.endDate)}`,
+    `DTSTAMP:${formatICSDate(new Date())}`,
+    `DTSTART:${formatICSDate(event.startDate)}`,
+    `DTEND:${formatICSDate(event.endDate)}`,
     `SUMMARY:${escapeText(event.title)}`,
     `DESCRIPTION:${escapeText(event.description)}`,
     `LOCATION:${escapeText(event.location)}`,
@@ -40,14 +35,42 @@ export function generateICS(event: CalendarEvent): string {
     'BEGIN:VALARM',
     'TRIGGER:-PT1H',
     'ACTION:DISPLAY',
-    'DESCRIPTION:Lembrete: Seu agendamento na Delon Barber é em 1 hora!',
+    'DESCRIPTION:Lembrete: Agendamento na Delon Barber em 1 hora!',
     'END:VALARM',
     'BEGIN:VALARM',
     'TRIGGER:-PT15M',
     'ACTION:DISPLAY', 
-    'DESCRIPTION:Lembrete: Seu agendamento na Delon Barber é em 15 minutos!',
+    'DESCRIPTION:Lembrete: Agendamento na Delon Barber em 15 minutos!',
     'END:VALARM',
-    'END:VEVENT',
+    'END:VEVENT'
+  ].join('\r\n');
+}
+
+export function generateICS(event: CalendarEvent): string {
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Delon Barber//Agendamento//PT',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    generateEventBlock(event),
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  return icsContent;
+}
+
+// Generate ICS with multiple events
+export function generateMultipleICS(events: CalendarEvent[]): string {
+  const eventBlocks = events.map(generateEventBlock).join('\r\n');
+
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Delon Barber//Agendamento//PT',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    eventBlocks,
     'END:VCALENDAR'
   ].join('\r\n');
 
@@ -68,12 +91,27 @@ export function downloadICS(event: CalendarEvent, filename?: string): void {
   URL.revokeObjectURL(url);
 }
 
+export function downloadMultipleICS(events: CalendarEvent[], filename?: string): void {
+  const icsContent = generateMultipleICS(events);
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename || 'agendamentos-delon-barber.ics';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function createAppointmentEvent(
   date: string,
   time: string,
   durationMinutes: number,
   services: string[],
-  appointmentId: string
+  appointmentId: string,
+  clientName?: string
 ): CalendarEvent {
   // Parse date and time - using local timezone
   const [year, month, day] = date.split('-').map(Number);
@@ -82,9 +120,13 @@ export function createAppointmentEvent(
   const startDate = new Date(year, month - 1, day, hour, minute);
   const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
 
+  const title = clientName 
+    ? `✂️ ${clientName} - ${services.join(', ')}`
+    : `✂️ Delon Barber - ${services.join(', ')}`;
+
   return {
-    title: `✂️ Delon Barber - ${services.join(', ')}`,
-    description: `Serviços: ${services.join(', ')}\n\nAgendamento confirmado na Delon Barber.\n\nDuração estimada: ${durationMinutes} minutos`,
+    title,
+    description: `${clientName ? `Cliente: ${clientName}\n` : ''}Serviços: ${services.join(', ')}\n\nDuração estimada: ${durationMinutes} minutos`,
     location: 'Delon Barber',
     startDate,
     endDate,
