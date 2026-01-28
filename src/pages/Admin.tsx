@@ -15,6 +15,7 @@ import { PackageForm } from '@/components/admin/PackageForm';
 import { PackageList } from '@/components/admin/PackageList';
 import { ClientPackagesList } from '@/components/admin/ClientPackagesList';
 import { BlockedSlotsManager } from '@/components/admin/BlockedSlotsManager';
+import { CalendarSubscription } from '@/components/admin/CalendarSubscription';
 import { RatingsManager } from '@/components/admin/RatingsManager';
 import { LoyaltyManager } from '@/components/admin/LoyaltyManager';
 import { PushNotificationSetup } from '@/components/admin/PushNotificationSetup';
@@ -131,61 +132,11 @@ export function AdminAgenda() {
   const dateStr = selectedDate.toISOString().split('T')[0];
   const dayAppointments = appointments.filter(a => a.appointment_date === dateStr);
 
-  // Filter only confirmed/pending appointments for calendar export
-  const exportableAppointments = dayAppointments.filter(a => 
-    a.status === 'confirmed' || a.status === 'pending'
-  );
-
-  const handleExportToCalendar = () => {
-    if (exportableAppointments.length === 0) {
-      toast.error('Nenhum agendamento para exportar', {
-        description: 'Não há agendamentos pendentes ou confirmados neste dia.',
-      });
-      return;
-    }
-
-    const events = exportableAppointments.map(apt => {
-      const clientName = apt.guest_name || apt.profile?.name || 'Cliente';
-      const services = apt.services.map(s => s.name);
-      const duration = apt.total_duration || 30;
-
-      return createAppointmentEvent(
-        apt.appointment_date,
-        apt.appointment_time,
-        duration,
-        services,
-        apt.id,
-        clientName
-      );
-    });
-
-    const formattedDate = selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }).replace('/', '-');
-    downloadMultipleICS(events, `agenda-${formattedDate}.ics`);
-    
-    toast.success(`${events.length} agendamento${events.length > 1 ? 's' : ''} exportado${events.length > 1 ? 's' : ''}!`, {
-      description: 'Abra o arquivo para adicionar ao calendário do iPhone.',
-    });
-  };
-
   return (
     <AdminLayout>
       <div className="flex items-center justify-between gap-3 mb-4 md:mb-6">
         <h1 className="font-display text-2xl md:text-3xl font-bold">Agenda</h1>
-        <Button 
-          onClick={handleExportToCalendar}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          disabled={exportableAppointments.length === 0}
-        >
-          <CalendarPlus className="h-4 w-4" />
-          <span className="hidden sm:inline">Adicionar ao</span> Calendário
-          {exportableAppointments.length > 0 && (
-            <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
-              {exportableAppointments.length}
-            </span>
-          )}
-        </Button>
+        <CalendarSubscription />
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
