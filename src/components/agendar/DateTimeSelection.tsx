@@ -352,9 +352,29 @@ export function DateTimeSelection({
             <p className="text-muted-foreground text-sm">😔 Fechado neste dia</p>
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2">
             {availableSlots.map((slot, index) => {
-              const isBooked = bookedSlots.includes(slot);
+              // Calculate required duration for selected services
+              const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0) || 30;
+              const slotsNeeded = Math.ceil(totalDuration / 30);
+              
+              // Check if THIS slot and all consecutive slots needed are available
+              const [slotHour, slotMin] = slot.split(':').map(Number);
+              let hasConflict = false;
+              
+              for (let i = 0; i < slotsNeeded; i++) {
+                const checkMinutes = slotHour * 60 + slotMin + (i * 30);
+                const checkHour = Math.floor(checkMinutes / 60);
+                const checkMin = checkMinutes % 60;
+                const checkSlot = `${String(checkHour).padStart(2, '0')}:${String(checkMin).padStart(2, '0')}:00`;
+                
+                if (bookedSlots.includes(checkSlot)) {
+                  hasConflict = true;
+                  break;
+                }
+              }
+              
+              const isBooked = bookedSlots.includes(slot) || hasConflict;
               const isSelected = selectedTime === slot;
 
               return (
