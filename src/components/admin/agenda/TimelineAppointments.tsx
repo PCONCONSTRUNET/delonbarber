@@ -208,6 +208,16 @@ function SwipeableAppointmentCard({
     }
   };
 
+  // Calculate total width needed for actions
+  const getActionsWidth = () => {
+    if (apt.status === 'pending') return 200; // Aceitar + Recusar + Lixeira
+    if (apt.status === 'confirmed') return isPaid ? 160 : 220; // Concluir + Pagar + Lixeira
+    if (apt.status === 'completed' && !isPaid) return 160; // Pagar + Lixeira
+    return 56; // Apenas Lixeira
+  };
+
+  const actionsWidth = getActionsWidth();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -216,28 +226,28 @@ function SwipeableAppointmentCard({
       className="relative mb-2 overflow-hidden rounded-xl"
       ref={constraintsRef}
     >
-      {/* Actions revealed on swipe */}
-      <div className="absolute inset-y-0 right-0 flex items-stretch">
-        <motion.div
-          style={{ opacity: actionsOpacity }}
-          className="flex items-center gap-1.5 px-2 bg-card"
-        >
+      {/* Actions revealed on swipe - fixed width container */}
+      <div 
+        className="absolute inset-y-0 right-0 flex items-center justify-end bg-card/95 backdrop-blur-sm rounded-r-xl"
+        style={{ width: actionsWidth }}
+      >
+        <div className="flex items-center gap-2 px-2">
           {/* PENDENTE: Confirmar ou Cancelar */}
           {apt.status === 'pending' && (
             <>
               <button
                 onClick={() => onUpdateStatus(apt.id, 'confirmed')}
-                className="h-10 px-3 rounded-lg bg-primary text-primary-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                className="h-11 px-3 rounded-xl bg-primary text-primary-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"
               >
-                <Check className="h-4 w-4" />
-                <span className="text-xs font-medium">Aceitar</span>
+                <Check className="h-4 w-4 flex-shrink-0" />
+                <span className="text-xs font-semibold whitespace-nowrap">Aceitar</span>
               </button>
               <button
                 onClick={() => onUpdateStatus(apt.id, 'cancelled')}
-                className="h-10 px-3 rounded-lg bg-destructive text-destructive-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                className="h-11 px-3 rounded-xl bg-destructive text-destructive-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"
               >
-                <X className="h-4 w-4" />
-                <span className="text-xs font-medium">Recusar</span>
+                <X className="h-4 w-4 flex-shrink-0" />
+                <span className="text-xs font-semibold whitespace-nowrap">Recusar</span>
               </button>
             </>
           )}
@@ -245,22 +255,20 @@ function SwipeableAppointmentCard({
           {/* CONFIRMADO: Concluir Corte e/ou Registrar Pagamento */}
           {apt.status === 'confirmed' && (
             <>
-              {/* Concluir o corte */}
               <button
                 onClick={() => onUpdateStatus(apt.id, 'completed')}
-                className="h-10 px-3 rounded-lg bg-primary text-primary-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                className="h-11 px-3 rounded-xl bg-primary text-primary-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"
               >
-                <Scissors className="h-4 w-4" />
-                <span className="text-xs font-medium">Concluir</span>
+                <Scissors className="h-4 w-4 flex-shrink-0" />
+                <span className="text-xs font-semibold whitespace-nowrap">Concluir</span>
               </button>
-              {/* Registrar pagamento (independente) */}
               {!isPaid && (
                 <button
                   onClick={onOpenPayment}
-                  className="h-10 px-3 rounded-lg bg-success text-success-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                  className="h-11 px-3 rounded-xl bg-success text-white flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"
                 >
-                  <CreditCard className="h-4 w-4" />
-                  <span className="text-xs font-medium">Pagar</span>
+                  <CreditCard className="h-4 w-4 flex-shrink-0" />
+                  <span className="text-xs font-semibold whitespace-nowrap">Pagar</span>
                 </button>
               )}
             </>
@@ -270,10 +278,10 @@ function SwipeableAppointmentCard({
           {apt.status === 'completed' && !isPaid && (
             <button
               onClick={onOpenPayment}
-              className="h-10 px-3 rounded-lg bg-success text-success-foreground flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+              className="h-11 px-3 rounded-xl bg-success text-white flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"
             >
-              <CreditCard className="h-4 w-4" />
-              <span className="text-xs font-medium">Pagar</span>
+              <CreditCard className="h-4 w-4 flex-shrink-0" />
+              <span className="text-xs font-semibold whitespace-nowrap">Pagar</span>
             </button>
           )}
 
@@ -281,25 +289,25 @@ function SwipeableAppointmentCard({
           {onDelete && (
             <button
               onClick={() => onDelete(apt.id)}
-              className="h-10 w-10 rounded-lg bg-destructive/80 text-destructive-foreground flex items-center justify-center active:scale-95 transition-transform"
+              className="h-11 w-11 rounded-xl bg-destructive text-destructive-foreground flex items-center justify-center active:scale-95 transition-transform shadow-sm flex-shrink-0"
             >
               <Trash2 className="h-4 w-4" />
             </button>
           )}
-        </motion.div>
+        </div>
       </div>
 
       {/* Main card - draggable */}
       <motion.div
         drag="x"
-        dragConstraints={{ left: -120, right: 0 }}
+        dragConstraints={{ left: -(actionsWidth - 8), right: 0 }}
         dragElastic={0.1}
         onDragEnd={handleDragEnd}
         onTap={handleTap}
-        animate={{ x: isRevealed ? -120 : 0 }}
+        animate={{ x: isRevealed ? -(actionsWidth - 8) : 0 }}
         style={{ x }}
         className={cn(
-          'relative bg-card border-l-4 rounded-xl p-3 cursor-grab active:cursor-grabbing',
+          'relative bg-card border-l-4 rounded-xl p-3 cursor-grab active:cursor-grabbing shadow-sm',
           config.border,
           apt.status === 'cancelled' && 'opacity-50'
         )}
