@@ -19,6 +19,7 @@ import { PackageList } from '@/components/admin/PackageList';
 import { ClientPackagesList } from '@/components/admin/ClientPackagesList';
 import { BlockedSlotsManager } from '@/components/admin/BlockedSlotsManager';
 import { CalendarSubscription } from '@/components/admin/CalendarSubscription';
+import { BusinessHoursManager } from '@/components/admin/BusinessHoursManager';
 import { RatingsManager } from '@/components/admin/RatingsManager';
 import { LoyaltyManager } from '@/components/admin/LoyaltyManager';
 import { PushNotificationSetup } from '@/components/admin/PushNotificationSetup';
@@ -139,9 +140,10 @@ export function AdminAgenda() {
     <AdminLayout>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex items-center justify-between gap-2 mb-4">
-          <TabsList className="grid grid-cols-2 h-9">
-            <TabsTrigger value="agendamentos" className="text-xs px-3">Agenda</TabsTrigger>
-            <TabsTrigger value="horarios" className="text-xs px-3">Bloquear</TabsTrigger>
+          <TabsList className="grid grid-cols-3 h-9">
+            <TabsTrigger value="agendamentos" className="text-xs px-2">Agenda</TabsTrigger>
+            <TabsTrigger value="horarios" className="text-xs px-2">Bloquear</TabsTrigger>
+            <TabsTrigger value="config" className="text-xs px-2">Horários</TabsTrigger>
           </TabsList>
           
           <div className="flex items-center gap-2">
@@ -201,6 +203,12 @@ export function AdminAgenda() {
 
         <TabsContent value="horarios" className="mt-0">
           <BlockedSlotsManager />
+        </TabsContent>
+
+        <TabsContent value="config" className="mt-0">
+          <ScrollArea className="h-[calc(100vh-180px)] md:h-[calc(100vh-140px)]">
+            <BusinessHoursManager />
+          </ScrollArea>
         </TabsContent>
       </Tabs>
     </AdminLayout>
