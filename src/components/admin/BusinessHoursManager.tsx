@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Clock, Save, Loader2, Coffee } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Clock, Save, Loader2, Coffee, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -22,21 +21,22 @@ interface BusinessHour {
 
 const DAY_NAMES = [
   'Domingo',
-  'Segunda-feira',
-  'Terça-feira',
-  'Quarta-feira',
-  'Quinta-feira',
-  'Sexta-feira',
+  'Segunda',
+  'Terça',
+  'Quarta',
+  'Quinta',
+  'Sexta',
   'Sábado',
 ];
 
-const DAY_ABBREVIATIONS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const DAY_ABBREVIATIONS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
 export function BusinessHoursManager() {
   const [hours, setHours] = useState<BusinessHour[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
 
   useEffect(() => {
     fetchBusinessHours();
@@ -69,12 +69,10 @@ export function BusinessHoursManager() {
 
   const formatTimeForInput = (time: string | null): string => {
     if (!time) return '';
-    // Remove seconds if present (HH:MM:SS -> HH:MM)
     return time.slice(0, 5);
   };
 
   const formatTimeForDB = (time: string): string => {
-    // Add seconds if not present (HH:MM -> HH:MM:SS)
     if (time.length === 5) return `${time}:00`;
     return time;
   };
@@ -100,8 +98,8 @@ export function BusinessHoursManager() {
         }
       }
 
-      toast.success('Horários salvos com sucesso!', {
-        description: 'As alterações já estão disponíveis para os clientes.',
+      toast.success('Horários salvos!', {
+        description: 'Alterações aplicadas na agenda.',
       });
       setHasChanges(false);
     } catch (error) {
@@ -112,6 +110,10 @@ export function BusinessHoursManager() {
     setSaving(false);
   }
 
+  const toggleExpand = (dayOfWeek: number) => {
+    setExpandedDay(expandedDay === dayOfWeek ? null : dayOfWeek);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -121,173 +123,231 @@ export function BusinessHoursManager() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-lg">Horários de Funcionamento</h2>
+    <div className="space-y-3 pb-4">
+      {/* Header - sticky on mobile */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-2 -mx-1 px-1">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-primary" />
+            </div>
+            <h2 className="font-semibold">Horários</h2>
+          </div>
+          <Button
+            onClick={saveChanges}
+            disabled={!hasChanges || saving}
+            size="sm"
+            className="h-9 gap-2"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            <span className="hidden xs:inline">Salvar</span>
+          </Button>
         </div>
-        <Button
-          onClick={saveChanges}
-          disabled={!hasChanges || saving}
-          size="sm"
-          className="gap-2"
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          Salvar
-        </Button>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        Configure os horários de funcionamento. As alterações serão aplicadas imediatamente na agenda dos clientes.
-      </p>
-
-      {/* Days list */}
+      {/* Days list - compact cards */}
       <div className="space-y-2">
-        {hours.map((hour, index) => (
-          <motion.div
-            key={hour.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-          >
-            <Card
-              className={cn(
-                'transition-all',
-                !hour.is_open && 'opacity-50'
-              )}
+        {hours.map((hour, index) => {
+          const isExpanded = expandedDay === hour.day_of_week;
+          
+          return (
+            <motion.div
+              key={hour.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
             >
-              <CardContent className="p-3 space-y-3">
-                {/* Day header with toggle */}
-                <div className="flex items-center justify-between">
+              <div
+                className={cn(
+                  'rounded-xl border transition-all overflow-hidden',
+                  hour.is_open 
+                    ? 'bg-card border-border' 
+                    : 'bg-muted/30 border-border/50'
+                )}
+              >
+                {/* Compact header - always visible */}
+                <button
+                  onClick={() => hour.is_open && toggleExpand(hour.day_of_week)}
+                  className={cn(
+                    'w-full p-3 flex items-center justify-between',
+                    hour.is_open && 'cursor-pointer active:bg-accent/50'
+                  )}
+                >
                   <div className="flex items-center gap-3">
+                    {/* Day badge */}
                     <div
                       className={cn(
-                        'w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold',
+                        'w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold',
                         hour.is_open
-                          ? 'bg-primary/20 text-primary'
+                          ? 'bg-primary text-primary-foreground'
                           : 'bg-muted text-muted-foreground'
                       )}
                     >
                       {DAY_ABBREVIATIONS[hour.day_of_week]}
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">
+                    
+                    {/* Day info */}
+                    <div className="text-left">
+                      <p className={cn(
+                        'font-medium text-sm',
+                        !hour.is_open && 'text-muted-foreground'
+                      )}>
                         {DAY_NAMES[hour.day_of_week]}
                       </p>
-                      {hour.is_open && (
+                      {hour.is_open ? (
                         <p className="text-xs text-muted-foreground">
                           {formatTimeForInput(hour.open_time)} - {formatTimeForInput(hour.close_time)}
                           {hour.lunch_start && hour.lunch_end && (
-                            <span className="ml-1">
-                              (almoço: {formatTimeForInput(hour.lunch_start)} - {formatTimeForInput(hour.lunch_end)})
+                            <span className="text-primary/70 ml-1">
+                              · {formatTimeForInput(hour.lunch_start)}-{formatTimeForInput(hour.lunch_end)}
                             </span>
                           )}
                         </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground/60">Fechado</p>
                       )}
                     </div>
                   </div>
+
                   <div className="flex items-center gap-2">
-                    <Label htmlFor={`open-${hour.day_of_week}`} className="text-xs text-muted-foreground">
-                      {hour.is_open ? 'Aberto' : 'Fechado'}
-                    </Label>
+                    {/* Toggle */}
                     <Switch
-                      id={`open-${hour.day_of_week}`}
                       checked={hour.is_open}
-                      onCheckedChange={(checked) =>
-                        updateHour(hour.day_of_week, 'is_open', checked)
-                      }
+                      onCheckedChange={(checked) => {
+                        updateHour(hour.day_of_week, 'is_open', checked);
+                        if (checked) setExpandedDay(hour.day_of_week);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
                     />
+                    
+                    {/* Expand indicator */}
+                    {hour.is_open && (
+                      <ChevronDown 
+                        className={cn(
+                          'h-4 w-4 text-muted-foreground transition-transform',
+                          isExpanded && 'rotate-180'
+                        )} 
+                      />
+                    )}
                   </div>
-                </div>
+                </button>
 
-                {/* Time inputs (only show when open) */}
-                {hour.is_open && (
-                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/50">
-                    {/* Opening hours */}
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Horário
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="time"
-                          value={formatTimeForInput(hour.open_time)}
-                          onChange={(e) =>
-                            updateHour(hour.day_of_week, 'open_time', e.target.value)
-                          }
-                          className="h-9 text-sm"
-                        />
-                        <span className="text-muted-foreground text-sm">às</span>
-                        <Input
-                          type="time"
-                          value={formatTimeForInput(hour.close_time)}
-                          onChange={(e) =>
-                            updateHour(hour.day_of_week, 'close_time', e.target.value)
-                          }
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                    </div>
+                {/* Expandable time inputs */}
+                <AnimatePresence>
+                  {hour.is_open && isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-3 pb-3 pt-1 space-y-3 border-t border-border/50">
+                        {/* Working hours */}
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <Clock className="h-3 w-3" />
+                            Horário de Trabalho
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="time"
+                              value={formatTimeForInput(hour.open_time)}
+                              onChange={(e) =>
+                                updateHour(hour.day_of_week, 'open_time', e.target.value)
+                              }
+                              className="h-10 text-center font-mono"
+                            />
+                            <span className="text-muted-foreground text-sm flex-shrink-0">às</span>
+                            <Input
+                              type="time"
+                              value={formatTimeForInput(hour.close_time)}
+                              onChange={(e) =>
+                                updateHour(hour.day_of_week, 'close_time', e.target.value)
+                              }
+                              className="h-10 text-center font-mono"
+                            />
+                          </div>
+                        </div>
 
-                    {/* Lunch break */}
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Coffee className="h-3 w-3" />
-                        Almoço (opcional)
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="time"
-                          value={formatTimeForInput(hour.lunch_start)}
-                          onChange={(e) =>
-                            updateHour(
-                              hour.day_of_week,
-                              'lunch_start',
-                              e.target.value || null
-                            )
-                          }
-                          className="h-9 text-sm"
-                          placeholder="--:--"
-                        />
-                        <span className="text-muted-foreground text-sm">às</span>
-                        <Input
-                          type="time"
-                          value={formatTimeForInput(hour.lunch_end)}
-                          onChange={(e) =>
-                            updateHour(
-                              hour.day_of_week,
-                              'lunch_end',
-                              e.target.value || null
-                            )
-                          }
-                          className="h-9 text-sm"
-                          placeholder="--:--"
-                        />
+                        {/* Lunch break */}
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <Coffee className="h-3 w-3" />
+                            Intervalo de Almoço
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="time"
+                              value={formatTimeForInput(hour.lunch_start)}
+                              onChange={(e) =>
+                                updateHour(
+                                  hour.day_of_week,
+                                  'lunch_start',
+                                  e.target.value || null
+                                )
+                              }
+                              className="h-10 text-center font-mono"
+                              placeholder="--:--"
+                            />
+                            <span className="text-muted-foreground text-sm flex-shrink-0">às</span>
+                            <Input
+                              type="time"
+                              value={formatTimeForInput(hour.lunch_end)}
+                              onChange={(e) =>
+                                updateHour(
+                                  hour.day_of_week,
+                                  'lunch_end',
+                                  e.target.value || null
+                                )
+                              }
+                              className="h-10 text-center font-mono"
+                              placeholder="--:--"
+                            />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground/60">
+                            Deixe vazio se não tiver intervalo
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Floating save button when has changes */}
+      <AnimatePresence>
+        {hasChanges && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-20 left-0 right-0 flex justify-center md:hidden z-50 pointer-events-none"
+          >
+            <Button
+              onClick={saveChanges}
+              disabled={saving}
+              size="lg"
+              className="shadow-lg gap-2 pointer-events-auto"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              Salvar Alterações
+            </Button>
           </motion.div>
-        ))}
-      </div>
-
-      {/* Info box */}
-      <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
-        <Clock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-        <p className="text-xs text-muted-foreground">
-          Os horários configurados aqui definem quando os clientes podem agendar. 
-          Alterações são aplicadas imediatamente.
-        </p>
-      </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
