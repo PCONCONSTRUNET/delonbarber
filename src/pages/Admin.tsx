@@ -105,10 +105,12 @@ export function AdminDashboard() {
         
         <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
           <div>
-            <h2 className="font-semibold mb-3 md:mb-4 text-sm md:text-base">Agendamentos de Hoje</h2>
+            <h2 className="font-semibold mb-3 md:mb-4 text-sm md:text-base">
+              Agendamentos de {selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+            </h2>
             {loading ? <Loader2 className="animate-spin" /> : (
               <TodayAppointments 
-                appointments={appointments}
+                appointments={appointments.filter(a => a.appointment_date === selectedDate.toISOString().split('T')[0])}
                 onUpdateStatus={(id, status) => updateAppointmentStatus(id, status as any)}
                 onUpdatePayment={updatePaymentStatus}
                 onDelete={deleteAppointment}
