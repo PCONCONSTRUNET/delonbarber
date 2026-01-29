@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 import { Navigate } from 'react-router-dom';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { MobileAdminNav } from '@/components/admin/MobileAdminNav';
@@ -110,7 +111,7 @@ export function AdminDashboard() {
             </h2>
             {loading ? <Loader2 className="animate-spin" /> : (
               <TodayAppointments 
-                appointments={appointments.filter(a => a.appointment_date === selectedDate.toISOString().split('T')[0])}
+                appointments={appointments.filter(a => a.appointment_date === format(selectedDate, 'yyyy-MM-dd'))}
                 onUpdateStatus={(id, status) => updateAppointmentStatus(id, status as any)}
                 onUpdatePayment={updatePaymentStatus}
                 onDelete={deleteAppointment}
@@ -149,7 +150,7 @@ export function AdminAgenda() {
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!isAdmin) return <Navigate to="/login" replace />;
 
-  const dateStr = selectedDate.toISOString().split('T')[0];
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const dayAppointments = appointments.filter(a => a.appointment_date === dateStr);
   
   // Get business hours for the selected day (0=Sunday, 1=Monday, etc.)
@@ -216,7 +217,7 @@ export function AdminAgenda() {
                   onUpdatePayment={updatePaymentStatus}
                   onDelete={deleteAppointment}
                   businessHours={todayHours}
-                  selectedDate={selectedDate.toISOString().split('T')[0]}
+                  selectedDate={format(selectedDate, 'yyyy-MM-dd')}
                   onRefresh={fetchAppointments}
                 />
               )}
