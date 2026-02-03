@@ -146,7 +146,7 @@ export function WhatsAppAI() {
           notes: parsed.notes || null,
           total_price: totalPrice,
           total_duration: totalDuration,
-          status: 'pending',
+          status: 'confirmed',
           payment_status: 'pending',
           guest_name: parsed.client_name || null,
           guest_phone: parsed.client_phone?.replace(/\D/g, '') || null
