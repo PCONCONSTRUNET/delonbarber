@@ -147,9 +147,12 @@ export function TimelineAppointments({
     }
   };
 
-  // Find current hour to auto-scroll
-  const currentHour = new Date().getHours();
-  const currentMin = new Date().getMinutes();
+  // Find current hour to auto-scroll - only relevant if viewing today
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMin = now.getMinutes();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const isViewingToday = selectedDate === todayStr;
 
   return (
     <>
@@ -162,7 +165,8 @@ export function TimelineAppointments({
             const isBlocked = blockedSlots.has(timeSlot);
             const slotHour = parseInt(timeSlot.slice(0, 2));
             const slotMin = parseInt(timeSlot.slice(3, 5));
-            const isPast = slotHour < currentHour || (slotHour === currentHour && slotMin < currentMin);
+            // Only mark as past if viewing today and the time has passed
+            const isPast = isViewingToday && (slotHour < currentHour || (slotHour === currentHour && slotMin < currentMin));
             const isFreeSlot = !hasAppointments && !isBlocked && !isPast;
 
             return (
