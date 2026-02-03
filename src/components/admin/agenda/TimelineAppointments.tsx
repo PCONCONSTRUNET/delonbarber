@@ -35,6 +35,7 @@ const statusConfig = {
 };
 
 // Generate time slots based on business hours
+// For admin, always generate slots even if closed (admin can book exceptions)
 const generateTimeSlots = (businessHours?: BusinessHour | null) => {
   const slots: string[] = [];
   
@@ -42,7 +43,8 @@ const generateTimeSlots = (businessHours?: BusinessHour | null) => {
   let startHour = 8;
   let endHour = 18;
   
-  if (businessHours && businessHours.is_open) {
+  // Use business hours if available (even if is_open is false, for admin exceptions)
+  if (businessHours) {
     startHour = parseInt(businessHours.open_time.slice(0, 2));
     endHour = parseInt(businessHours.close_time.slice(0, 2));
   }
