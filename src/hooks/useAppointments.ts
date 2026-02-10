@@ -466,19 +466,13 @@ export function useAppointments() {
   }
 
   async function cancelAppointment(appointmentId: string) {
-    // First get appointment details to clean up blocked slots
-    const { data: apt } = await supabase
-      .from('appointments')
-      .select('appointment_date, appointment_time, total_duration')
-      .eq('id', appointmentId)
-      .single();
-
     const { error } = await supabase
       .from('appointments')
       .update({ status: 'cancelled' })
       .eq('id', appointmentId);
 
     if (error) {
+      console.error('Error cancelling appointment:', error);
       toast({
         title: "Erro",
         description: "Não foi possível cancelar o agendamento.",
@@ -487,13 +481,7 @@ export function useAppointments() {
       return false;
     }
 
-    // Release blocked slots for this appointment
-    if (apt) {
-      await supabase
-        .from('blocked_slots')
-        .delete()
-        .eq('appointment_id', appointmentId);
-    }
+    // Blocked slots are released automatically by database trigger
 
     toast({
       title: "Agendamento cancelado",
