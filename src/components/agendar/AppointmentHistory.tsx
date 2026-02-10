@@ -1,11 +1,22 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { X, CheckCircle, AlertCircle, History, CalendarPlus } from 'lucide-react';
+import { X, History } from 'lucide-react';
 import { Appointment } from '@/hooks/useAppointments';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 interface AppointmentHistoryProps {
   appointments: Appointment[];
   onCancel: (id: string) => void;
@@ -35,6 +46,7 @@ const statusConfig = {
 };
 
 export function AppointmentHistory({ appointments, onCancel }: AppointmentHistoryProps) {
+  const [cancelId, setCancelId] = useState<string | null>(null);
   const formatTime = (time: string) => time.slice(0, 5);
 
   if (appointments.length === 0) {
@@ -141,16 +153,43 @@ export function AppointmentHistory({ appointments, onCancel }: AppointmentHistor
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onCancel(appointment.id)}
+                  onClick={() => setCancelId(appointment.id)}
                   className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl px-4"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 mr-1" />
+                  Cancelar
                 </Button>
               )}
             </div>
           </motion.div>
         );
       })}
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={!!cancelId} onOpenChange={(open) => !open && setCancelId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar este agendamento? O horário será liberado para outros clientes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não, manter</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (cancelId) {
+                  onCancel(cancelId);
+                  setCancelId(null);
+                }
+              }}
+            >
+              Sim, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
