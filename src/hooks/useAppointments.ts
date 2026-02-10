@@ -95,10 +95,20 @@ export function useAppointments() {
   async function fetchAppointments() {
     setLoading(true);
     
-    const { data: appointmentsData, error: appointmentsError } = await supabase
+    // Get current user to filter appointments
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    let query = supabase
       .from('appointments')
       .select('*')
       .order('appointment_date', { ascending: false });
+    
+    // Filter by user_id for non-admin users
+    if (user) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { data: appointmentsData, error: appointmentsError } = await query;
 
     if (appointmentsError) {
       console.error('Error fetching appointments:', appointmentsError);
@@ -106,20 +116,32 @@ export function useAppointments() {
       return;
     }
 
-    // Fetch services for each appointment
-    const appointmentsWithServices: Appointment[] = [];
-    
-    for (const apt of appointmentsData || []) {
-      const { data: servicesData } = await supabase
-        .from('appointment_services')
-        .select('service_id, price_at_booking, services(*)')
-        .eq('appointment_id', apt.id);
-
-      appointmentsWithServices.push({
-        ...apt,
-        services: servicesData?.map((s: any) => s.services) || []
-      });
+    if (!appointmentsData || appointmentsData.length === 0) {
+      setAppointments([]);
+      setLoading(false);
+      return;
     }
+
+    // Fetch all appointment services in a single query
+    const appointmentIds = appointmentsData.map(a => a.id);
+    const { data: allServicesData } = await supabase
+      .from('appointment_services')
+      .select('appointment_id, service_id, price_at_booking, services(*)')
+      .in('appointment_id', appointmentIds);
+
+    // Group services by appointment_id
+    const servicesByAppointment: Record<string, any[]> = {};
+    (allServicesData || []).forEach((s: any) => {
+      if (!servicesByAppointment[s.appointment_id]) {
+        servicesByAppointment[s.appointment_id] = [];
+      }
+      servicesByAppointment[s.appointment_id].push(s.services);
+    });
+
+    const appointmentsWithServices: Appointment[] = appointmentsData.map(apt => ({
+      ...apt,
+      services: servicesByAppointment[apt.id] || []
+    }));
 
     setAppointments(appointmentsWithServices);
     setLoading(false);
