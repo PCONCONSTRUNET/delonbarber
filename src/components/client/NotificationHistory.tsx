@@ -46,6 +46,8 @@ export function NotificationHistory({ userId }: NotificationHistoryProps) {
       .from("notifications" as any)
       .select("*")
       .eq("user_id", userId)
+      .not("title", "ilike", "%Novo Agendamento%")
+      .not("title", "ilike", "%Novo agendamento%")
       .order("created_at", { ascending: false })
       .limit(20);
 
@@ -73,6 +75,8 @@ export function NotificationHistory({ userId }: NotificationHistoryProps) {
         },
         (payload) => {
           const newNotification = payload.new as Notification;
+          // Skip admin-only notifications (new appointment alerts for admins)
+          if (newNotification.title?.includes('Novo Agendamento')) return;
           setNotifications((prev) => [newNotification, ...prev]);
           setUnreadCount((prev) => prev + 1);
         }
