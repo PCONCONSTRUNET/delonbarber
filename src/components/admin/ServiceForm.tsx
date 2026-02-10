@@ -110,7 +110,7 @@ export function ServiceForm({ service, onSubmit, onCancel }: ServiceFormProps) {
               type="number"
               value={formData.duration_minutes}
               onChange={(e) => setFormData({ ...formData, duration_minutes: Number(e.target.value) })}
-              min={5}
+              min={0}
               step={5}
               required
             />
