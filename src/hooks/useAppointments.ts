@@ -424,29 +424,11 @@ export function useAppointments() {
       }
     }
 
-    // Notify admins about new appointment
-    const { data: admins } = await supabase
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'admin');
-
-    if (admins && admins.length > 0) {
-      const notifications = admins.map(admin => ({
-        user_id: admin.user_id,
-        title: '📅 Novo Agendamento',
-        message: `${selectedServices.map(s => s.name).join(', ')} para ${date.toLocaleDateString('pt-BR')} às ${time.slice(0, 5)}`,
-        type: 'info',
-        appointment_id: appointment.id
-      }));
-
-      await supabase.from('notifications').insert(notifications);
-
-      // Send push notification to admins (for background alerts)
-      sendPushToAdmins(
-        '📅 Novo Agendamento',
-        `${selectedServices.map(s => s.name).join(', ')} para ${date.toLocaleDateString('pt-BR')} às ${time.slice(0, 5)}`
-      );
-    }
+    // Notify admins via push notification (DB trigger already creates the notification record)
+    sendPushToAdmins(
+      '📅 Novo Agendamento',
+      `${selectedServices.map(s => s.name).join(', ')} para ${date.toLocaleDateString('pt-BR')} às ${time.slice(0, 5)}`
+    );
 
     // Show appropriate toast message
     if (benefitsToUse.length > 0) {
