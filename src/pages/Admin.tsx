@@ -135,6 +135,28 @@ export function AdminAgenda() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [businessHours, setBusinessHours] = useState<any[]>([]);
 
+  // Auto-complete appointments every 60 seconds
+  useEffect(() => {
+    const autoComplete = async () => {
+      try {
+        const { data, error } = await supabase.rpc('auto_complete_appointments');
+        if (!error && data && data > 0) {
+          console.log(`Auto-completed ${data} appointment(s)`);
+          fetchAppointments();
+        }
+      } catch (e) {
+        console.error('Auto-complete error:', e);
+      }
+    };
+
+    // Run immediately on mount
+    autoComplete();
+
+    // Then run every 60 seconds
+    const interval = setInterval(autoComplete, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Fetch business hours
   useEffect(() => {
     async function fetchHours() {
