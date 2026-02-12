@@ -22,7 +22,7 @@ interface AppointmentHistoryProps {
   onCancel: (id: string) => void;
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; emoji: string; className: string }> = {
   pending: {
     label: 'Pendente',
     emoji: '⏳',
@@ -42,6 +42,11 @@ const statusConfig = {
     label: 'Cancelado',
     emoji: '❌',
     className: 'bg-red-500/10 text-red-500'
+  },
+  no_show: {
+    label: 'Falta',
+    emoji: '🚫',
+    className: 'bg-orange-500/10 text-orange-500'
   }
 };
 

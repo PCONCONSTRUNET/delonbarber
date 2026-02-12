@@ -28,7 +28,7 @@ export interface Appointment {
   id: string;
   appointment_date: string;
   appointment_time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   notes: string | null;
   total_price: number;
   total_duration: number;

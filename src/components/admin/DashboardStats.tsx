@@ -12,7 +12,7 @@ export function DashboardStats({ appointments }: DashboardStatsProps) {
   const todayAppointments = appointments.filter(a => a.appointment_date === today);
   const pendingPayments = appointments.filter(a => a.payment_status === 'pending' && a.status === 'completed');
   const totalRevenue = appointments
-    .filter(a => a.payment_status === 'paid')
+    .filter(a => a.payment_status === 'paid' && a.status !== 'no_show')
     .reduce((sum, a) => sum + Number(a.total_price || 0), 0);
   
   const uniqueClients = new Set(appointments.map(a => a.user_id)).size;
