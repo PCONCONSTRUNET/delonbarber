@@ -36,6 +36,7 @@ interface ClientStats {
 const statusConfig: Record<string, { label: string; color: string }> = {
   pending: { label: 'Pendente', color: 'bg-yellow-500/20 text-yellow-500' },
   confirmed: { label: 'Confirmado', color: 'bg-blue-500/20 text-blue-500' },
+  no_show: { label: 'Falta', color: 'bg-orange-500/20 text-orange-500' },
   completed: { label: 'Concluído', color: 'bg-green-500/20 text-green-500' },
   cancelled: { label: 'Cancelado', color: 'bg-red-500/20 text-red-500' },
 };

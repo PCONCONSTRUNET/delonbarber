@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone, Crown } from 'lucide-react';
+import { Clock, User, Check, X, Trash2, CreditCard, Banknote, Smartphone, Crown, UserX } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ const statusColors: Record<string, string> = {
   confirmed: 'bg-blue-500/20 text-blue-500',
   completed: 'bg-green-500/20 text-green-500',
   cancelled: 'bg-red-500/20 text-red-500',
+  no_show: 'bg-orange-500/20 text-orange-500',
 };
 
 const statusLabels: Record<string, string> = {
@@ -30,6 +31,7 @@ const statusLabels: Record<string, string> = {
   confirmed: 'Confirmado',
   completed: 'Concluído',
   cancelled: 'Cancelado',
+  no_show: 'Falta',
 };
 
 const paymentMethodConfig: Record<string, { label: string; color: string }> = {
@@ -238,6 +240,15 @@ Qualquer dúvida, estamos à disposição! 💈`;
                       >
                         <Check className="h-3 md:h-3.5 w-3 md:w-3.5 mr-0.5" />
                         OK
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 md:h-8 text-[10px] md:text-xs px-1.5 md:px-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
+                        onClick={() => onUpdateStatus(apt.id, 'no_show')}
+                      >
+                        <UserX className="h-3 md:h-3.5 w-3 md:w-3.5 mr-0.5" />
+                        Falta
                       </Button>
                       {apt.payment_status !== 'paid' && (
                         <Button

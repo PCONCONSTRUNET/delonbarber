@@ -6,7 +6,7 @@ export interface AdminAppointment {
   id: string;
   appointment_date: string;
   appointment_time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   notes: string | null;
   total_price: number;
   total_duration: number;
@@ -164,10 +164,19 @@ export function useAdminAppointments() {
     };
   }, []);
 
-  async function updateAppointmentStatus(id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled') {
+  async function updateAppointmentStatus(id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show') {
+    const updateData: any = { status };
+    
+    // When marking as no_show, reset payment to remove revenue
+    if (status === 'no_show') {
+      updateData.payment_status = 'pending';
+      updateData.payment_method = null;
+      updateData.payment_date = null;
+    }
+
     const { error } = await supabase
       .from('appointments')
-      .update({ status })
+      .update(updateData)
       .eq('id', id);
 
     if (error) {
@@ -175,7 +184,7 @@ export function useAdminAppointments() {
       return false;
     }
 
-    toast({ title: "Atualizado!", description: "Status alterado com sucesso." });
+    toast({ title: "Atualizado!", description: status === 'no_show' ? "Marcado como falta." : "Status alterado com sucesso." });
     fetchAppointments();
     return true;
   }

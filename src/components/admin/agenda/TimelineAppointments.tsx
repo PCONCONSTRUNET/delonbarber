@@ -32,6 +32,7 @@ const statusConfig = {
   confirmed: { label: 'Confirmado', bg: 'bg-primary', border: 'border-l-primary' },
   completed: { label: 'Concluído', bg: 'bg-success', border: 'border-l-success' },
   cancelled: { label: 'Cancelado', bg: 'bg-destructive/50', border: 'border-l-destructive' },
+  no_show: { label: 'Falta', bg: 'bg-orange-500', border: 'border-l-orange-500' },
 };
 
 // Generate time slots based on business hours

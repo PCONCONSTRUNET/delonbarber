@@ -91,7 +91,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
     }
   });
 
-  const paidAppointments = filteredAppointments.filter(a => a.payment_status === 'paid');
+  const paidAppointments = filteredAppointments.filter(a => a.payment_status === 'paid' && a.status !== 'no_show');
   const pendingAppointments = filteredAppointments.filter(a => a.payment_status === 'pending' && a.status === 'completed');
 
   const totalRevenue = paidAppointments.reduce((sum, a) => sum + Number(a.total_price || 0), 0);
