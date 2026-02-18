@@ -147,16 +147,32 @@ export function DateTimeSelection({
     let currentHour = openHour;
     let currentMin = openMin;
 
+    // Calculate total duration needed for selected services
+    const totalServiceDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0) || 30;
+    const closeTimeMinutes = closeHour * 60 + closeMin;
+    const lunchStartMinutes = lunchStartHour >= 0 ? lunchStartHour * 60 + lunchStartMin : -1;
+    const lunchEndMinutes = lunchEndHour >= 0 ? lunchEndHour * 60 + lunchEndMin : -1;
+
     while (currentHour < closeHour || (currentHour === closeHour && currentMin < closeMin)) {
+      const currentMinutes = currentHour * 60 + currentMin;
+      
       // Check if current time is during lunch break
-      const isLunchBreak = lunchStartHour >= 0 && (
-        (currentHour > lunchStartHour || (currentHour === lunchStartHour && currentMin >= lunchStartMin)) &&
-        (currentHour < lunchEndHour || (currentHour === lunchEndHour && currentMin < lunchEndMin))
+      const isLunchBreak = lunchStartMinutes >= 0 && (
+        currentMinutes >= lunchStartMinutes && currentMinutes < lunchEndMinutes
       );
 
       if (!isLunchBreak) {
-        const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}:00`;
-        slots.push(timeStr);
+        const endMinutes = currentMinutes + totalServiceDuration;
+        // Check appointment finishes before closing
+        const fitsBeforeClose = endMinutes <= closeTimeMinutes;
+        // Check appointment doesn't overlap into lunch break
+        const overlapsLunch = lunchStartMinutes >= 0 && 
+          currentMinutes < lunchStartMinutes && endMinutes > lunchStartMinutes;
+        
+        if (fitsBeforeClose && !overlapsLunch) {
+          const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}:00`;
+          slots.push(timeStr);
+        }
       }
       
       currentMin += 30;
