@@ -322,7 +322,7 @@ const Login = () => {
                                 placeholder="seu@email.com"
                                 value={loginEmail}
                                 onChange={(e) => setLoginEmail(e.target.value)}
-                                className="pl-10 h-12 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                className="pl-10 h-12 rounded-2xl transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
                                 required
                               />
                             </div>
