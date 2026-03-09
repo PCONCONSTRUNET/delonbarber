@@ -96,7 +96,7 @@ const Index = () => {
           <div className="flex flex-col w-full max-w-[280px] xs:max-w-xs sm:max-w-none sm:w-auto sm:flex-row gap-2.5 sm:gap-4">
             <Button 
               size="lg" 
-              className="w-full sm:min-w-[180px] h-11 sm:h-12 text-sm xs:text-base sm:text-lg font-semibold"
+              className="w-full sm:min-w-[180px] h-12 sm:h-14 text-sm xs:text-base sm:text-lg font-semibold rounded-2xl"
               onClick={() => navigate("/login?tab=signup")}
             >
               Criar Conta
@@ -104,7 +104,7 @@ const Index = () => {
             <Button 
               variant="outline" 
               size="lg" 
-              className="w-full sm:min-w-[180px] h-11 sm:h-12 text-sm xs:text-base sm:text-lg border-foreground/20 hover:bg-foreground/5"
+              className="w-full sm:min-w-[180px] h-12 sm:h-14 text-sm xs:text-base sm:text-lg border-foreground/20 hover:bg-foreground/5 rounded-2xl"
               onClick={() => navigate("/login?tab=login")}
             >
               Já tenho conta
