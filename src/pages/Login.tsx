@@ -286,7 +286,7 @@ const Login = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.7, duration: 0.4 }}
                     >
-                      <TabsList className="grid w-full grid-cols-2 mb-6 p-1">
+                      <TabsList className="grid w-full grid-cols-2 mb-6 p-1 rounded-2xl">
                         <TabsTrigger 
                           value="login" 
                           className="transition-all duration-500 data-[state=active]:shadow-lg"
