@@ -248,7 +248,7 @@ const Login = () => {
                 ease: [0.16, 1, 0.3, 1]
               }}
             >
-              <Card className="glass-effect border-border overflow-hidden shadow-2xl shadow-primary/10">
+              <Card className="glass-effect border-border overflow-hidden shadow-2xl shadow-primary/10 rounded-2xl">
                 {/* Animated border gradient */}
                 <motion.div 
                   className="absolute inset-0 rounded-lg opacity-50 pointer-events-none"
