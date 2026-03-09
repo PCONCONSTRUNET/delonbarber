@@ -382,7 +382,7 @@ const Login = () => {
                                 placeholder="Seu nome"
                                 value={signupName}
                                 onChange={(e) => setSignupName(e.target.value)}
-                                className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                className="pl-10 h-11 rounded-2xl transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
                                 required
                               />
                             </div>
