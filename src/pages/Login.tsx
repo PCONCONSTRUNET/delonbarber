@@ -248,7 +248,7 @@ const Login = () => {
                 ease: [0.16, 1, 0.3, 1]
               }}
             >
-              <Card className="glass-effect border-border overflow-hidden shadow-2xl shadow-primary/10">
+              <Card className="glass-effect border-border overflow-hidden shadow-2xl shadow-primary/10 rounded-2xl">
                 {/* Animated border gradient */}
                 <motion.div 
                   className="absolute inset-0 rounded-lg opacity-50 pointer-events-none"
@@ -286,7 +286,7 @@ const Login = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.7, duration: 0.4 }}
                     >
-                      <TabsList className="grid w-full grid-cols-2 mb-6 p-1">
+                      <TabsList className="grid w-full grid-cols-2 mb-6 p-1 rounded-2xl">
                         <TabsTrigger 
                           value="login" 
                           className="transition-all duration-500 data-[state=active]:shadow-lg"
@@ -322,7 +322,7 @@ const Login = () => {
                                 placeholder="seu@email.com"
                                 value={loginEmail}
                                 onChange={(e) => setLoginEmail(e.target.value)}
-                                className="pl-10 h-12 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                className="pl-10 h-12 rounded-2xl transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
                                 required
                               />
                             </div>
@@ -338,7 +338,7 @@ const Login = () => {
                                 placeholder="••••••••"
                                 value={loginPassword}
                                 onChange={(e) => setLoginPassword(e.target.value)}
-                                className="pl-10 h-12 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                className="pl-10 h-12 rounded-2xl transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
                                 required
                               />
                             </div>
@@ -350,7 +350,7 @@ const Login = () => {
                           >
                             <Button 
                               type="submit" 
-                              className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40" 
+                                className="w-full h-12 text-base font-semibold rounded-2xl shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40" 
                               disabled={isLoading}
                             >
                               {isLoading ? (
@@ -382,7 +382,7 @@ const Login = () => {
                                 placeholder="Seu nome"
                                 value={signupName}
                                 onChange={(e) => setSignupName(e.target.value)}
-                                className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                className="pl-10 h-11 rounded-2xl transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
                                 required
                               />
                             </div>
@@ -398,7 +398,7 @@ const Login = () => {
                                 placeholder="(48) 99999-9999"
                                 value={signupPhone}
                                 onChange={(e) => setSignupPhone(e.target.value)}
-                                className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                className="pl-10 h-11 rounded-2xl transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
                                 required
                               />
                             </div>
@@ -414,7 +414,7 @@ const Login = () => {
                                 placeholder="seu@email.com"
                                 value={signupEmail}
                                 onChange={(e) => setSignupEmail(e.target.value)}
-                                className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                className="pl-10 h-11 rounded-2xl transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
                                 required
                               />
                             </div>
@@ -430,7 +430,7 @@ const Login = () => {
                                 placeholder="••••••••"
                                 value={signupPassword}
                                 onChange={(e) => setSignupPassword(e.target.value)}
-                                className="pl-10 h-11 transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
+                                className="pl-10 h-11 rounded-2xl transition-all duration-300 focus:shadow-lg focus:shadow-primary/20 focus:border-primary"
                                 required
                               />
                             </div>
@@ -442,7 +442,7 @@ const Login = () => {
                           >
                             <Button 
                               type="submit" 
-                              className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40" 
+                              className="w-full h-12 text-base font-semibold rounded-2xl shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40" 
                               disabled={isLoading}
                             >
                               {isLoading ? (
