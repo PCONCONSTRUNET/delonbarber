@@ -115,8 +115,14 @@ export function AnimatedBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-0"
-      style={{ background: "transparent" }}
+      className="fixed inset-0 pointer-events-none"
+      style={{
+        background: "transparent",
+        zIndex: 0,
+        WebkitTransform: "translateZ(0)",
+        transform: "translateZ(0)",
+        willChange: "auto",
+      }}
     />
   );
 }
