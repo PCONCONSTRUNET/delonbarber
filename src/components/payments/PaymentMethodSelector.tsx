@@ -28,7 +28,7 @@ const paymentMethods: PaymentMethodConfig[] = [
 
 const getIcon = (method: PaymentMethodConfig, isSelected: boolean) => {
   if (method.isPix) {
-    return <PixIcon size={28} />;
+    return <PixIcon size={22} />;
   }
 
   const iconClass = cn("h-7 w-7", method.iconColor);
