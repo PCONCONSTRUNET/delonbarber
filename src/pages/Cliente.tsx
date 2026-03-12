@@ -5,7 +5,6 @@ import { Calendar, Crown, User, LogOut, ArrowLeft, Shield, Sparkles } from 'luci
 import { Button } from '@/components/ui/button';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
-import { MyLoyaltyProgress } from '@/components/client/MyLoyaltyProgress';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useIsAdmin } from '@/hooks/useAdmin';
