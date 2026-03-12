@@ -141,7 +141,7 @@ const Agendar = () => {
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
 
   return (
-    <div className="min-h-screen bg-background pb-24 overflow-x-hidden relative" style={{ WebkitTransform: "translateZ(0)" }}>
+    <div className="min-h-screen bg-background pb-24 overflow-x-hidden relative">
       <AnimatedBackground />
       
       <main className="relative z-10 pt-4 sm:pt-6 pb-20 px-3 sm:px-4 max-w-lg mx-auto safe-area-top">
