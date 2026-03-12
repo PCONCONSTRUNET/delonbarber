@@ -116,7 +116,7 @@ export function RegisterExternalCutModal({
         .from('appointments')
         .insert({
           user_id: user.id,
-          appointment_date: selectedDate,
+          appointment_date: editableDate,
           appointment_time: timeFormatted,
           status: 'completed' as const,
           total_price: finalPrice,
