@@ -64,8 +64,9 @@ export function RegisterExternalCutModal({
       setCustomTime('');
       setPaymentMethod('cash');
       setCustomPrice('');
+      setEditableDate(selectedDate);
     }
-  }, [open]);
+  }, [open, selectedDate]);
 
   async function fetchServices() {
     setLoadingServices(true);
