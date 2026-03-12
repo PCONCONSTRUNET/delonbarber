@@ -366,15 +366,26 @@ function SwipeableAppointmentCard({
             </>
           )}
 
-          {/* CONCLUÍDO: Apenas Registrar Pagamento se não pago */}
-          {apt.status === 'completed' && !isPaid && (
-            <button
-              onClick={onOpenPayment}
-              className="h-11 px-3 rounded-xl bg-success text-white flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"
-            >
-              <CreditCard className="h-4 w-4 flex-shrink-0" />
-              <span className="text-xs font-semibold whitespace-nowrap">Pagar</span>
-            </button>
+          {/* CONCLUÍDO: Marcar Falta + Registrar Pagamento se não pago */}
+          {apt.status === 'completed' && (
+            <>
+              <button
+                onClick={() => onUpdateStatus(apt.id, 'no_show')}
+                className="h-11 px-3 rounded-xl bg-orange-500 text-white flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"
+              >
+                <X className="h-4 w-4 flex-shrink-0" />
+                <span className="text-xs font-semibold whitespace-nowrap">Falta</span>
+              </button>
+              {!isPaid && (
+                <button
+                  onClick={onOpenPayment}
+                  className="h-11 px-3 rounded-xl bg-success text-white flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm"
+                >
+                  <CreditCard className="h-4 w-4 flex-shrink-0" />
+                  <span className="text-xs font-semibold whitespace-nowrap">Pagar</span>
+                </button>
+              )}
+            </>
           )}
 
           {/* Excluir (sempre disponível) */}
