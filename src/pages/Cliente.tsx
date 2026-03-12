@@ -247,19 +247,6 @@ const Cliente = () => {
           <MyPackagesBenefits />
         </motion.div>
 
-        {/* My Loyalty Progress */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
-          className="mt-6"
-        >
-          <h3 className="font-display text-lg font-semibold mb-3 flex items-center gap-2">
-            <Gift className="h-5 w-5 text-amber-500" />
-            Programa Fidelidade
-          </h3>
-          <MyLoyaltyProgress />
-        </motion.div>
 
         {/* Quick stats */}
         <motion.div
