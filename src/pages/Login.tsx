@@ -1,4 +1,4 @@
-// v2 - deploy sync
+// v3 - force deploy sync
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
