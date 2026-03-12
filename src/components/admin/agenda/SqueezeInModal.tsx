@@ -42,6 +42,8 @@ export function SqueezeInModal({
   const [customTime, setCustomTime] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
+  const [editableDate, setEditableDate] = useState(selectedDate);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const selectedServiceDetails = services.filter(s => selectedServices.includes(s.id));
   const totalDuration = selectedServiceDetails.reduce((acc, s) => acc + s.duration_minutes, 0);
@@ -63,8 +65,9 @@ export function SqueezeInModal({
       setClientName('');
       setClientPhone('');
       setCustomTime('');
+      setEditableDate(selectedDate);
     }
-  }, [open]);
+  }, [open, selectedDate]);
 
   async function fetchServices() {
     setLoadingServices(true);
