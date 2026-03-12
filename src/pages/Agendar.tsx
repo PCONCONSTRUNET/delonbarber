@@ -310,13 +310,13 @@ const Agendar = () => {
                 >
                   {hoursLoading ? (
                     <div className="flex justify-center py-12">
-                      <motion.span
+                      <motion.img
+                        src={scissorsImg}
+                        alt="Carregando"
                         animate={{ rotate: 360 }}
                         transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                        className="text-3xl"
-                      >
-                        ✂️
-                      </motion.span>
+                        className="w-12 h-12"
+                      />
                     </div>
                   ) : (
                     <DateTimeSelection
