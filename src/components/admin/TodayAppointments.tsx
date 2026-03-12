@@ -262,15 +262,28 @@ Qualquer dúvida, estamos à disposição! 💈`;
                       )}
                     </>
                   )}
-                  {apt.status === 'completed' && apt.payment_status !== 'paid' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-6 md:h-8 px-1.5 md:px-2 border-green-500 text-green-500 gap-0.5"
-                      onClick={() => handleOpenPayment(apt)}
-                    >
-                      <PixIcon size={12} />
-                    </Button>
+                  {apt.status === 'completed' && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 md:h-8 text-[10px] md:text-xs px-1.5 md:px-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
+                        onClick={() => onUpdateStatus(apt.id, 'no_show')}
+                      >
+                        <UserX className="h-3 md:h-3.5 w-3 md:w-3.5 mr-0.5" />
+                        Falta
+                      </Button>
+                      {apt.payment_status !== 'paid' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 md:h-8 px-1.5 md:px-2 border-green-500 text-green-500 gap-0.5"
+                          onClick={() => handleOpenPayment(apt)}
+                        >
+                          <PixIcon size={12} />
+                        </Button>
+                      )}
+                    </>
                   )}
                   {onDelete && (
                     <Button
