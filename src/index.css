@@ -210,3 +210,86 @@
 .group:hover .group-hover\:animate-shine {
   animation: shine 1s ease-out;
 }
+
+/* 3D Squeeze-in button */
+.squeeze-btn-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas: "bt-1 bt-2 bt-3" "bt-4 bt-5 bt-6";
+  position: relative;
+  perspective: 800px;
+  padding: 0;
+  width: 100%;
+  height: 36px;
+  transition: all 0.3s ease-in-out;
+}
+.squeeze-btn-container:active {
+  transform: scale(0.95);
+}
+.squeeze-hover { position: absolute; width: 100%; height: 100%; z-index: 200; }
+.squeeze-bt-1 { grid-area: bt-1; }
+.squeeze-bt-2 { grid-area: bt-2; }
+.squeeze-bt-3 { grid-area: bt-3; }
+.squeeze-bt-4 { grid-area: bt-4; }
+.squeeze-bt-5 { grid-area: bt-5; }
+.squeeze-bt-6 { grid-area: bt-6; }
+
+.squeeze-bt-1:hover ~ .squeeze-main-btn {
+  transform: rotateX(15deg) rotateY(-15deg);
+  box-shadow: -2px -2px hsl(var(--warning) / 0.5);
+}
+.squeeze-bt-3:hover ~ .squeeze-main-btn {
+  transform: rotateX(15deg) rotateY(15deg);
+  box-shadow: 2px -2px hsl(var(--warning) / 0.5);
+}
+.squeeze-bt-4:hover ~ .squeeze-main-btn {
+  transform: rotateX(-15deg) rotateY(-15deg);
+  box-shadow: -2px 2px hsl(var(--warning) / 0.5);
+}
+.squeeze-bt-6:hover ~ .squeeze-main-btn {
+  transform: rotateX(-15deg) rotateY(15deg);
+  box-shadow: 2px 2px hsl(var(--warning) / 0.5);
+}
+
+.squeeze-hover:hover ~ .squeeze-main-btn::before {
+  background: transparent;
+}
+
+.squeeze-main-btn {
+  position: absolute;
+  padding: 0;
+  width: 100%;
+  height: 36px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid hsl(var(--warning));
+  border-radius: 8px;
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+  color: hsl(var(--warning-foreground));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.squeeze-main-btn::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 36px;
+  background-color: hsl(var(--warning) / 0.15);
+  border-radius: 8px;
+  transition: all 0.3s ease-in-out;
+  z-index: -1;
+}
+.squeeze-hover:hover ~ .squeeze-main-btn {
+  border-color: hsl(var(--warning));
+}
+.squeeze-hover:hover ~ .squeeze-main-btn::before {
+  background-color: hsl(var(--warning) / 0.3);
+}

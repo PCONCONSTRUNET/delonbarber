@@ -63,15 +63,20 @@ export function AgendaHeader({
 
       {/* Action buttons */}
       <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 gap-1.5 text-xs border-warning/30 text-warning hover:bg-warning/10"
-          onClick={onSqueezeIn}
-        >
-          <Zap className="h-3.5 w-3.5" />
-          Encaixe
-        </Button>
+        <div className="flex-1">
+          <div className="squeeze-btn-container" onClick={onSqueezeIn}>
+            <div className="squeeze-hover squeeze-bt-1" />
+            <div className="squeeze-hover squeeze-bt-2" />
+            <div className="squeeze-hover squeeze-bt-3" />
+            <div className="squeeze-hover squeeze-bt-4" />
+            <div className="squeeze-hover squeeze-bt-5" />
+            <div className="squeeze-hover squeeze-bt-6" />
+            <div className="squeeze-main-btn">
+              <Zap className="h-3.5 w-3.5 text-warning" />
+              <span className="text-warning">Encaixe</span>
+            </div>
+          </div>
+        </div>
         <Button
           variant="outline"
           size="sm"
