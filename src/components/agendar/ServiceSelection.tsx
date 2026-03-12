@@ -157,7 +157,7 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
                         />
                       ) : (
                         <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <span className="text-2xl">✂️</span>
+                          <img src={scissorsImg} alt="" className="w-8 h-8" />
                         </div>
                       )}
                     </div>
