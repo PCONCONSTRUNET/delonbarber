@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Phone, Calendar, DollarSign, Eye, Trash2, Link } from 'lucide-react';
+import { User, Phone, Calendar, DollarSign, Eye, Trash2, Link, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Client } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { ClientDetailsModal } from './ClientDetailsModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useExclusiveClients } from '@/hooks/useExclusiveClients';
+import { cn } from '@/lib/utils';
 
 interface ClientListProps {
   clients: Client[];
