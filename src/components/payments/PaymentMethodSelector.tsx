@@ -31,7 +31,7 @@ const getIcon = (method: PaymentMethodConfig, isSelected: boolean) => {
     return <PixIcon size={22} />;
   }
 
-  const iconClass = cn("h-7 w-7", method.iconColor);
+  const iconClass = cn("h-5 w-5", method.iconColor);
   
   switch (method.id) {
     case 'credit':
