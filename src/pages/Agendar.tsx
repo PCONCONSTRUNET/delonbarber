@@ -160,9 +160,8 @@ const Agendar = () => {
             <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
           
-          <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-            <img src={scissorsImg} alt="" className="w-6 h-6 sm:w-7 sm:h-7" />
-            Agendar
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground">
+            ✂️ Agendar
           </h1>
           
           <div className="flex gap-1">
