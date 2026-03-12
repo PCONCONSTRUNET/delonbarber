@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { PaymentMethodSelector, PaymentMethod } from '@/components/payments/PaymentMethodSelector';
+import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
