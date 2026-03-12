@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Crown, User, LogOut, ArrowLeft, Shield, Gift, Sparkles } from 'lucide-react';
+import { Calendar, Crown, User, LogOut, ArrowLeft, Shield, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
