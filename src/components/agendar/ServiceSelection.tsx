@@ -71,8 +71,10 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: catIndex * 0.1 }}
         >
-          <h3 className="text-lg font-semibold text-foreground mb-3 px-1">
-            {categoryLabels[category] || category}
+          <h3 className="text-lg font-semibold text-foreground mb-3 px-1 flex items-center gap-2">
+            {category === 'corte' && <img src={scissorsImg} alt="" className="w-5 h-5" />}
+            {category !== 'corte' && categoryLabels[category]?.split(' ')[0]}
+            {category === 'corte' ? categoryLabels[category] : categoryLabels[category]?.split(' ').slice(1).join(' ')}
           </h3>
           
           <div className="space-y-3">
