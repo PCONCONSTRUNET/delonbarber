@@ -167,10 +167,7 @@ export function RegisterExternalCutModal({
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year}`;
-  };
+  const parsedDate = parse(editableDate, 'yyyy-MM-dd', new Date());
 
   const formContent = (
     <div className="space-y-4 overflow-y-auto flex-1 px-1">
