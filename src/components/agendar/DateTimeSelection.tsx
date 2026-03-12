@@ -8,6 +8,7 @@ import { ptBR } from 'date-fns/locale';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useMyPackages } from '@/hooks/useMyPackages';
+import { useIsExclusiveClient } from '@/hooks/useExclusiveClients';
 
 
 interface DateTimeSelectionProps {
