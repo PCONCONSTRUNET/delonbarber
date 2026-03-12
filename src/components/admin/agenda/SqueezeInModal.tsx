@@ -175,10 +175,7 @@ export function SqueezeInModal({
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year}`;
-  };
+  const parsedDate = parse(editableDate, 'yyyy-MM-dd', new Date());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
