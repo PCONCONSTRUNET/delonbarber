@@ -5,6 +5,7 @@ import { useMyPackages } from '@/hooks/useMyPackages';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import scissorsImg from '@/assets/scissors.png';
 
 interface ServiceSelectionProps {
   services: Service[];
