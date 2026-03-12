@@ -4,14 +4,12 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { ClipboardCheck, User, Phone, CreditCard, Clock, CalendarIcon } from 'lucide-react';
+import { ClipboardCheck, User, Phone, CalendarIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { PaymentMethodSelector, PaymentMethod } from '@/components/payments/PaymentMethodSelector';
+import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -169,25 +167,24 @@ export function RegisterExternalCutModal({
 
   const parsedDate = parse(editableDate, 'yyyy-MM-dd', new Date());
 
-  const formContent = (
-    <div className="space-y-4 overflow-y-auto flex-1 px-1">
-      {/* Info pill */}
-      <div className="p-2.5 rounded-2xl bg-success/10 border border-success/20 flex items-center gap-2.5">
-        <ClipboardCheck className="h-4 w-4 text-success flex-shrink-0" />
-        <p className="text-xs text-success font-medium">
-          Registre um corte feito fora do app. Será salvo como concluído e pago.
-        </p>
-      </div>
+  const paymentOptions: { id: PaymentMethod; label: string; icon: string }[] = [
+    { id: 'pix', label: 'PIX', icon: '◆' },
+    { id: 'credit', label: 'Crédito', icon: '💳' },
+    { id: 'debit', label: 'Débito', icon: '📱' },
+    { id: 'cash', label: 'Dinheiro', icon: '💵' },
+  ];
 
-      {/* Date + optional time */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Data</Label>
+  const formContent = (
+    <div className="space-y-3 overflow-y-auto flex-1 px-1">
+      {/* Date + Time + Client in compact rows */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Data</Label>
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full h-10 justify-start gap-2 text-xs font-medium rounded-xl bg-muted/30 border-border/50">
-                <CalendarIcon className="h-3.5 w-3.5 text-success" />
-                {format(parsedDate, "dd/MM/yyyy")}
+              <Button variant="outline" size="sm" className="w-full h-9 justify-start gap-1.5 text-xs font-medium rounded-xl bg-muted/30 border-border/50 px-2">
+                <CalendarIcon className="h-3 w-3 text-success" />
+                {format(parsedDate, "dd/MM")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 rounded-2xl" align="start">
@@ -205,131 +202,122 @@ export function RegisterExternalCutModal({
             </PopoverContent>
           </Popover>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="extTime" className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Horário (opcional)</Label>
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Hora</Label>
           <Input
-            id="extTime"
             type="time"
             value={customTime}
             onChange={(e) => setCustomTime(e.target.value)}
-            className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
+            className="h-9 text-xs rounded-xl bg-muted/30 border-border/50 px-2"
           />
         </div>
-      </div>
-
-      {/* Client info */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
-            <User className="h-3 w-3" /> Nome *
-          </Label>
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Valor (R$)</Label>
           <Input
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            placeholder="João Silva"
-            className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
-            autoFocus
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
-            <Phone className="h-3 w-3" /> Telefone
-          </Label>
-          <Input
-            value={clientPhone}
-            onChange={(e) => setClientPhone(e.target.value)}
-            placeholder="11999999999"
-            className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
+            type="number"
+            value={customPrice}
+            onChange={(e) => setCustomPrice(e.target.value)}
+            placeholder={`${calculatedPrice}`}
+            className="h-9 text-xs rounded-xl bg-muted/30 border-border/50 px-2"
+            step="0.01"
+            min="0"
           />
         </div>
       </div>
 
-      {/* Services */}
-      <div className="space-y-1.5">
-        <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Serviços *</Label>
-        <ScrollArea className="h-[120px] border border-border/50 rounded-2xl p-2 bg-muted/10">
-          {loadingServices ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-xs text-muted-foreground">Carregando...</p>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {services.map((service) => (
-                <div
-                  key={service.id}
-                  className={cn(
-                    'flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer transition-all active:scale-[0.98]',
-                    selectedServices.includes(service.id)
-                      ? 'bg-success/15 border border-success/30'
-                      : 'hover:bg-muted/50 border border-transparent'
-                  )}
-                  onClick={() => toggleService(service.id)}
-                >
-                  <Checkbox checked={selectedServices.includes(service.id)} className="h-4 w-4 rounded-md" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium truncate">{service.name}</p>
-                  </div>
-                  <span className="text-xs font-bold flex-shrink-0 text-success">R${service.price}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-      </div>
-
-      {/* Custom price */}
-      <div className="space-y-1.5">
-        <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1">
-          <CreditCard className="h-3 w-3" /> Valor cobrado
-        </Label>
+      {/* Client */}
+      <div className="grid grid-cols-2 gap-2">
         <Input
-          type="number"
-          value={customPrice}
-          onChange={(e) => setCustomPrice(e.target.value)}
-          placeholder={`${calculatedPrice} (automático)`}
-          className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
-          step="0.01"
-          min="0"
+          value={clientName}
+          onChange={(e) => setClientName(e.target.value)}
+          placeholder="Nome do cliente *"
+          className="h-9 text-sm rounded-xl bg-muted/30 border-border/50"
+        />
+        <Input
+          value={clientPhone}
+          onChange={(e) => setClientPhone(e.target.value)}
+          placeholder="Telefone"
+          className="h-9 text-sm rounded-xl bg-muted/30 border-border/50"
         />
       </div>
 
-      {/* Payment method */}
-      <div className="space-y-1.5">
-        <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Forma de pagamento</Label>
-        <PaymentMethodSelector
-          selected={paymentMethod}
-          onSelect={setPaymentMethod}
-        />
+      {/* Services - compact */}
+      <div className="space-y-1">
+        <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Serviços *</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {loadingServices ? (
+            <p className="text-xs text-muted-foreground">Carregando...</p>
+          ) : (
+            services.map((service) => {
+              const isSelected = selectedServices.includes(service.id);
+              return (
+                <button
+                  key={service.id}
+                  type="button"
+                  onClick={() => toggleService(service.id)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-[0.96] border',
+                    isSelected
+                      ? 'bg-success/20 border-success/40 text-success'
+                      : 'bg-muted/20 border-border/50 text-muted-foreground'
+                  )}
+                >
+                  {service.name} • R${service.price}
+                </button>
+              );
+            })
+          )}
+        </div>
       </div>
 
-      {/* Summary */}
+      {/* Payment - inline chips */}
+      <div className="space-y-1">
+        <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Pagamento</Label>
+        <div className="flex gap-1.5">
+          {paymentOptions.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setPaymentMethod(opt.id)}
+              className={cn(
+                'flex-1 py-2 rounded-xl text-[11px] font-medium transition-all active:scale-[0.96] border text-center',
+                paymentMethod === opt.id
+                  ? 'bg-success/20 border-success/40 text-success'
+                  : 'bg-muted/20 border-border/50 text-muted-foreground'
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Total */}
       {selectedServices.length > 0 && (
-        <div className="p-3 rounded-2xl bg-success/10 border border-success/20">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Total</span>
-            <span className="font-bold text-success text-base">R$ {finalPrice.toFixed(2)}</span>
-          </div>
+        <div className="flex justify-between items-center px-1">
+          <span className="text-xs text-muted-foreground">Total</span>
+          <span className="font-bold text-success text-lg">R$ {finalPrice.toFixed(2)}</span>
         </div>
       )}
     </div>
   );
 
   const footerContent = (
-    <div className="flex gap-3 pt-2">
+    <div className="flex gap-2 pt-1">
       <Button
         variant="outline"
         onClick={() => onOpenChange(false)}
         disabled={loading}
-        className="flex-1 h-11 rounded-2xl text-sm font-medium"
+        className="flex-1 h-10 rounded-2xl text-sm font-medium"
       >
         Cancelar
       </Button>
       <Button
         onClick={handleSubmit}
         disabled={loading || selectedServices.length === 0}
-        className="flex-1 h-11 rounded-2xl text-sm font-medium bg-success text-success-foreground hover:bg-success/90 active:scale-[0.97] transition-all"
+        className="flex-1 h-10 rounded-2xl text-sm font-medium bg-success text-success-foreground hover:bg-success/90 active:scale-[0.97] transition-all"
       >
-        {loading ? 'Salvando...' : '📋 Registrar'}
+        {loading ? 'Salvando...' : 'Registrar'}
       </Button>
     </div>
   );
