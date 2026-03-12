@@ -6,10 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Phone, Zap, AlertTriangle } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Clock, User, Phone, Zap, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { format, parse } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Service {
   id: string;
@@ -38,6 +42,8 @@ export function SqueezeInModal({
   const [customTime, setCustomTime] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
+  const [editableDate, setEditableDate] = useState(selectedDate);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const selectedServiceDetails = services.filter(s => selectedServices.includes(s.id));
   const totalDuration = selectedServiceDetails.reduce((acc, s) => acc + s.duration_minutes, 0);
@@ -59,8 +65,9 @@ export function SqueezeInModal({
       setClientName('');
       setClientPhone('');
       setCustomTime('');
+      setEditableDate(selectedDate);
     }
-  }, [open]);
+  }, [open, selectedDate]);
 
   async function fetchServices() {
     setLoadingServices(true);
@@ -119,7 +126,7 @@ export function SqueezeInModal({
         .from('appointments')
         .insert({
           user_id: user.id,
-          appointment_date: selectedDate,
+          appointment_date: editableDate,
           appointment_time: timeFormatted,
           status: 'confirmed' as const,
           total_price: totalPrice,
@@ -168,10 +175,7 @@ export function SqueezeInModal({
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year}`;
-  };
+  const parsedDate = parse(editableDate, 'yyyy-MM-dd', new Date());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -194,9 +198,29 @@ export function SqueezeInModal({
 
           {/* Date and custom time */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="p-2 rounded-lg bg-muted/50 flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary flex-shrink-0" />
-              <p className="text-xs font-medium">{formatDate(selectedDate)}</p>
+            <div className="space-y-1">
+              <Label className="text-xs">Data</Label>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full h-8 justify-start gap-2 text-xs font-medium">
+                    <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                    {format(parsedDate, "dd/MM/yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={parsedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setEditableDate(format(date, 'yyyy-MM-dd'));
+                        setCalendarOpen(false);
+                      }
+                    }}
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-1">
               <Label htmlFor="squeezeTime" className="text-xs">Horário *</Label>
