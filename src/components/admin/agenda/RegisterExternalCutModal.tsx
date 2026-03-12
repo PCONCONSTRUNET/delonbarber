@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { ClipboardCheck, User, Phone, CreditCard, Clock } from 'lucide-react';
 import { PaymentMethodSelector, PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Service {
   id: string;
@@ -32,6 +33,7 @@ export function RegisterExternalCutModal({
   selectedDate,
   onSuccess,
 }: RegisterExternalCutModalProps) {
+  const isMobile = useIsMobile();
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [clientName, setClientName] = useState('');
@@ -77,21 +79,14 @@ export function RegisterExternalCutModal({
   };
 
   async function handleSubmit() {
-    if (selectedServices.length === 0) {
-      toast.error('Selecione pelo menos um serviço');
-      return;
-    }
-    if (!clientName.trim()) {
-      toast.error('Digite o nome do cliente');
-      return;
-    }
+    if (selectedServices.length === 0) { toast.error('Selecione pelo menos um serviço'); return; }
+    if (!clientName.trim()) { toast.error('Digite o nome do cliente'); return; }
 
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error('Sessão expirada'); setLoading(false); return; }
 
-      // Handle guest client
       let guestClientId: string | null = null;
       const phoneClean = clientPhone.replace(/\D/g, '');
       if (phoneClean) {
@@ -106,7 +101,7 @@ export function RegisterExternalCutModal({
         }
       }
 
-      const timeFormatted = customTime 
+      const timeFormatted = customTime
         ? (customTime.length === 5 ? `${customTime}:00` : customTime)
         : '00:00:00';
 
@@ -170,150 +165,182 @@ export function RegisterExternalCutModal({
     return `${day}/${month}/${year}`;
   };
 
+  const formContent = (
+    <div className="space-y-4 overflow-y-auto flex-1 px-1">
+      {/* Info pill */}
+      <div className="p-2.5 rounded-2xl bg-success/10 border border-success/20 flex items-center gap-2.5">
+        <ClipboardCheck className="h-4 w-4 text-success flex-shrink-0" />
+        <p className="text-xs text-success font-medium">
+          Registre um corte feito fora do app. Será salvo como concluído e pago.
+        </p>
+      </div>
+
+      {/* Date + optional time */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="p-2.5 rounded-xl bg-muted/30 border border-border/50 flex items-center gap-2">
+          <Clock className="h-4 w-4 text-success flex-shrink-0" />
+          <p className="text-xs font-medium">{formatDate(selectedDate)}</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="extTime" className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Horário (opcional)</Label>
+          <Input
+            id="extTime"
+            type="time"
+            value={customTime}
+            onChange={(e) => setCustomTime(e.target.value)}
+            className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
+          />
+        </div>
+      </div>
+
+      {/* Client info */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+            <User className="h-3 w-3" /> Nome *
+          </Label>
+          <Input
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            placeholder="João Silva"
+            className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
+            autoFocus
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+            <Phone className="h-3 w-3" /> Telefone
+          </Label>
+          <Input
+            value={clientPhone}
+            onChange={(e) => setClientPhone(e.target.value)}
+            placeholder="11999999999"
+            className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
+          />
+        </div>
+      </div>
+
+      {/* Services */}
+      <div className="space-y-1.5">
+        <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Serviços *</Label>
+        <ScrollArea className="h-[120px] border border-border/50 rounded-2xl p-2 bg-muted/10">
+          {loadingServices ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-xs text-muted-foreground">Carregando...</p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {services.map((service) => (
+                <div
+                  key={service.id}
+                  className={cn(
+                    'flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer transition-all active:scale-[0.98]',
+                    selectedServices.includes(service.id)
+                      ? 'bg-success/15 border border-success/30'
+                      : 'hover:bg-muted/50 border border-transparent'
+                  )}
+                  onClick={() => toggleService(service.id)}
+                >
+                  <Checkbox checked={selectedServices.includes(service.id)} className="h-4 w-4 rounded-md" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium truncate">{service.name}</p>
+                  </div>
+                  <span className="text-xs font-bold flex-shrink-0 text-success">R${service.price}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+
+      {/* Custom price */}
+      <div className="space-y-1.5">
+        <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1">
+          <CreditCard className="h-3 w-3" /> Valor cobrado
+        </Label>
+        <Input
+          type="number"
+          value={customPrice}
+          onChange={(e) => setCustomPrice(e.target.value)}
+          placeholder={`${calculatedPrice} (automático)`}
+          className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
+          step="0.01"
+          min="0"
+        />
+      </div>
+
+      {/* Payment method */}
+      <div className="space-y-1.5">
+        <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Forma de pagamento</Label>
+        <PaymentMethodSelector
+          selected={paymentMethod}
+          onSelect={setPaymentMethod}
+        />
+      </div>
+
+      {/* Summary */}
+      {selectedServices.length > 0 && (
+        <div className="p-3 rounded-2xl bg-success/10 border border-success/20">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">Total</span>
+            <span className="font-bold text-success text-base">R$ {finalPrice.toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const footerContent = (
+    <div className="flex gap-3 pt-2">
+      <Button
+        variant="outline"
+        onClick={() => onOpenChange(false)}
+        disabled={loading}
+        className="flex-1 h-11 rounded-2xl text-sm font-medium"
+      >
+        Cancelar
+      </Button>
+      <Button
+        onClick={handleSubmit}
+        disabled={loading || selectedServices.length === 0}
+        className="flex-1 h-11 rounded-2xl text-sm font-medium bg-success text-success-foreground hover:bg-success/90 active:scale-[0.97] transition-all"
+      >
+        {loading ? 'Salvando...' : '📋 Registrar'}
+      </Button>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[92vh] px-4 pb-safe">
+          <DrawerHeader className="pb-2 pt-3 px-0">
+            <DrawerTitle className="flex items-center gap-2 text-base font-semibold">
+              <ClipboardCheck className="h-5 w-5 text-success" />
+              Registrar Corte Externo
+            </DrawerTitle>
+          </DrawerHeader>
+          {formContent}
+          <DrawerFooter className="px-0 pb-4">
+            {footerContent}
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-md p-3 sm:p-6 max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-md p-5 max-h-[85vh] flex flex-col rounded-2xl">
         <DialogHeader className="pb-2">
-          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-            <ClipboardCheck className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+            <ClipboardCheck className="h-5 w-5 text-success" />
             Registrar Corte Externo
           </DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-3 overflow-y-auto flex-1">
-          {/* Info */}
-          <div className="p-2 rounded-lg bg-success/10 border border-success/30">
-            <p className="text-xs text-success">
-              Registre um corte feito fora do app. Será salvo como concluído e pago.
-            </p>
-          </div>
-
-          {/* Date + optional time */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="p-2 rounded-lg bg-muted/50 flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary flex-shrink-0" />
-              <p className="text-xs font-medium">{formatDate(selectedDate)}</p>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="extTime" className="text-xs">Horário (opcional)</Label>
-              <Input
-                id="extTime"
-                type="time"
-                value={customTime}
-                onChange={(e) => setCustomTime(e.target.value)}
-                className="h-8 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Client info */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label className="flex items-center gap-1 text-xs">
-                <User className="h-3 w-3" /> Nome *
-              </Label>
-              <Input
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="João Silva"
-                className="h-8 text-sm"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="flex items-center gap-1 text-xs">
-                <Phone className="h-3 w-3" /> Telefone
-              </Label>
-              <Input
-                value={clientPhone}
-                onChange={(e) => setClientPhone(e.target.value)}
-                placeholder="11999999999"
-                className="h-8 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Services */}
-          <div className="space-y-1">
-            <Label className="text-xs">Serviços *</Label>
-            <ScrollArea className="h-[100px] sm:h-[120px] border rounded-lg p-1.5">
-              {loadingServices ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-xs text-muted-foreground">Carregando...</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {services.map((service) => (
-                    <div
-                      key={service.id}
-                      className={cn(
-                        'flex items-center gap-2 p-1.5 rounded-lg cursor-pointer transition-colors',
-                        selectedServices.includes(service.id)
-                          ? 'bg-success/10 border border-success/30'
-                          : 'hover:bg-muted/50'
-                      )}
-                      onClick={() => toggleService(service.id)}
-                    >
-                      <Checkbox checked={selectedServices.includes(service.id)} className="h-4 w-4" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">{service.name}</p>
-                      </div>
-                      <span className="text-xs font-semibold flex-shrink-0">R${service.price}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </div>
-
-          {/* Custom price override */}
-          <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1">
-              <CreditCard className="h-3 w-3" /> Valor cobrado
-            </Label>
-            <Input
-              type="number"
-              value={customPrice}
-              onChange={(e) => setCustomPrice(e.target.value)}
-              placeholder={`${calculatedPrice} (automático)`}
-              className="h-8 text-sm"
-              step="0.01"
-              min="0"
-            />
-          </div>
-
-          {/* Payment method */}
-          <div className="space-y-1">
-            <Label className="text-xs">Forma de pagamento</Label>
-            <PaymentMethodSelector
-              selected={paymentMethod}
-              onSelect={setPaymentMethod}
-            />
-          </div>
-
-          {/* Summary */}
-          {selectedServices.length > 0 && (
-            <div className="p-2 rounded-lg bg-success/10 border border-success/20">
-              <div className="flex justify-between items-center">
-                <span className="text-xs">Total:</span>
-                <span className="font-bold text-success text-sm">R$ {finalPrice.toFixed(2)}</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="gap-2 pt-2 flex-shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading} size="sm" className="flex-1 sm:flex-none">
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={loading || selectedServices.length === 0}
-            size="sm"
-            className="flex-1 sm:flex-none bg-success text-white hover:bg-success/90"
-          >
-            {loading ? 'Salvando...' : '📋 Registrar'}
-          </Button>
+        {formContent}
+        <DialogFooter className="flex-shrink-0">
+          {footerContent}
         </DialogFooter>
       </DialogContent>
     </Dialog>
