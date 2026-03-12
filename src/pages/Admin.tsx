@@ -138,6 +138,8 @@ export function AdminAgenda() {
   const [activeTab, setActiveTab] = useState('agendamentos');
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [businessHours, setBusinessHours] = useState<any[]>([]);
+  const [squeezeInOpen, setSqueezeInOpen] = useState(false);
+  const [externalCutOpen, setExternalCutOpen] = useState(false);
 
   // Auto-complete appointments every 60 seconds
   useEffect(() => {
