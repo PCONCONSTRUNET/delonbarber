@@ -31,6 +31,7 @@ export function DateTimeSelection({
   selectedServices = []
 }: DateTimeSelectionProps) {
   const { packages } = useMyPackages();
+  const { isExclusive: isExclusiveClient } = useIsExclusiveClient();
   const [blockedWeekDates, setBlockedWeekDates] = useState<Date[]>([]);
   const [isVipBooking, setIsVipBooking] = useState(false);
 
