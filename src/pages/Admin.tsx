@@ -11,6 +11,8 @@ import { CalendarView } from '@/components/admin/CalendarView';
 import { TimelineAppointments } from '@/components/admin/agenda/TimelineAppointments';
 import { CompactCalendar } from '@/components/admin/agenda/CompactCalendar';
 import { AgendaHeader } from '@/components/admin/agenda/AgendaHeader';
+import { SqueezeInModal } from '@/components/admin/agenda/SqueezeInModal';
+import { RegisterExternalCutModal } from '@/components/admin/agenda/RegisterExternalCutModal';
 import { ServiceForm } from '@/components/admin/ServiceForm';
 import { ClientList } from '@/components/admin/ClientList';
 import { FinancialReport } from '@/components/admin/FinancialReport';
@@ -134,6 +136,8 @@ export function AdminAgenda() {
   const [activeTab, setActiveTab] = useState('agendamentos');
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [businessHours, setBusinessHours] = useState<any[]>([]);
+  const [squeezeInOpen, setSqueezeInOpen] = useState(false);
+  const [externalCutOpen, setExternalCutOpen] = useState(false);
 
   // Auto-complete appointments every 60 seconds
   useEffect(() => {
@@ -224,6 +228,22 @@ export function AdminAgenda() {
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
               appointmentCount={dayAppointments.length}
+              onSqueezeIn={() => setSqueezeInOpen(true)}
+              onRegisterExternal={() => setExternalCutOpen(true)}
+            />
+
+            <SqueezeInModal
+              open={squeezeInOpen}
+              onOpenChange={setSqueezeInOpen}
+              selectedDate={format(selectedDate, 'yyyy-MM-dd')}
+              onSuccess={fetchAppointments}
+            />
+
+            <RegisterExternalCutModal
+              open={externalCutOpen}
+              onOpenChange={setExternalCutOpen}
+              selectedDate={format(selectedDate, 'yyyy-MM-dd')}
+              onSuccess={fetchAppointments}
             />
 
             {/* Timeline appointments */}

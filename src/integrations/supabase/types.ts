@@ -59,6 +59,7 @@ export type Database = {
           guest_name: string | null
           guest_phone: string | null
           id: string
+          is_force_booking: boolean
           notes: string | null
           payment_date: string | null
           payment_method: string | null
@@ -77,6 +78,7 @@ export type Database = {
           guest_name?: string | null
           guest_phone?: string | null
           id?: string
+          is_force_booking?: boolean
           notes?: string | null
           payment_date?: string | null
           payment_method?: string | null
@@ -95,6 +97,7 @@ export type Database = {
           guest_name?: string | null
           guest_phone?: string | null
           id?: string
+          is_force_booking?: boolean
           notes?: string | null
           payment_date?: string | null
           payment_method?: string | null
