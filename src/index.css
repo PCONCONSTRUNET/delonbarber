@@ -48,7 +48,7 @@
     --input: 0 0% 15%;
     --ring: 4 77% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     /* Gradients */
     --gradient-hero: linear-gradient(135deg, hsl(var(--brand-red) / 0.15) 0%, hsl(var(--brand-blue-deep) / 0.3) 50%, hsl(var(--background)) 100%);
