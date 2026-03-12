@@ -1,9 +1,16 @@
 import { motion } from 'framer-motion';
-import { Star, Quote } from 'lucide-react';
+import { Quote } from 'lucide-react';
 import { useRatings, useAverageRating } from '@/hooks/useRatings';
 import { RatingStars } from './RatingStars';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
+} from '@/components/ui/carousel';
 
 export function PublicRatings() {
   const { ratings, loading } = useRatings();
@@ -51,45 +58,58 @@ export function PublicRatings() {
           )}
         </motion.div>
 
-        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {ratings.map((rating, index) => (
-            <motion.div
-              key={rating.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-card/50 backdrop-blur-sm border border-border rounded-xl sm:rounded-2xl p-3 xs:p-4 sm:p-5 relative"
-            >
-              <Quote className="absolute top-3 right-3 h-5 w-5 xs:h-6 xs:w-6 text-primary/20" />
-              
-              <div className="flex items-center gap-2.5 mb-2.5">
-                <div className="w-8 h-8 xs:w-10 xs:h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs xs:text-sm">
-                  {rating.profile?.name?.[0]?.toUpperCase() || '?'}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-foreground text-xs xs:text-sm truncate">
-                    {rating.profile?.name || 'Cliente'}
-                  </p>
-                  <p className="text-[10px] xs:text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(rating.created_at), { 
-                      addSuffix: true, 
-                      locale: ptBR 
-                    })}
-                  </p>
-                </div>
-              </div>
+        <Carousel
+          opts={{ align: 'start', loop: true }}
+          className="w-full"
+        >
+          <CarouselContent className="-ml-3">
+            {ratings.map((rating, index) => (
+              <CarouselItem
+                key={rating.id}
+                className="pl-3 basis-[85%] xs:basis-[70%] sm:basis-1/2 lg:basis-1/3"
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl p-3 xs:p-4 sm:p-5 relative h-full"
+                >
+                  <Quote className="absolute top-3 right-3 h-5 w-5 xs:h-6 xs:w-6 text-primary/20" />
+                  
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <div className="w-8 h-8 xs:w-10 xs:h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs xs:text-sm">
+                      {rating.profile?.name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground text-xs xs:text-sm truncate">
+                        {rating.profile?.name || 'Cliente'}
+                      </p>
+                      <p className="text-[10px] xs:text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(rating.created_at), { 
+                          addSuffix: true, 
+                          locale: ptBR 
+                        })}
+                      </p>
+                    </div>
+                  </div>
 
-              <RatingStars rating={rating.rating} size="sm" />
+                  <RatingStars rating={rating.rating} size="sm" />
 
-              {rating.comment && (
-                <p className="text-xs xs:text-sm text-muted-foreground mt-2 line-clamp-3">
-                  "{rating.comment}"
-                </p>
-              )}
-            </motion.div>
-          ))}
-        </div>
+                  {rating.comment && (
+                    <p className="text-xs xs:text-sm text-muted-foreground mt-2 line-clamp-3">
+                      "{rating.comment}"
+                    </p>
+                  )}
+                </motion.div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <CarouselPrevious className="static translate-y-0 h-9 w-9 rounded-full border-border" />
+            <CarouselNext className="static translate-y-0 h-9 w-9 rounded-full border-border" />
+          </div>
+        </Carousel>
       </div>
     </section>
   );
