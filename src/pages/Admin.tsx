@@ -69,6 +69,8 @@ export function AdminDashboard() {
   const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment, fetchAppointments } = useAdminAppointments();
   const { isOpen, toggleStatus } = useBusinessStatus();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [squeezeInOpen, setSqueezeInOpen] = useState(false);
+  const [externalCutOpen, setExternalCutOpen] = useState(false);
 
   // Enable real-time notifications for new appointments
   useAdminNotifications({
