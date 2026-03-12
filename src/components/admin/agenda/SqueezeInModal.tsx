@@ -4,12 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { User, Phone, Zap, AlertTriangle, CalendarIcon } from 'lucide-react';
+import { User, Phone, Zap, CalendarIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -171,24 +168,16 @@ export function SqueezeInModal({
   const parsedDate = parse(editableDate, 'yyyy-MM-dd', new Date());
 
   const formContent = (
-    <div className="space-y-4 overflow-y-auto flex-1 px-1">
-      {/* Warning pill */}
-      <div className="p-2.5 rounded-2xl bg-warning/10 border border-warning/20 flex items-center gap-2.5">
-        <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0" />
-        <p className="text-xs text-warning font-medium">
-          Encaixe ignora conflitos de horário. Use com cuidado!
-        </p>
-      </div>
-
-      {/* Date & Time */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Data</Label>
+    <div className="space-y-3 overflow-y-auto flex-1 px-1">
+      {/* Date + Time */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Data</Label>
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full h-10 justify-start gap-2 text-xs font-medium rounded-xl bg-muted/30 border-border/50">
-                <CalendarIcon className="h-3.5 w-3.5 text-warning" />
-                {format(parsedDate, "dd/MM/yyyy")}
+              <Button variant="outline" size="sm" className="w-full h-9 justify-start gap-1.5 text-xs font-medium rounded-xl bg-muted/30 border-border/50 px-2">
+                <CalendarIcon className="h-3 w-3 text-warning" />
+                {format(parsedDate, "dd/MM")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 rounded-2xl" align="start">
@@ -206,122 +195,93 @@ export function SqueezeInModal({
             </PopoverContent>
           </Popover>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="squeezeTime" className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Horário *</Label>
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Horário *</Label>
           <Input
-            id="squeezeTime"
             type="time"
             value={customTime}
             onChange={(e) => setCustomTime(e.target.value)}
-            className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
+            className="h-9 text-xs rounded-xl bg-muted/30 border-border/50 px-2"
             autoFocus
           />
         </div>
       </div>
 
       {customTime && totalDuration > 0 && (
-        <div className="text-xs text-muted-foreground text-center py-0.5 font-medium">
+        <div className="text-xs text-muted-foreground text-center font-medium">
           {customTime} → {calculateEndTime()} <span className="text-warning">({totalDuration}min)</span>
         </div>
       )}
 
-      {/* Client info */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="squeezeName" className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
-            <User className="h-3 w-3" /> Nome *
-          </Label>
-          <Input
-            id="squeezeName"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            placeholder="João Silva"
-            className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="squeezePhone" className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
-            <Phone className="h-3 w-3" /> Telefone
-          </Label>
-          <Input
-            id="squeezePhone"
-            value={clientPhone}
-            onChange={(e) => setClientPhone(e.target.value)}
-            placeholder="11999999999"
-            className="h-10 text-sm rounded-xl bg-muted/30 border-border/50"
-          />
-        </div>
+      {/* Client */}
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          value={clientName}
+          onChange={(e) => setClientName(e.target.value)}
+          placeholder="Nome do cliente *"
+          className="h-9 text-sm rounded-xl bg-muted/30 border-border/50"
+        />
+        <Input
+          value={clientPhone}
+          onChange={(e) => setClientPhone(e.target.value)}
+          placeholder="Telefone"
+          className="h-9 text-sm rounded-xl bg-muted/30 border-border/50"
+        />
       </div>
 
-      {/* Services */}
-      <div className="space-y-1.5">
-        <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Serviços *</Label>
-        <ScrollArea className="h-[140px] border border-border/50 rounded-2xl p-2 bg-muted/10">
+      {/* Services - compact chips */}
+      <div className="space-y-1">
+        <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Serviços *</Label>
+        <div className="flex flex-wrap gap-1.5">
           {loadingServices ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-xs text-muted-foreground">Carregando...</p>
-            </div>
+            <p className="text-xs text-muted-foreground">Carregando...</p>
           ) : (
-            <div className="space-y-1.5">
-              {services.map((service) => (
-                <div
+            services.map((service) => {
+              const isSelected = selectedServices.includes(service.id);
+              return (
+                <button
                   key={service.id}
-                  className={cn(
-                    'flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer transition-all active:scale-[0.98]',
-                    selectedServices.includes(service.id)
-                      ? 'bg-warning/15 border border-warning/30'
-                      : 'hover:bg-muted/50 border border-transparent'
-                  )}
+                  type="button"
                   onClick={() => toggleService(service.id)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-[0.96] border',
+                    isSelected
+                      ? 'bg-warning/20 border-warning/40 text-warning'
+                      : 'bg-muted/20 border-border/50 text-muted-foreground'
+                  )}
                 >
-                  <Checkbox checked={selectedServices.includes(service.id)} className="h-4 w-4 rounded-md" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium truncate">{service.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{service.duration_minutes}min</p>
-                  </div>
-                  <span className={cn(
-                    "text-xs font-bold flex-shrink-0",
-                    service.price === 0 ? "text-primary" : "text-warning"
-                  )}>
-                    {service.price === 0 ? 'VIP' : `R$${service.price}`}
-                  </span>
-                </div>
-              ))}
-            </div>
+                  {service.name} • {service.duration_minutes}min • R${service.price}
+                </button>
+              );
+            })
           )}
-        </ScrollArea>
+        </div>
       </div>
 
-      {/* Summary */}
+      {/* Total */}
       {selectedServices.length > 0 && (
-        <div className="p-3 rounded-2xl bg-warning/10 border border-warning/20 space-y-1.5">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Duração</span>
-            <Badge variant="secondary" className="text-[10px] h-5 rounded-lg">{totalDuration}min</Badge>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Total</span>
-            <span className="font-bold text-warning text-base">R$ {totalPrice}</span>
-          </div>
+        <div className="flex justify-between items-center px-1">
+          <span className="text-xs text-muted-foreground">{totalDuration}min</span>
+          <span className="font-bold text-warning text-lg">R$ {totalPrice}</span>
         </div>
       )}
     </div>
   );
 
   const footerContent = (
-    <div className="flex gap-3 pt-2">
+    <div className="flex gap-2 pt-1">
       <Button
         variant="outline"
         onClick={() => onOpenChange(false)}
         disabled={loading}
-        className="flex-1 h-11 rounded-2xl text-sm font-medium"
+        className="flex-1 h-10 rounded-2xl text-sm font-medium"
       >
         Cancelar
       </Button>
       <Button
         onClick={handleSubmit}
         disabled={loading || selectedServices.length === 0 || !customTime}
-        className="flex-1 h-11 rounded-2xl text-sm font-medium bg-warning text-warning-foreground hover:bg-warning/90 active:scale-[0.97] transition-all"
+        className="flex-1 h-10 rounded-2xl text-sm font-medium bg-warning text-warning-foreground hover:bg-warning/90 active:scale-[0.97] transition-all"
       >
         {loading ? 'Salvando...' : '⚡ Encaixar'}
       </Button>
