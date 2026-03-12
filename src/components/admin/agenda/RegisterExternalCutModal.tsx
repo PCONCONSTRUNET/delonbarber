@@ -47,6 +47,8 @@ export function RegisterExternalCutModal({
   const [customPrice, setCustomPrice] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
+  const [editableDate, setEditableDate] = useState(selectedDate);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const selectedServiceDetails = services.filter(s => selectedServices.includes(s.id));
   const totalDuration = selectedServiceDetails.reduce((acc, s) => acc + s.duration_minutes, 0);
