@@ -228,6 +228,22 @@ export function AdminAgenda() {
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
               appointmentCount={dayAppointments.length}
+              onSqueezeIn={() => setSqueezeInOpen(true)}
+              onRegisterExternal={() => setExternalCutOpen(true)}
+            />
+
+            <SqueezeInModal
+              open={squeezeInOpen}
+              onOpenChange={setSqueezeInOpen}
+              selectedDate={format(selectedDate, 'yyyy-MM-dd')}
+              onSuccess={fetchAppointments}
+            />
+
+            <RegisterExternalCutModal
+              open={externalCutOpen}
+              onOpenChange={setExternalCutOpen}
+              selectedDate={format(selectedDate, 'yyyy-MM-dd')}
+              onSuccess={fetchAppointments}
             />
 
             {/* Timeline appointments */}
