@@ -181,9 +181,29 @@ export function RegisterExternalCutModal({
 
       {/* Date + optional time */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-2.5 rounded-xl bg-muted/30 border border-border/50 flex items-center gap-2">
-          <Clock className="h-4 w-4 text-success flex-shrink-0" />
-          <p className="text-xs font-medium">{formatDate(selectedDate)}</p>
+        <div className="space-y-1.5">
+          <Label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Data</Label>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full h-10 justify-start gap-2 text-xs font-medium rounded-xl bg-muted/30 border-border/50">
+                <CalendarIcon className="h-3.5 w-3.5 text-success" />
+                {format(parsedDate, "dd/MM/yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 rounded-2xl" align="start">
+              <Calendar
+                mode="single"
+                selected={parsedDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setEditableDate(format(date, 'yyyy-MM-dd'));
+                    setCalendarOpen(false);
+                  }
+                }}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="extTime" className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Horário (opcional)</Label>
