@@ -14,7 +14,7 @@ interface ServiceSelectionProps {
 }
 
 const categoryLabels: Record<string, string> = {
-  corte: '✂️ Cortes',
+  corte: 'Cortes',
   barba: '🧔 Barba',
   sobrancelha: '👁️ Sobrancelha',
   combo: '⭐ Combos',
