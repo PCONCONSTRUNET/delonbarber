@@ -85,7 +85,7 @@ const Cliente = () => {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <AnimatedBackground />
       
-      <main className="pt-6 pb-20 px-4 max-w-lg mx-auto safe-area-top safe-area-bottom">
+      <main className="pt-10 pb-20 px-4 max-w-lg mx-auto safe-area-top safe-area-bottom">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
