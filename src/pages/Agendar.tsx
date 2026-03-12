@@ -24,6 +24,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { useIsAdmin } from '@/hooks/useAdmin';
+import scissorsImg from '@/assets/scissors.png';
 
 const steps = [
   { id: 1, title: 'Serviços' },
@@ -283,13 +284,13 @@ const Agendar = () => {
                 >
                   {servicesLoading ? (
                     <div className="flex justify-center py-12">
-                      <motion.span
+                      <motion.img
+                        src={scissorsImg}
+                        alt="Carregando"
                         animate={{ rotate: 360 }}
                         transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                        className="text-3xl"
-                      >
-                        ✂️
-                      </motion.span>
+                        className="w-12 h-12"
+                      />
                     </div>
                   ) : (
                     <ServiceSelection
@@ -310,13 +311,13 @@ const Agendar = () => {
                 >
                   {hoursLoading ? (
                     <div className="flex justify-center py-12">
-                      <motion.span
+                      <motion.img
+                        src={scissorsImg}
+                        alt="Carregando"
                         animate={{ rotate: 360 }}
                         transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                        className="text-3xl"
-                      >
-                        ✂️
-                      </motion.span>
+                        className="w-12 h-12"
+                      />
                     </div>
                   ) : (
                     <DateTimeSelection
