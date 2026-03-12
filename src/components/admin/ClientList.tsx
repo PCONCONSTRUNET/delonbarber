@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Phone, Calendar, DollarSign, Eye, Trash2, Link } from 'lucide-react';
+import { User, Phone, Calendar, DollarSign, Eye, Trash2, Link, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Client } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { ClientDetailsModal } from './ClientDetailsModal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useExclusiveClients } from '@/hooks/useExclusiveClients';
+import { cn } from '@/lib/utils';
 
 interface ClientListProps {
   clients: Client[];
@@ -17,6 +19,7 @@ interface ClientListProps {
 export function ClientList({ clients, onDeleteClient }: ClientListProps) {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { exclusiveIds, toggleExclusive } = useExclusiveClients();
 
   const handleDelete = async (client: Client) => {
     if (!onDeleteClient) return;
@@ -44,6 +47,12 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <User className="h-4 w-4 text-primary shrink-0" />
                   <span className="font-semibold text-sm md:text-base truncate">{client.name || 'Sem nome'}</span>
+                  {!client.is_guest && exclusiveIds.includes(client.user_id) && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                      <Star className="h-2.5 w-2.5 mr-0.5 fill-yellow-500" />
+                      Exclusivo
+                    </Badge>
+                  )}
                   {client.is_guest && (
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-500/10 text-blue-500 border-blue-500/30">
                       <Link className="h-2.5 w-2.5 mr-0.5" />
@@ -78,6 +87,27 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
               </div>
 
               <div className="flex gap-1 md:gap-2 shrink-0">
+                {/* Exclusive star toggle - only for registered clients */}
+                {!client.is_guest && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-8 w-8 p-0",
+                      exclusiveIds.includes(client.user_id) 
+                        ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-600" 
+                        : "text-muted-foreground"
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExclusive(client.user_id);
+                    }}
+                    title={exclusiveIds.includes(client.user_id) ? 'Remover exclusividade' : 'Marcar como exclusivo (sábado)'}
+                  >
+                    <Star className={cn("h-3.5 w-3.5", exclusiveIds.includes(client.user_id) && "fill-yellow-500")} />
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   size="sm"
