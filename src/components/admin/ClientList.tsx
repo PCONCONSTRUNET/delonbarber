@@ -87,6 +87,27 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
               </div>
 
               <div className="flex gap-1 md:gap-2 shrink-0">
+                {/* Exclusive star toggle - only for registered clients */}
+                {!client.is_guest && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-8 w-8 p-0",
+                      exclusiveIds.includes(client.user_id) 
+                        ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-600" 
+                        : "text-muted-foreground"
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExclusive(client.user_id);
+                    }}
+                    title={exclusiveIds.includes(client.user_id) ? 'Remover exclusividade' : 'Marcar como exclusivo (sábado)'}
+                  >
+                    <Star className={cn("h-3.5 w-3.5", exclusiveIds.includes(client.user_id) && "fill-yellow-500")} />
+                  </Button>
+                )}
+
                 <Button
                   variant="outline"
                   size="sm"

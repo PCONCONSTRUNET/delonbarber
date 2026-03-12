@@ -194,14 +194,16 @@ export function DateTimeSelection({
     );
   };
 
-  // Disable days that are closed OR blocked by VIP weekly limit
+  // Disable days that are closed OR blocked by VIP weekly limit OR Saturday for non-exclusive
   const disabledDays = (date: Date) => {
     const dayOfWeek = date.getDay();
     const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     const isBlockedByVipLimit = isDateBlockedByVip(date);
+    // Saturday (6) is exclusive - only allowed for exclusive clients
+    const isSaturdayRestricted = dayOfWeek === 6 && !isExclusiveClient;
     
-    return isPast || !dayHours?.is_open || isBlockedByVipLimit;
+    return isPast || !dayHours?.is_open || isBlockedByVipLimit || isSaturdayRestricted;
   };
 
   // Custom day content to show VIP blocked indicator
