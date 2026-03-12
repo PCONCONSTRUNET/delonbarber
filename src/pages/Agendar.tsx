@@ -353,31 +353,6 @@ const Agendar = () => {
               )}
             </AnimatePresence>
 
-            {/* Navigation Buttons - fixos no bottom */}
-            <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-background/90 backdrop-blur-lg border-t border-border safe-area-bottom">
-              <div className="max-w-lg mx-auto flex gap-2 sm:gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep(prev => prev - 1)}
-                  disabled={currentStep === 1}
-                  className="flex-1 h-11 sm:h-12 rounded-xl sm:rounded-2xl text-sm"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Voltar
-                </Button>
-
-                {currentStep < 3 && (
-                  <Button
-                    onClick={() => setCurrentStep(prev => prev + 1)}
-                    disabled={!canProceed()}
-                    className="flex-1 h-11 sm:h-12 rounded-xl sm:rounded-2xl text-sm"
-                  >
-                    Próximo
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                )}
-              </div>
-            </div>
           </TabsContent>
 
           <TabsContent value="historico" className="mt-0">
