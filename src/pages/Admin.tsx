@@ -11,6 +11,8 @@ import { CalendarView } from '@/components/admin/CalendarView';
 import { TimelineAppointments } from '@/components/admin/agenda/TimelineAppointments';
 import { CompactCalendar } from '@/components/admin/agenda/CompactCalendar';
 import { AgendaHeader } from '@/components/admin/agenda/AgendaHeader';
+import { SqueezeInModal } from '@/components/admin/agenda/SqueezeInModal';
+import { RegisterExternalCutModal } from '@/components/admin/agenda/RegisterExternalCutModal';
 import { ServiceForm } from '@/components/admin/ServiceForm';
 import { ClientList } from '@/components/admin/ClientList';
 import { FinancialReport } from '@/components/admin/FinancialReport';
