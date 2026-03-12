@@ -77,15 +77,12 @@ export function AgendaHeader({
             </div>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 gap-1.5 text-xs border-success/30 text-success hover:bg-success/10"
-          onClick={onRegisterExternal}
-        >
-          <ClipboardCheck className="h-3.5 w-3.5" />
-          Corte Externo
-        </Button>
+        <div className="flex-1">
+          <button className="external-cut-btn" onClick={onRegisterExternal}>
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            <span>Corte Externo</span>
+          </button>
+        </div>
       </div>
     </div>
   );
