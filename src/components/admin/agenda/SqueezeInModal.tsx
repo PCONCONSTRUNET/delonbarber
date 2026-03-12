@@ -198,9 +198,29 @@ export function SqueezeInModal({
 
           {/* Date and custom time */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="p-2 rounded-lg bg-muted/50 flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary flex-shrink-0" />
-              <p className="text-xs font-medium">{formatDate(selectedDate)}</p>
+            <div className="space-y-1">
+              <Label className="text-xs">Data</Label>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full h-8 justify-start gap-2 text-xs font-medium">
+                    <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                    {format(parsedDate, "dd/MM/yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={parsedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setEditableDate(format(date, 'yyyy-MM-dd'));
+                        setCalendarOpen(false);
+                      }
+                    }}
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-1">
               <Label htmlFor="squeezeTime" className="text-xs">Horário *</Label>
