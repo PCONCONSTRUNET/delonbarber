@@ -5,6 +5,7 @@ import { useMyPackages } from '@/hooks/useMyPackages';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import scissorsImg from '@/assets/scissors.png';
 
 interface ServiceSelectionProps {
   services: Service[];
@@ -13,7 +14,7 @@ interface ServiceSelectionProps {
 }
 
 const categoryLabels: Record<string, string> = {
-  corte: '✂️ Cortes',
+  corte: 'Cortes',
   barba: '🧔 Barba',
   sobrancelha: '👁️ Sobrancelha',
   combo: '⭐ Combos',
@@ -70,8 +71,15 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: catIndex * 0.1 }}
         >
-          <h3 className="text-lg font-semibold text-foreground mb-3 px-1">
-            {categoryLabels[category] || category}
+          <h3 className="text-lg font-semibold text-foreground mb-3 px-1 flex items-center gap-2">
+            {category === 'corte' ? (
+              <>
+                <img src={scissorsImg} alt="" className="w-5 h-5" />
+                Cortes
+              </>
+            ) : (
+              categoryLabels[category] || category
+            )}
           </h3>
           
           <div className="space-y-3">
@@ -154,7 +162,7 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
                         />
                       ) : (
                         <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <span className="text-2xl">✂️</span>
+                          <img src={scissorsImg} alt="" className="w-8 h-8" />
                         </div>
                       )}
                     </div>
