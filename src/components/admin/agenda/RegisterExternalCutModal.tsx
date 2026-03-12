@@ -286,8 +286,8 @@ export function RegisterExternalCutModal({
           <div className="space-y-1">
             <Label className="text-xs">Forma de pagamento</Label>
             <PaymentMethodSelector
-              selectedMethod={paymentMethod}
-              onSelectMethod={setPaymentMethod}
+              selected={paymentMethod}
+              onSelect={setPaymentMethod}
             />
           </div>
 
