@@ -62,7 +62,7 @@ export function PaymentMethodSelector({ selected, onSelect, disabled }: PaymentM
               onClick={() => !disabled && onSelect(method.id)}
               disabled={disabled}
               className={cn(
-                "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
+                "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all",
                 "hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed",
                 isSelected
                   ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
