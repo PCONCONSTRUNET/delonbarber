@@ -47,6 +47,12 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <User className="h-4 w-4 text-primary shrink-0" />
                   <span className="font-semibold text-sm md:text-base truncate">{client.name || 'Sem nome'}</span>
+                  {!client.is_guest && exclusiveIds.includes(client.user_id) && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                      <Star className="h-2.5 w-2.5 mr-0.5 fill-yellow-500" />
+                      Exclusivo
+                    </Badge>
+                  )}
                   {client.is_guest && (
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-500/10 text-blue-500 border-blue-500/30">
                       <Link className="h-2.5 w-2.5 mr-0.5" />
