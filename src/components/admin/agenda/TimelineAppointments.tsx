@@ -302,10 +302,10 @@ function SwipeableAppointmentCard({
 
   // Calculate total width needed for actions
   const getActionsWidth = () => {
-    if (apt.status === 'pending') return 200; // Aceitar + Recusar + Lixeira
-    if (apt.status === 'confirmed') return isPaid ? 160 : 220; // Concluir + Pagar + Lixeira
-    if (apt.status === 'completed' && !isPaid) return 160; // Pagar + Lixeira
-    return 56; // Apenas Lixeira
+    if (apt.status === 'pending') return 200;
+    if (apt.status === 'confirmed') return isPaid ? 160 : 220;
+    if (apt.status === 'completed') return isPaid ? 120 : 220; // Falta + (Pagar) + Lixeira
+    return 56;
   };
 
   const actionsWidth = getActionsWidth();
