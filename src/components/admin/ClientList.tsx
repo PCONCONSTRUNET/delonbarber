@@ -19,6 +19,7 @@ interface ClientListProps {
 export function ClientList({ clients, onDeleteClient }: ClientListProps) {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { exclusiveIds, toggleExclusive } = useExclusiveClients();
 
   const handleDelete = async (client: Client) => {
     if (!onDeleteClient) return;
