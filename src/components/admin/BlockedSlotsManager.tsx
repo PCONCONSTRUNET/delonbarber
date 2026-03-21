@@ -22,6 +22,12 @@ interface BlockedSlot {
   appointment_id: string | null;
 }
 
+interface AppointmentSlot {
+  time: string;
+  clientName: string | null;
+}
+
+
 interface BusinessHours {
   day_of_week: number;
   open_time: string;
