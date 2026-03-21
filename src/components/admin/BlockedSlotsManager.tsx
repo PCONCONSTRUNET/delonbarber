@@ -154,6 +154,10 @@ export function BlockedSlotsManager() {
     return blockedSlots.find(slot => slot.blocked_time.substring(0, 5) === time);
   };
 
+  const isSlotBooked = (time: string) => {
+    return appointmentSlots.find(slot => slot.time === time);
+  };
+
   const toggleSlotBlock = async (time: string) => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const existingBlock = isSlotBlocked(time);
