@@ -22,6 +22,12 @@ interface BlockedSlot {
   appointment_id: string | null;
 }
 
+interface AppointmentSlot {
+  time: string;
+  clientName: string | null;
+}
+
+
 interface BusinessHours {
   day_of_week: number;
   open_time: string;
@@ -38,6 +44,8 @@ export function BlockedSlotsManager() {
   const [loading, setLoading] = useState(false);
   const [reason, setReason] = useState('');
 
+  const [appointmentSlots, setAppointmentSlots] = useState<AppointmentSlot[]>([]);
+
   useEffect(() => {
     fetchBusinessHours();
   }, []);
@@ -45,6 +53,7 @@ export function BlockedSlotsManager() {
   useEffect(() => {
     if (selectedDate) {
       fetchBlockedSlots();
+      fetchAppointments();
     }
   }, [selectedDate]);
 
@@ -69,6 +78,35 @@ export function BlockedSlotsManager() {
       setBlockedSlots(data || []);
     }
     setLoading(false);
+  };
+
+  const fetchAppointments = async () => {
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const { data } = await supabase
+      .from('appointments')
+      .select('appointment_time, total_duration, guest_name, user_id, status')
+      .eq('appointment_date', dateStr)
+      .in('status', ['pending', 'confirmed']);
+    
+    if (data) {
+      const slots: AppointmentSlot[] = [];
+      for (const apt of data) {
+        const duration = apt.total_duration || 30;
+        const [h, m] = apt.appointment_time.split(':').map(Number);
+        let totalMin = h * 60 + m;
+        const slotsNeeded = Math.ceil(duration / 30);
+        for (let i = 0; i < slotsNeeded; i++) {
+          const slotH = Math.floor(totalMin / 60);
+          const slotM = totalMin % 60;
+          slots.push({
+            time: `${String(slotH).padStart(2, '0')}:${String(slotM).padStart(2, '0')}`,
+            clientName: apt.guest_name || null,
+          });
+          totalMin += 30;
+        }
+      }
+      setAppointmentSlots(slots);
+    }
   };
 
   const generateTimeSlots = () => {
@@ -114,6 +152,10 @@ export function BlockedSlotsManager() {
 
   const isSlotBlocked = (time: string) => {
     return blockedSlots.find(slot => slot.blocked_time.substring(0, 5) === time);
+  };
+
+  const isSlotBooked = (time: string) => {
+    return appointmentSlots.find(slot => slot.time === time);
   };
 
   const toggleSlotBlock = async (time: string) => {
@@ -288,23 +330,25 @@ export function BlockedSlotsManager() {
               <div className="grid grid-cols-3 gap-2">
                 {timeSlots.map((time) => {
                   const blocked = isSlotBlocked(time);
+                  const booked = isSlotBooked(time);
                   const isAutoBlocked = blocked && !blocked.is_manual;
+                  const isOccupied = isAutoBlocked || booked;
                   
                   return (
                     <button
                       key={time}
-                      onClick={() => toggleSlotBlock(time)}
-                      disabled={isAutoBlocked}
+                      onClick={() => !isOccupied && toggleSlotBlock(time)}
+                      disabled={!!isOccupied}
                       className={cn(
                         "relative p-3 rounded-lg text-sm font-medium transition-all",
                         "border-2 hover:scale-105",
-                        !blocked && "bg-green-500/20 border-green-500/50 text-green-400 hover:bg-green-500/30",
-                        blocked && blocked.is_manual && "bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30",
-                        isAutoBlocked && "bg-amber-500/20 border-amber-500/50 text-amber-400 cursor-not-allowed opacity-75"
+                        !blocked && !booked && "bg-green-500/20 border-green-500/50 text-green-400 hover:bg-green-500/30",
+                        blocked && blocked.is_manual && !booked && "bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30",
+                        isOccupied && "bg-amber-500/20 border-amber-500/50 text-amber-400 cursor-not-allowed opacity-75"
                       )}
                     >
                       <span>{time}</span>
-                      {blocked && (
+                      {(blocked || booked) && (
                         <Lock className="h-3 w-3 absolute top-1 right-1" />
                       )}
                     </button>
