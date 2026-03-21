@@ -425,9 +425,22 @@ const Perfil = () => {
                                 <span className="text-muted-foreground">
                                   R$ {Number(apt.total_price).toFixed(0)}
                                 </span>
-                                <span className={apt.payment_status === 'paid' ? 'text-green-500' : 'text-yellow-500'}>
-                                  {apt.payment_status === 'paid' ? '✓ Pago' : 'Aguardando'}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className={apt.payment_status === 'paid' ? 'text-green-500' : 'text-yellow-500'}>
+                                    {apt.payment_status === 'paid' ? '✓ Pago' : 'Aguardando'}
+                                  </span>
+                                  {['pending', 'confirmed'].includes(apt.status) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setCancelId(apt.id)}
+                                      className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10 text-xs"
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Cancelar
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );
@@ -446,6 +459,27 @@ const Perfil = () => {
           </div>
         </div>
       </main>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={!!cancelId} onOpenChange={(open) => !open && setCancelId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar? O horário será liberado para outros clientes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não, manter</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => cancelId && handleCancelAppointment(cancelId)}
+            >
+              Sim, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Footer />
     </div>
