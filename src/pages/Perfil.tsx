@@ -63,6 +63,7 @@ const Perfil = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [stats, setStats] = useState<ClientStats>({ totalVisits: 0, totalSpent: 0, completedVisits: 0 });
+  const [cancelId, setCancelId] = useState<string | null>(null);
 
   const { subscribeToAppointments } = useClientNotifications();
 
