@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Phone, Mail, Camera, Loader2, Save, Bell, Calendar, Clock, ArrowLeft, Gift, DollarSign, Star, Trophy } from "lucide-react";
+import { User, Phone, Mail, Camera, Loader2, Save, Bell, Calendar, Clock, ArrowLeft, Gift, DollarSign, Star, Trophy, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useClientNotifications } from "@/hooks/useNotifications";
@@ -17,6 +17,16 @@ import { NotificationHistory } from "@/components/client/NotificationHistory";
 import { MyLoyaltyProgress } from "@/components/client/MyLoyaltyProgress";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Appointment {
   id: string;
@@ -53,6 +63,7 @@ const Perfil = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [stats, setStats] = useState<ClientStats>({ totalVisits: 0, totalSpent: 0, completedVisits: 0 });
+  const [cancelId, setCancelId] = useState<string | null>(null);
 
   const { subscribeToAppointments } = useClientNotifications();
 
@@ -136,6 +147,28 @@ const Perfil = () => {
     }
     
     setIsSaving(false);
+  };
+
+  const handleCancelAppointment = async (appointmentId: string) => {
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'cancelled' })
+      .eq('id', appointmentId);
+
+    if (error) {
+      toast.error("Não foi possível cancelar o agendamento.");
+      return;
+    }
+
+    await supabase
+      .from('blocked_slots')
+      .delete()
+      .eq('appointment_id', appointmentId)
+      .eq('is_manual', false);
+
+    toast.success("Agendamento cancelado e horário liberado!");
+    setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: 'cancelled' } : a));
+    setCancelId(null);
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -392,9 +425,22 @@ const Perfil = () => {
                                 <span className="text-muted-foreground">
                                   R$ {Number(apt.total_price).toFixed(0)}
                                 </span>
-                                <span className={apt.payment_status === 'paid' ? 'text-green-500' : 'text-yellow-500'}>
-                                  {apt.payment_status === 'paid' ? '✓ Pago' : 'Aguardando'}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className={apt.payment_status === 'paid' ? 'text-green-500' : 'text-yellow-500'}>
+                                    {apt.payment_status === 'paid' ? '✓ Pago' : 'Aguardando'}
+                                  </span>
+                                  {['pending', 'confirmed'].includes(apt.status) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setCancelId(apt.id)}
+                                      className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10 text-xs"
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Cancelar
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );
@@ -413,6 +459,27 @@ const Perfil = () => {
           </div>
         </div>
       </main>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={!!cancelId} onOpenChange={(open) => !open && setCancelId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar? O horário será liberado para outros clientes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Não, manter</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => cancelId && handleCancelAppointment(cancelId)}
+            >
+              Sim, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Footer />
     </div>
