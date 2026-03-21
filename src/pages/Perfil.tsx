@@ -9,9 +9,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Phone, Mail, Camera, Loader2, Save, Bell, Calendar, Clock, ArrowLeft, Gift, DollarSign, Star, Trophy } from "lucide-react";
+import { User, Phone, Mail, Camera, Loader2, Save, Bell, Calendar, Clock, ArrowLeft, Gift, DollarSign, Star, Trophy, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useClientNotifications } from "@/hooks/useNotifications";
+import { NotificationHistory } from "@/components/client/NotificationHistory";
+import { MyLoyaltyProgress } from "@/components/client/MyLoyaltyProgress";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useClientNotifications } from "@/hooks/useNotifications";
 import { NotificationHistory } from "@/components/client/NotificationHistory";
 import { MyLoyaltyProgress } from "@/components/client/MyLoyaltyProgress";
