@@ -27,11 +27,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useClientNotifications } from "@/hooks/useNotifications";
-import { NotificationHistory } from "@/components/client/NotificationHistory";
-import { MyLoyaltyProgress } from "@/components/client/MyLoyaltyProgress";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface Appointment {
   id: string;
