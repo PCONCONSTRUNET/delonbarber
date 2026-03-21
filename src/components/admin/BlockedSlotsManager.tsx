@@ -330,23 +330,25 @@ export function BlockedSlotsManager() {
               <div className="grid grid-cols-3 gap-2">
                 {timeSlots.map((time) => {
                   const blocked = isSlotBlocked(time);
+                  const booked = isSlotBooked(time);
                   const isAutoBlocked = blocked && !blocked.is_manual;
+                  const isOccupied = isAutoBlocked || booked;
                   
                   return (
                     <button
                       key={time}
-                      onClick={() => toggleSlotBlock(time)}
-                      disabled={isAutoBlocked}
+                      onClick={() => !isOccupied && toggleSlotBlock(time)}
+                      disabled={!!isOccupied}
                       className={cn(
                         "relative p-3 rounded-lg text-sm font-medium transition-all",
                         "border-2 hover:scale-105",
-                        !blocked && "bg-green-500/20 border-green-500/50 text-green-400 hover:bg-green-500/30",
-                        blocked && blocked.is_manual && "bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30",
-                        isAutoBlocked && "bg-amber-500/20 border-amber-500/50 text-amber-400 cursor-not-allowed opacity-75"
+                        !blocked && !booked && "bg-green-500/20 border-green-500/50 text-green-400 hover:bg-green-500/30",
+                        blocked && blocked.is_manual && !booked && "bg-red-500/20 border-red-500/50 text-red-400 hover:bg-red-500/30",
+                        isOccupied && "bg-amber-500/20 border-amber-500/50 text-amber-400 cursor-not-allowed opacity-75"
                       )}
                     >
                       <span>{time}</span>
-                      {blocked && (
+                      {(blocked || booked) && (
                         <Lock className="h-3 w-3 absolute top-1 right-1" />
                       )}
                     </button>
