@@ -149,6 +149,28 @@ const Perfil = () => {
     setIsSaving(false);
   };
 
+  const handleCancelAppointment = async (appointmentId: string) => {
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'cancelled' })
+      .eq('id', appointmentId);
+
+    if (error) {
+      toast.error("Não foi possível cancelar o agendamento.");
+      return;
+    }
+
+    await supabase
+      .from('blocked_slots')
+      .delete()
+      .eq('appointment_id', appointmentId)
+      .eq('is_manual', false);
+
+    toast.success("Agendamento cancelado e horário liberado!");
+    setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: 'cancelled' } : a));
+    setCancelId(null);
+  };
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
