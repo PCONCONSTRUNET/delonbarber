@@ -485,7 +485,17 @@ export function useAppointments() {
       return false;
     }
 
-    // Blocked slots are released automatically by database trigger
+    // Safety net: explicitly delete blocked slots for this appointment
+    // in case the database trigger didn't fire properly
+    const { error: blockError } = await supabase
+      .from('blocked_slots')
+      .delete()
+      .eq('appointment_id', appointmentId)
+      .eq('is_manual', false);
+
+    if (blockError) {
+      console.warn('Could not clean blocked slots (trigger may have handled it):', blockError);
+    }
 
     toast({
       title: "Agendamento cancelado",
