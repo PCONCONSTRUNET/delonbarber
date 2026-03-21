@@ -44,6 +44,8 @@ export function BlockedSlotsManager() {
   const [loading, setLoading] = useState(false);
   const [reason, setReason] = useState('');
 
+  const [appointmentSlots, setAppointmentSlots] = useState<AppointmentSlot[]>([]);
+
   useEffect(() => {
     fetchBusinessHours();
   }, []);
@@ -51,6 +53,7 @@ export function BlockedSlotsManager() {
   useEffect(() => {
     if (selectedDate) {
       fetchBlockedSlots();
+      fetchAppointments();
     }
   }, [selectedDate]);
 
@@ -75,6 +78,35 @@ export function BlockedSlotsManager() {
       setBlockedSlots(data || []);
     }
     setLoading(false);
+  };
+
+  const fetchAppointments = async () => {
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const { data } = await supabase
+      .from('appointments')
+      .select('appointment_time, total_duration, guest_name, user_id, status')
+      .eq('appointment_date', dateStr)
+      .in('status', ['pending', 'confirmed']);
+    
+    if (data) {
+      const slots: AppointmentSlot[] = [];
+      for (const apt of data) {
+        const duration = apt.total_duration || 30;
+        const [h, m] = apt.appointment_time.split(':').map(Number);
+        let totalMin = h * 60 + m;
+        const slotsNeeded = Math.ceil(duration / 30);
+        for (let i = 0; i < slotsNeeded; i++) {
+          const slotH = Math.floor(totalMin / 60);
+          const slotM = totalMin % 60;
+          slots.push({
+            time: `${String(slotH).padStart(2, '0')}:${String(slotM).padStart(2, '0')}`,
+            clientName: apt.guest_name || null,
+          });
+          totalMin += 30;
+        }
+      }
+      setAppointmentSlots(slots);
+    }
   };
 
   const generateTimeSlots = () => {
