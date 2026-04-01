@@ -48,7 +48,22 @@ const Cliente = () => {
   }, [isAdmin]);
 
   useEffect(() => {
+    let mounted = true;
+
+    // Set up listener FIRST to catch token refresh events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      if (!session) {
+        navigate('/login');
+      } else {
+        setUser(session.user);
+        setLoading(false);
+      }
+    });
+
+    // Then check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       if (!session) {
         navigate('/login');
       } else {
@@ -57,15 +72,10 @@ const Cliente = () => {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        navigate('/login');
-      } else {
-        setUser(session.user);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const handleLogout = async () => {
