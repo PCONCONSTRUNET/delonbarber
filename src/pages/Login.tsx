@@ -43,19 +43,31 @@ const Login = () => {
   const [signupPassword, setSignupPassword] = useState("");
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        navigate("/cliente");
-      }
-    });
+    let mounted = true;
+    let isInitialCheck = true;
 
+    // Check current session first
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       if (session?.user) {
+        navigate("/cliente");
+      }
+      isInitialCheck = false;
+    });
+
+    // Listen for auth changes (login events)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      // Only redirect on explicit sign-in events, not on initial session restore
+      if (event === 'SIGNED_IN' && session?.user && !isInitialCheck) {
         navigate("/cliente");
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
