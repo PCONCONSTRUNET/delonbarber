@@ -126,6 +126,11 @@ const Perfil = () => {
     };
 
     checkAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   // Subscribe to real-time appointment updates
