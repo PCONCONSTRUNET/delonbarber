@@ -68,8 +68,19 @@ const Perfil = () => {
   const { subscribeToAppointments } = useClientNotifications();
 
   useEffect(() => {
+    let mounted = true;
+
+    // Listen for auth changes (including token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      if (!session?.user) {
+        navigate("/login");
+      }
+    });
+
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!mounted) return;
       if (!session?.user) {
         navigate("/login");
         return;
@@ -115,6 +126,11 @@ const Perfil = () => {
     };
 
     checkAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   // Subscribe to real-time appointment updates
