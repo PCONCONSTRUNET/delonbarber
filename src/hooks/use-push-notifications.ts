@@ -204,6 +204,27 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
         setSubscribed(true);
         await saveSubscription(pid);
         console.log('[push] inscrição salva com sucesso');
+
+        // Welcome push so the user sees a confirmation right away
+        // (same UX as competitor apps). Small delay so OneSignal fully
+        // registers the player on their side before targeting it.
+        setTimeout(async () => {
+          try {
+            const { data: welcomeRes, error: welcomeErr } = await supabase.functions.invoke('send-push', {
+              body: {
+                role,
+                user_id: userId ?? undefined,
+                title: '🔔 Notificações ativadas!',
+                message: 'Você receberá avisos de novos agendamentos aqui.',
+                url: '/',
+              },
+            });
+            console.log('[push] welcome push enviado', { welcomeRes, welcomeErr });
+          } catch (e) {
+            console.warn('[push] welcome push falhou (não-crítico):', e);
+          }
+        }, 1500);
+
         return true;
       }
       console.error('[push] timeout: player_id nunca chegou. optedIn=', OneSignal.User?.PushSubscription?.optedIn);
