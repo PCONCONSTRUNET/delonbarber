@@ -71,11 +71,11 @@ export function PushPromptModal() {
       return;
     }
 
-    console.log('[PushPrompt] scheduling prompt in 3s');
+    console.log('[PushPrompt] scheduling prompt in 500ms');
     const t = setTimeout(() => {
       console.log('[PushPrompt] opening prompt');
       setOpen(true);
-    }, 3000);
+    }, 500);
     return () => clearTimeout(t);
   }, [authChecked, userId, supported, subscribed, permission, location.pathname]);
 
