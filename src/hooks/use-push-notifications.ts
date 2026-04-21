@@ -116,8 +116,8 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
           language: navigator.language,
         };
 
-        const { error } = await supabase
-          .from('push_subscriptions' as never)
+        const { error } = await (supabase as any)
+          .from('push_subscriptions')
           .upsert(
             {
               player_id: pid,
@@ -203,8 +203,8 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
       setLoading(true);
       await OneSignal.User.PushSubscription.optOut();
       if (playerId) {
-        await supabase
-          .from('push_subscriptions' as never)
+        await (supabase as any)
+          .from('push_subscriptions')
           .update({ ativo: false, updated_at: new Date().toISOString() })
           .eq('player_id', playerId);
       }
