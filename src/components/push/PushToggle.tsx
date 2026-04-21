@@ -10,7 +10,7 @@ interface PushToggleProps {
 }
 
 export function PushToggle({ role, userId, variant = 'default' }: PushToggleProps) {
-  const { supported, subscribed, loading, enable, disable, unsupportedReason, isIOS } =
+  const { supported, subscribed, loading, enable, disable, unsupportedReason, isIOS, permission } =
     usePushNotifications({ role, userId });
 
   const handleToggle = async () => {
@@ -23,8 +23,19 @@ export function PushToggle({ role, userId, variant = 'default' }: PushToggleProp
       if (ok) {
         toast.success('Notificações ativadas com sucesso!');
       } else {
-        if (isIOS) {
-          toast.error('Não foi possível ativar. Confirme que o app está instalado na tela inicial e iOS é 16.4+');
+        // Specific error messages based on failure reason
+        if (unsupportedReason === 'permission-denied' || permission === 'denied') {
+          toast.error('Permissão negada. Vá nas configurações do navegador e libere notificações para este site.', {
+            duration: 7000,
+          });
+        } else if (unsupportedReason === 'config-error') {
+          toast.error('Erro de configuração. Recarregue a página e tente novamente.');
+        } else if (unsupportedReason === 'init-error') {
+          toast.error('Erro ao inicializar. Recarregue a página e tente novamente.');
+        } else if (isIOS) {
+          toast.error('Não foi possível ativar. Confirme que o app está instalado na tela inicial e iOS é 16.4+', {
+            duration: 7000,
+          });
         } else {
           toast.error('Não foi possível ativar. Verifique as permissões do navegador.');
         }
