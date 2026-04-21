@@ -22,6 +22,7 @@ const EXCLUDED_PATHS = ['/login', '/admin'];
 export function PushPromptModal() {
   const [open, setOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const location = useLocation();
 
@@ -30,17 +31,35 @@ export function PushPromptModal() {
     userId,
   });
 
-  // Track logged-in user (only show prompt to authenticated clients)
+  // Track logged-in user + admin role (admins shouldn't see the client prompt)
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getUser().then(({ data }) => {
+
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
       if (!mounted) return;
-      setUserId(data.user?.id ?? null);
+      const uid = data.user?.id ?? null;
+      setUserId(uid);
+
+      if (uid) {
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', uid)
+          .eq('role', 'admin');
+        if (mounted) setIsAdmin((roles?.length ?? 0) > 0);
+      } else {
+        setIsAdmin(false);
+      }
       setAuthChecked(true);
-    });
+    };
+
+    checkUser();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id ?? null);
+      // Re-check admin role on auth change
+      checkUser();
     });
 
     return () => {
@@ -53,6 +72,10 @@ export function PushPromptModal() {
   useEffect(() => {
     if (!authChecked) return;
     if (!userId) return; // only logged-in clients
+    if (isAdmin) {
+      console.log('[PushPrompt] user is admin, skipping client prompt');
+      return;
+    }
     if (EXCLUDED_PATHS.some((p) => location.pathname.startsWith(p))) return;
     if (!supported) {
       console.log('[PushPrompt] not supported, skipping');
@@ -77,7 +100,7 @@ export function PushPromptModal() {
       setOpen(true);
     }, 500);
     return () => clearTimeout(t);
-  }, [authChecked, userId, supported, subscribed, permission, location.pathname]);
+  }, [authChecked, userId, isAdmin, supported, subscribed, permission, location.pathname]);
 
   const handleEnable = async () => {
     // Safety: close modal automatically if enable() takes longer than 15s
