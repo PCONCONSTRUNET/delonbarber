@@ -11,6 +11,8 @@ serve(async (req) => {
   }
 
   const appId = Deno.env.get('ONESIGNAL_APP_ID');
+  // Safari Web ID is required for Safari desktop push (and useful as a fallback)
+  const safariWebId = Deno.env.get('ONESIGNAL_SAFARI_WEB_ID') ?? 'web.onesignal.auto.45e32f52-047f-48ea-8b6f-5a9d2fcde2db';
 
   if (!appId) {
     return new Response(
@@ -20,7 +22,7 @@ serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ appId }),
+    JSON.stringify({ appId, safariWebId }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 });

@@ -44,12 +44,13 @@ function detectEnvironment() {
   };
 }
 
-async function initOneSignal(appId: string): Promise<void> {
+async function initOneSignal(appId: string, safariWebId?: string): Promise<void> {
   if (oneSignalInitPromise) return oneSignalInitPromise;
 
   oneSignalInitPromise = (async () => {
     await OneSignal.init({
       appId,
+      safari_web_id: safariWebId,
       allowLocalhostAsSecureOrigin: true,
       serviceWorkerPath: '/OneSignalSDKWorker.js',
       welcomeNotification: { disable: true, message: '' },
