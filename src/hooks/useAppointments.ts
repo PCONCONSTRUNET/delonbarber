@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
-import { notifyAdmin } from '@/lib/oneSignalPush';
+import { notifyAdmin, notifyClient } from '@/lib/oneSignalPush';
 
 export interface Service {
   id: string;
@@ -447,9 +447,23 @@ export function useAppointments() {
     }
 
     // Notify admins via OneSignal push (DB trigger already creates the notification record)
-    const pushTitle = '📅 Novo Agendamento';
-    const pushBody = `${selectedServices.map(s => s.name).join(', ')} para ${date.toLocaleDateString('pt-BR')} às ${time.slice(0, 5)}`;
-    notifyAdmin(pushTitle, pushBody, '/admin/agenda');
+    const servicesLabel = selectedServices.map(s => s.name).join(', ');
+    const dateLabel = date.toLocaleDateString('pt-BR');
+    const timeLabel = time.slice(0, 5);
+
+    notifyAdmin(
+      '📅 Novo Agendamento',
+      `${servicesLabel} para ${dateLabel} às ${timeLabel}`,
+      '/admin/agenda'
+    );
+
+    // Notify the client that their appointment was auto-confirmed
+    notifyClient(
+      user.id,
+      '✅ Agendamento Confirmado',
+      `Seu horário de ${servicesLabel} em ${dateLabel} às ${timeLabel} está confirmado!`,
+      '/perfil'
+    );
 
     // Show appropriate toast message
     if (benefitsToUse.length > 0) {
