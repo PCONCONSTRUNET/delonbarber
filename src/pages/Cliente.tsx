@@ -11,7 +11,7 @@ import { useIsAdmin } from '@/hooks/useAdmin';
 import { useAdminNotifications } from '@/hooks/useNotifications';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { Badge } from '@/components/ui/badge';
-import { PushPromptModal } from '@/components/push/PushPromptModal';
+
 
 const Cliente = () => {
   const navigate = useNavigate();
