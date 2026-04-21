@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminIA, AdminPacotes, AdminAvaliacoes, AdminFidelidade } from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 import { PushPromptModal } from "@/components/push/PushPromptModal";
+import { DynamicManifest } from "@/components/pwa/DynamicManifest";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <DynamicManifest />
             <PushPromptModal excludePaths={["/admin", "/login", "/perfil"]} />
             <Routes>
               <Route path="/admin/login" element={<AdminLogin />} />
