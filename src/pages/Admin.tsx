@@ -119,7 +119,7 @@ export function AdminDashboard() {
               <p className="text-xs text-muted-foreground mb-3">
                 Notificações nativas para receber alertas mesmo com o app fechado em iOS e Android.
               </p>
-              <PushToggle role="admin" userId={user?.id} />
+              <PushToggle role="admin" userId={adminUserId} />
             </CardContent>
           </Card>
         </div>
