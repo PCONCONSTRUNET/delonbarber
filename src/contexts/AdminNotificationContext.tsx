@@ -1,14 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { playNotificationSound, showBrowserNotification, requestNotificationPermission } from '@/lib/notifications';
-import { subscribeToPushNotifications } from '@/lib/pushNotifications';
 import { toast } from 'sonner';
 
 interface AdminNotificationContextValue {
   pendingCount: number;
   isAdmin: boolean;
-  pushEnabled: boolean;
-  enablePush: () => Promise<boolean>;
 }
 
 const AdminNotificationContext = createContext<AdminNotificationContextValue | null>(null);
@@ -25,18 +22,6 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [pushEnabled, setPushEnabled] = useState(false);
-
-  const enablePush = async () => {
-    const success = await subscribeToPushNotifications();
-    setPushEnabled(success);
-    if (success) {
-      toast.success('🔔 Notificações push ativadas!', {
-        description: 'Você receberá alertas mesmo com o navegador minimizado.',
-      });
-    }
-    return success;
-  };
 
   // Check if user is admin
   useEffect(() => {
@@ -57,17 +42,8 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
       setIsAdmin(hasAdminRole);
 
       if (hasAdminRole) {
-        // Request notification permission for admins
-        const hasPermission = await requestNotificationPermission();
-        
-        if (hasPermission) {
-          // Subscribe to push notifications for background alerts
-          const pushSuccess = await subscribeToPushNotifications();
-          setPushEnabled(pushSuccess);
-          if (pushSuccess) {
-            console.log('✅ Admin subscribed to push notifications');
-          }
-        }
+        // Request browser notification permission for foreground alerts
+        await requestNotificationPermission();
       }
     }
 
@@ -189,7 +165,7 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
   }, [isAdmin, initialLoadComplete]);
 
   return (
-    <AdminNotificationContext.Provider value={{ pendingCount, isAdmin, pushEnabled, enablePush }}>
+    <AdminNotificationContext.Provider value={{ pendingCount, isAdmin }}>
       {children}
     </AdminNotificationContext.Provider>
   );
