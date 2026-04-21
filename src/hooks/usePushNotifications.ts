@@ -18,12 +18,32 @@ function isInPreviewIframe(): boolean {
     const host = window.location.hostname;
     const isPreviewHost =
       host.includes('id-preview--') ||
-      host.includes('lovableproject.com') ||
-      host.includes('lovable.app') && host.includes('id-preview');
+      host.includes('lovableproject.com');
     return inIframe || isPreviewHost;
   } catch {
     return true;
   }
+}
+
+function detectEnvironment() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+  const isStandalone =
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+    (navigator as any).standalone === true;
+  const hasNotificationAPI = 'Notification' in window;
+  const hasServiceWorker = 'serviceWorker' in navigator;
+  const hasPushManager = 'PushManager' in window;
+
+  return {
+    isIOS,
+    isStandalone,
+    hasNotificationAPI,
+    hasServiceWorker,
+    hasPushManager,
+    // iOS only supports push when installed as PWA (iOS 16.4+)
+    iosSupportsPush: isIOS && isStandalone && hasNotificationAPI && hasPushManager,
+  };
 }
 
 async function initOneSignal(appId: string): Promise<void> {
@@ -48,6 +68,7 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
   const [loading, setLoading] = useState(true);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [unsupportedReason, setUnsupportedReason] = useState<string | null>(null);
   const initStartedRef = useRef(false);
 
   // Initialize OneSignal SDK
@@ -57,17 +78,32 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
 
     const setup = async () => {
       try {
+        const env = detectEnvironment();
+        console.log('[push] Environment:', env);
+
         // Block in preview/iframe
         if (isInPreviewIframe()) {
           console.log('[push] Skipping init in preview/iframe');
           setSupported(false);
+          setUnsupportedReason('preview');
           setLoading(false);
           return;
         }
 
-        // Check basic browser support
-        if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        // iOS specific: must be installed as PWA
+        if (env.isIOS && !env.isStandalone) {
+          console.log('[push] iOS browser detected — push requires PWA install');
           setSupported(false);
+          setUnsupportedReason('ios-not-installed');
+          setLoading(false);
+          return;
+        }
+
+        // Check basic browser APIs
+        if (!env.hasNotificationAPI || !env.hasServiceWorker) {
+          console.log('[push] Missing browser APIs');
+          setSupported(false);
+          setUnsupportedReason('no-api');
           setLoading(false);
           return;
         }
@@ -77,6 +113,7 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
         if (error || !data?.appId) {
           console.error('[push] Failed to fetch OneSignal App ID', error);
           setSupported(false);
+          setUnsupportedReason('config-error');
           setLoading(false);
           return;
         }
@@ -100,6 +137,7 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
       } catch (err) {
         console.error('[push] Init error:', err);
         setSupported(false);
+        setUnsupportedReason('init-error');
       } finally {
         setLoading(false);
       }
@@ -220,5 +258,6 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
     playerId,
     enable,
     disable,
+    unsupportedReason,
   };
 }
