@@ -8,7 +8,7 @@
   "background_color": "#0B0B0B",
   "theme_color": "#D62828",
   "orientation": "portrait-primary",
-  "id": "/",
+  "id": "/client-pwa",
   "icons": [
     {
       "src": "/icons/icon-192.png",

@@ -12,12 +12,12 @@ const ADMIN_MANIFEST = {
   "short_name": "Delon Admin",
   "description": "Painel administrativo Delon Barber",
   "start_url": "/admin/login",
-  "scope": "/admin",
+  "scope": "/admin/",
   "display": "standalone",
   "background_color": "#0B0B0B",
   "theme_color": "#D62828",
   "orientation": "portrait-primary",
-  "id": "/admin",
+  "id": "/admin-pwa",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
@@ -36,7 +36,7 @@ const CLIENT_MANIFEST = {
   "background_color": "#0B0B0B",
   "theme_color": "#D62828",
   "orientation": "portrait-primary",
-  "id": "/",
+  "id": "/client-pwa",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
@@ -52,7 +52,9 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname === "/manifest.json" || url.pathname === "/manifest-admin.json") {
     // Check if the request comes from an admin path or explicitly asks for admin manifest
     const referer = event.request.referrer || "";
-    const isAdmin = referer.includes("/admin") || url.pathname === "/manifest-admin.json";
+    // If we're using query params like ?v=admin, we check that too
+    const isQueryAdmin = url.searchParams.get('v') === 'admin';
+    const isAdmin = isQueryAdmin || referer.includes("/admin") || url.pathname === "/manifest-admin.json";
 
     const manifest = isAdmin ? ADMIN_MANIFEST : CLIENT_MANIFEST;
 

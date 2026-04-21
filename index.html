@@ -10,7 +10,29 @@
     <!-- PWA / iOS push requirements -->
     <!-- Manifest is injected dynamically by src/main.tsx based on the URL path
          so /admin/* installs as a separate PWA from the client app. -->
-    <link rel="manifest" href="/manifest.json" />
+    <script id="pwa-setup">
+      (function() {
+        const path = window.location.pathname.toLowerCase();
+        const isAdmin = path.startsWith('/admin');
+        const manifestPath = isAdmin ? '/manifest-admin.json' : '/manifest.json';
+        const appTitle = isAdmin ? 'Delon Admin' : 'Delon Barber';
+        
+        // Inject manifest link
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = manifestPath + '?v=' + Date.now();
+        document.head.appendChild(link);
+        
+        // Inject apple title
+        const meta = document.createElement('meta');
+        meta.name = 'apple-mobile-web-app-title';
+        meta.content = appTitle;
+        document.head.appendChild(meta);
+
+        // Update document title immediately
+        if (isAdmin) document.title = appTitle;
+      })();
+    </script>
     <meta name="theme-color" content="#D62828" />
     <script>
       if ('serviceWorker' in navigator) {

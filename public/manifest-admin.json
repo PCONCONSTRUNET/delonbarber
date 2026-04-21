@@ -3,12 +3,12 @@
   "short_name": "Delon Admin",
   "description": "Painel administrativo Delon Barber",
   "start_url": "/admin/login",
-  "scope": "/admin",
+  "scope": "/admin/",
   "display": "standalone",
   "background_color": "#0B0B0B",
   "theme_color": "#D62828",
   "orientation": "portrait-primary",
-  "id": "/admin",
+  "id": "/admin-pwa",
   "icons": [
     {
       "src": "/icons/icon-192.png",
