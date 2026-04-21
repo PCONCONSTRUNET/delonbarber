@@ -2,9 +2,6 @@ importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
 /**
  * Service Worker Manifest Interceptor
- * This part intercepts manifest requests to serve the correct PWA configuration
- * (Admin vs Client) based on the URL that triggered the request.
- * This ensures that "Add to Home Screen" captures the correct app area.
  */
 
 const ADMIN_MANIFEST = {
@@ -12,12 +9,12 @@ const ADMIN_MANIFEST = {
   "short_name": "Delon Admin",
   "description": "Painel administrativo Delon Barber",
   "start_url": "/admin/login",
-  "scope": "/admin/",
+  "scope": "/admin",
   "display": "standalone",
   "background_color": "#0B0B0B",
   "theme_color": "#D62828",
   "orientation": "portrait-primary",
-  "id": "/admin-pwa",
+  "id": "delon-admin-pwa",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
@@ -36,7 +33,7 @@ const CLIENT_MANIFEST = {
   "background_color": "#0B0B0B",
   "theme_color": "#D62828",
   "orientation": "portrait-primary",
-  "id": "/client-pwa",
+  "id": "delon-client-pwa",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
@@ -48,13 +45,11 @@ const CLIENT_MANIFEST = {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Intercept manifest requests
-  if (url.pathname === "/manifest.json" || url.pathname === "/manifest-admin.json") {
-    // Check if the request comes from an admin path or explicitly asks for admin manifest
+  // Intercept any manifest request (.json or .webmanifest)
+  if (url.pathname.endsWith(".webmanifest") || url.pathname.endsWith("manifest.json")) {
     const referer = event.request.referrer || "";
-    // If we're using query params like ?v=admin, we check that too
     const isQueryAdmin = url.searchParams.get('v') === 'admin';
-    const isAdmin = isQueryAdmin || referer.includes("/admin") || url.pathname === "/manifest-admin.json";
+    const isAdmin = isQueryAdmin || referer.includes("/admin") || url.pathname.includes("admin");
 
     const manifest = isAdmin ? ADMIN_MANIFEST : CLIENT_MANIFEST;
 

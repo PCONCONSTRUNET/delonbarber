@@ -14,7 +14,7 @@
       (function() {
         const path = window.location.pathname.toLowerCase();
         const isAdmin = path.startsWith('/admin');
-        const manifestPath = isAdmin ? '/manifest-admin.json' : '/manifest.json';
+        const manifestPath = isAdmin ? '/admin.webmanifest' : '/client.webmanifest';
         const appTitle = isAdmin ? 'Delon Admin' : 'Delon Barber';
         
         // Inject manifest link
