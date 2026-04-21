@@ -32,8 +32,8 @@ async function initOneSignal(appId: string): Promise<void> {
     await OneSignal.init({
       appId,
       allowLocalhostAsSecureOrigin: true,
-      serviceWorkerPath: '/OneSignalSDKWorker.js',
-      serviceWorkerParam: { scope: '/' },
+      serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js',
+      serviceWorkerParam: { scope: '/push/onesignal/' },
       autoRegister: false,
       autoResubscribe: true,
       welcomeNotification: { disable: true, message: '' },
