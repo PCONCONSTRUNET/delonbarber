@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import {
@@ -19,6 +19,11 @@ const STORAGE_KEY = 'push-prompt-shown-v2';
 // Routes where we never show the prompt (admin area, login, public landing)
 const EXCLUDED_PATHS = ['/login', '/admin'];
 
+function getNativePermission(): NotificationPermission | 'default' {
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'default';
+  return Notification.permission;
+}
+
 export function PushPromptModal() {
   const [open, setOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -26,15 +31,20 @@ export function PushPromptModal() {
   const [authChecked, setAuthChecked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const location = useLocation();
+  // Prevent multiple toasts from stacking on repeat failures
+  const failedOnceRef = useRef(false);
 
   const { supported, subscribed, permission, enable, loading } = usePushNotifications({
     role: 'cliente',
     userId,
   });
 
-  const permissionDenied = permission === 'denied';
+  // Always trust the native API over hook state for the "denied" check —
+  // the hook may not have synced yet on first render.
+  const nativePermission = getNativePermission();
+  const permissionDenied = nativePermission === 'denied' || permission === 'denied';
 
-  // Track logged-in user + admin role (admins shouldn't see the client prompt)
+  // Track logged-in user + admin role
   useEffect(() => {
     let mounted = true;
 
@@ -78,53 +88,76 @@ export function PushPromptModal() {
     if (EXCLUDED_PATHS.some((p) => location.pathname.startsWith(p))) return;
     if (!supported) return;
     if (subscribed) return;
-    // If permission is already denied, don't auto-show — user must enable in OS settings
-    if (permission === 'denied') {
+
+    // If permission is already denied at the OS/browser level, never auto-show.
+    // The user must manually re-enable in OS settings.
+    if (getNativePermission() === 'denied') {
       localStorage.setItem(STORAGE_KEY, '1');
       return;
     }
+
     if (localStorage.getItem(STORAGE_KEY)) return;
 
     const t = setTimeout(() => setOpen(true), 500);
     return () => clearTimeout(t);
-  }, [authChecked, userId, isAdmin, supported, subscribed, permission, location.pathname]);
+  }, [authChecked, userId, isAdmin, supported, subscribed, location.pathname]);
+
+  const closeAndRemember = () => {
+    localStorage.setItem(STORAGE_KEY, '1');
+    setOpen(false);
+  };
 
   const handleEnable = async () => {
     if (submitting) return; // prevent double-clicks
+
+    // Pre-check: if already denied at the OS level, don't even try —
+    // just close and tell the user once.
+    if (getNativePermission() === 'denied') {
+      if (!failedOnceRef.current) {
+        failedOnceRef.current = true;
+        toast.error('Notificações bloqueadas. Ative nas configurações do seu celular.');
+      }
+      closeAndRemember();
+      return;
+    }
+
     setSubmitting(true);
 
-    // Safety: close modal automatically if enable() takes longer than 15s
+    // Safety: force close after 15s if enable() hangs
     const safetyTimer = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, '1');
-      setOpen(false);
+      if (!failedOnceRef.current) {
+        failedOnceRef.current = true;
+        toast.error('Tempo esgotado. Tente novamente nas configurações.');
+      }
+      closeAndRemember();
       setSubmitting(false);
-      toast.error('Tempo esgotado. Tente novamente nas configurações.');
     }, 15000);
 
     try {
       const ok = await enable();
       clearTimeout(safetyTimer);
-      localStorage.setItem(STORAGE_KEY, '1');
-      setOpen(false);
       if (ok) {
         toast.success('Notificações ativadas!');
-      } else {
-        toast.error('Não foi possível ativar. Habilite nas configurações do seu celular.');
+      } else if (!failedOnceRef.current) {
+        failedOnceRef.current = true;
+        toast.error('Não foi possível ativar. Verifique as permissões nas configurações.');
       }
     } catch (err) {
       clearTimeout(safetyTimer);
       console.error('[PushPrompt] handleEnable error:', err);
-      localStorage.setItem(STORAGE_KEY, '1');
-      setOpen(false);
-      toast.error('Erro ao ativar. Tente novamente.');
+      if (!failedOnceRef.current) {
+        failedOnceRef.current = true;
+        toast.error('Erro ao ativar. Tente novamente mais tarde.');
+      }
     } finally {
+      // ALWAYS close + remember, regardless of outcome — never let user retry from this modal
+      closeAndRemember();
       setSubmitting(false);
     }
   };
 
   const handleDismiss = () => {
-    localStorage.setItem(STORAGE_KEY, '1');
-    setOpen(false);
+    closeAndRemember();
   };
 
   const isBusy = loading || submitting;
