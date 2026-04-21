@@ -217,7 +217,7 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
         return false;
       }
 
-      // Pedir permissão DIRETA (sem prompt do OneSignal)
+      // PASSO 1: Pedir permissão nativa (via SDK — usa User Activation do clique)
       try {
         console.log('[push] solicitando permissão nativa...');
         await OneSignal.Notifications.requestPermission();
@@ -225,17 +225,32 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
         console.warn('[push] requestPermission falhou', e);
       }
 
-      // Algumas versões devolvem o estado em Notification.permission
-      if ('Notification' in window) {
-        setPermission(Notification.permission);
-        console.log('[push] permissão pós-prompt:', Notification.permission);
-        if (Notification.permission !== 'granted') {
-          console.warn('[push] permissão não concedida');
-          return false;
+      // PASSO 2: Aguardar a permissão ser refletida no navegador
+      // (em iOS isso pode demorar alguns ms depois do usuário tocar em "Permitir")
+      const waitForPermission = async (): Promise<NotificationPermission> => {
+        const start = Date.now();
+        while (Date.now() - start < 5000) {
+          const p = 'Notification' in window ? Notification.permission : 'default';
+          if (p !== 'default') return p;
+          await new Promise((r) => setTimeout(r, 200));
         }
+        return 'Notification' in window ? Notification.permission : 'default';
+      };
+      const perm = await waitForPermission();
+      setPermission(perm);
+      console.log('[push] permissão pós-prompt:', perm);
+
+      if (perm !== 'granted') {
+        console.warn('[push] permissão não concedida');
+        return false;
       }
 
-      // OPT-IN — força o registro do player_id no OneSignal
+      // PASSO 3: Delay crítico — iOS precisa de tempo para o Service Worker
+      // receber o token APNs antes do OneSignal pedir o subscription_id.
+      // Workaround documentado para o bug onde optedIn=true mas id=undefined.
+      await new Promise((r) => setTimeout(r, 1500));
+
+      // PASSO 4: OPT-IN — força o registro do player_id no OneSignal
       try {
         console.log('[push] optIn()...');
         await OneSignal.User.PushSubscription.optIn();
@@ -243,8 +258,8 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
         console.warn('[push] optIn falhou', e);
       }
 
-      // Aguarda o player_id chegar (combina event + polling)
-      const pid = await waitForPlayerId(15000);
+      // PASSO 5: Aguarda o player_id chegar (combina event + polling, timeout maior pra iOS)
+      const pid = await waitForPlayerId(20000);
 
       if (pid) {
         setPlayerId(pid);
@@ -273,7 +288,13 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
         return true;
       }
 
-      console.error('[push] ❌ player_id não chegou. optedIn=', OneSignal.User?.PushSubscription?.optedIn);
+      const token = OneSignal.User?.PushSubscription?.token;
+      console.error('[push] ❌ player_id não chegou em 20s', {
+        optedIn: OneSignal.User?.PushSubscription?.optedIn,
+        hasToken: !!token,
+        tokenPreview: token ? token.substring(0, 40) + '...' : null,
+      });
+
       return false;
     } catch (err) {
       console.error('[push] enable error:', err);
