@@ -53,7 +53,7 @@ function notifyAll(pkgs: MyPackage[]) {
 }
 
 async function loadPackages(userId: string): Promise<MyPackage[]> {
-  // Single query: client_packages joined with packages and benefits (with services)
+  // Single query: client_packages joined with packages
   const { data: clientPackages, error } = await supabase
     .from('client_packages')
     .select(`
@@ -62,8 +62,7 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
       start_date,
       end_date,
       status,
-      packages:package_id ( id, name, price, discount_percent, description ),
-      packages_benefits:package_id ()
+      packages:package_id ( id, name, price, discount_percent, description )
     `)
     .eq('user_id', userId)
     .eq('status', 'active')
