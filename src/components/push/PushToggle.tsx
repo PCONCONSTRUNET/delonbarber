@@ -72,23 +72,26 @@ export function PushToggle({ role, userId, variant = 'default' }: PushToggleProp
     );
   }
 
-  // For non-iOS unsupported (no API available, etc.) → show info card
-  if (!supported && !isIOS) {
-    let title = 'Notificações indisponíveis';
-    let message = 'Use o Chrome, Safari (iOS 16.4+) ou Firefox para receber notificações.';
+  // Only block hard when browser truly has no Notification/SW APIs at all
+  // (very old browsers). Otherwise, always show the activation button and
+  // let the user attempt — clearer feedback than a static "indisponível" card.
+  const trulyNoApiSupport =
+    !isIOS &&
+    typeof window !== 'undefined' &&
+    (!('Notification' in window) || !('serviceWorker' in navigator));
 
-    if (unsupportedReason === 'config-error') {
-      title = '⚠️ Erro de configuração';
-      message = 'Não conseguimos carregar a configuração de notificações. Recarregue a página.';
-    }
-
+  if (trulyNoApiSupport) {
     return (
       <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3">
         <div className="flex items-start gap-2">
           <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-foreground mb-1">{title}</p>
-            <p className="text-xs text-muted-foreground">{message}</p>
+            <p className="text-sm font-medium text-foreground mb-1">
+              Notificações indisponíveis
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Use o Chrome, Safari (iOS 16.4+) ou Firefox para receber notificações.
+            </p>
           </div>
         </div>
       </div>

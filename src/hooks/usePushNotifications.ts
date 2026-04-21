@@ -90,22 +90,20 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
           return;
         }
 
-        // For iOS: ALWAYS try to init, even if standalone check is uncertain.
-        // Let the SDK + user attempt determine real support.
-        // For other browsers: require basic APIs upfront.
-        if (!env.isIOS && (!env.hasNotificationAPI || !env.hasServiceWorker)) {
-          console.log('[push] Missing browser APIs');
-          setSupported(false);
-          setUnsupportedReason('no-api');
-          setLoading(false);
-          return;
+        // Optimistic: assume supported. Real validation happens on enable().
+        // This ensures the activation button is always visible outside preview,
+        // regardless of admin/cliente or device — clearer UX than blocking upfront.
+        setSupported(true);
+
+        if (env.hasNotificationAPI) {
+          setPermission(Notification.permission);
         }
 
-        // Fetch App ID from edge function
+        // Try to fetch App ID and init in background (non-blocking for UI)
         const { data, error } = await supabase.functions.invoke('onesignal-config');
         if (error || !data?.appId) {
           console.error('[push] Failed to fetch OneSignal App ID', error);
-          setSupported(false);
+          // Keep supported=true so user can retry; mark reason for diagnostics
           setUnsupportedReason('config-error');
           setLoading(false);
           return;
@@ -113,12 +111,8 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
 
         try {
           await initOneSignal(data.appId);
-          setSupported(true);
           setInitialized(true);
-
-          if (env.hasNotificationAPI) {
-            setPermission(Notification.permission);
-          }
+          setUnsupportedReason(null);
 
           const isOptedIn = OneSignal.User?.PushSubscription?.optedIn ?? false;
           const id = OneSignal.User?.PushSubscription?.id ?? null;
@@ -135,19 +129,13 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
           );
         } catch (initErr) {
           console.error('[push] OneSignal init failed:', initErr);
-          // On iOS, still expose UI so user can try (gives clearer error)
-          if (env.isIOS) {
-            setSupported(true);
-            setInitialized(false);
-            setUnsupportedReason('ios-needs-retry');
-          } else {
-            setSupported(false);
-            setUnsupportedReason('init-error');
-          }
+          // Keep supported=true so user can still try — enable() will retry init
+          setInitialized(false);
+          setUnsupportedReason('init-error');
         }
       } catch (err) {
         console.error('[push] Setup error:', err);
-        setSupported(false);
+        // Even on error, keep supported=true outside preview so user can retry
         setUnsupportedReason('init-error');
       } finally {
         setLoading(false);
