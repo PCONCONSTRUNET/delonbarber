@@ -18,12 +18,30 @@ function isInPreviewIframe(): boolean {
     const host = window.location.hostname;
     const isPreviewHost =
       host.includes('id-preview--') ||
-      host.includes('lovableproject.com') ||
-      host.includes('lovable.app') && host.includes('id-preview');
+      host.includes('lovableproject.com');
     return inIframe || isPreviewHost;
   } catch {
     return true;
   }
+}
+
+function detectEnvironment() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+  const isStandalone =
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+    (navigator as any).standalone === true;
+  const hasNotificationAPI = 'Notification' in window;
+  const hasServiceWorker = 'serviceWorker' in navigator;
+  const hasPushManager = 'PushManager' in window;
+
+  return {
+    isIOS,
+    isStandalone,
+    hasNotificationAPI,
+    hasServiceWorker,
+    hasPushManager,
+  };
 }
 
 async function initOneSignal(appId: string): Promise<void> {
@@ -48,6 +66,8 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
   const [loading, setLoading] = useState(true);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [unsupportedReason, setUnsupportedReason] = useState<string | null>(null);
+  const [isIOS, setIsIOS] = useState(false);
   const initStartedRef = useRef(false);
 
   // Initialize OneSignal SDK
@@ -57,17 +77,26 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
 
     const setup = async () => {
       try {
-        // Block in preview/iframe
+        const env = detectEnvironment();
+        console.log('[push] Environment:', env);
+        setIsIOS(env.isIOS);
+
+        // Block in preview/iframe (always)
         if (isInPreviewIframe()) {
           console.log('[push] Skipping init in preview/iframe');
           setSupported(false);
+          setUnsupportedReason('preview');
           setLoading(false);
           return;
         }
 
-        // Check basic browser support
-        if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        // For iOS: ALWAYS try to init, even if standalone check is uncertain.
+        // Let the SDK + user attempt determine real support.
+        // For other browsers: require basic APIs upfront.
+        if (!env.isIOS && (!env.hasNotificationAPI || !env.hasServiceWorker)) {
+          console.log('[push] Missing browser APIs');
           setSupported(false);
+          setUnsupportedReason('no-api');
           setLoading(false);
           return;
         }
@@ -77,29 +106,49 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
         if (error || !data?.appId) {
           console.error('[push] Failed to fetch OneSignal App ID', error);
           setSupported(false);
+          setUnsupportedReason('config-error');
           setLoading(false);
           return;
         }
 
-        await initOneSignal(data.appId);
+        try {
+          await initOneSignal(data.appId);
+          setSupported(true);
+          setInitialized(true);
 
-        setSupported(true);
-        setInitialized(true);
-        setPermission(Notification.permission);
+          if (env.hasNotificationAPI) {
+            setPermission(Notification.permission);
+          }
 
-        const isOptedIn = OneSignal.User?.PushSubscription?.optedIn ?? false;
-        const id = OneSignal.User?.PushSubscription?.id ?? null;
-        setSubscribed(isOptedIn);
-        setPlayerId(id);
+          const isOptedIn = OneSignal.User?.PushSubscription?.optedIn ?? false;
+          const id = OneSignal.User?.PushSubscription?.id ?? null;
+          setSubscribed(isOptedIn);
+          setPlayerId(id);
 
-        // Listen for subscription changes
-        OneSignal.User?.PushSubscription?.addEventListener('change', (event: { current: { optedIn: boolean; id: string | null } }) => {
-          setSubscribed(event.current.optedIn);
-          setPlayerId(event.current.id);
-        });
+          // Listen for subscription changes
+          OneSignal.User?.PushSubscription?.addEventListener(
+            'change',
+            (event: { current: { optedIn: boolean; id: string | null } }) => {
+              setSubscribed(event.current.optedIn);
+              setPlayerId(event.current.id);
+            }
+          );
+        } catch (initErr) {
+          console.error('[push] OneSignal init failed:', initErr);
+          // On iOS, still expose UI so user can try (gives clearer error)
+          if (env.isIOS) {
+            setSupported(true);
+            setInitialized(false);
+            setUnsupportedReason('ios-needs-retry');
+          } else {
+            setSupported(false);
+            setUnsupportedReason('init-error');
+          }
+        }
       } catch (err) {
-        console.error('[push] Init error:', err);
+        console.error('[push] Setup error:', err);
         setSupported(false);
+        setUnsupportedReason('init-error');
       } finally {
         setLoading(false);
       }
@@ -116,6 +165,9 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
           userAgent: navigator.userAgent,
           platform: navigator.platform,
           language: navigator.language,
+          standalone:
+            (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+            (navigator as any).standalone === true,
         };
 
         const { error } = await supabase
@@ -151,42 +203,61 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
   }, [playerId, userId, initialized, saveSubscription]);
 
   const enable = useCallback(async (): Promise<boolean> => {
-    if (!initialized) {
-      console.warn('[push] Not initialized yet');
-      return false;
-    }
-
     try {
       setLoading(true);
+
+      // If not yet initialized but on iOS, attempt init now
+      if (!initialized) {
+        try {
+          const { data } = await supabase.functions.invoke('onesignal-config');
+          if (data?.appId) {
+            await initOneSignal(data.appId);
+            setInitialized(true);
+          }
+        } catch (e) {
+          console.error('[push] retry init failed:', e);
+        }
+      }
+
       // Request permission and opt-in
       await OneSignal.Notifications.requestPermission();
       await OneSignal.User.PushSubscription.optIn();
 
       // Wait for player_id (poll briefly)
       let pid: string | null = null;
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 30; i++) {
         pid = OneSignal.User.PushSubscription.id ?? null;
         if (pid) break;
         await new Promise((r) => setTimeout(r, 250));
       }
 
-      setPermission(Notification.permission);
+      if ('Notification' in window) {
+        setPermission(Notification.permission);
+      }
 
       if (pid) {
         setPlayerId(pid);
         setSubscribed(true);
+        setUnsupportedReason(null);
         await saveSubscription(pid);
         return true;
       }
 
+      // No player_id obtained — likely permission denied or iOS standalone issue
+      if (isIOS) {
+        setUnsupportedReason('ios-permission-failed');
+      }
       return false;
     } catch (err) {
       console.error('[push] enable error:', err);
+      if (isIOS) {
+        setUnsupportedReason('ios-permission-failed');
+      }
       return false;
     } finally {
       setLoading(false);
     }
-  }, [initialized, saveSubscription]);
+  }, [initialized, saveSubscription, isIOS]);
 
   const disable = useCallback(async (): Promise<boolean> => {
     if (!initialized) return false;
@@ -220,5 +291,7 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
     playerId,
     enable,
     disable,
+    unsupportedReason,
+    isIOS,
   };
 }
