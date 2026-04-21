@@ -145,40 +145,57 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
 
   const enable = useCallback(async (): Promise<boolean> => {
     setLoading(true);
+    console.log('[push] enable() iniciado', { initialized, role, userId });
     try {
       if (!initialized) {
-        const { data } = await supabase.functions.invoke('onesignal-config');
-        if (!data?.appId) return false;
+        console.log('[push] buscando config OneSignal...');
+        const { data, error: cfgErr } = await supabase.functions.invoke('onesignal-config');
+        console.log('[push] config recebida', { data, cfgErr });
+        if (!data?.appId) {
+          console.error('[push] appId vazio', data);
+          return false;
+        }
         await initOneSignal(data.appId);
         setInitialized(true);
+        console.log('[push] OneSignal inicializado com appId', data.appId);
       }
 
       if ('Notification' in window && Notification.permission === 'denied') {
+        console.warn('[push] permissão já estava negada');
         setPermission('denied');
         return false;
       }
 
       try {
+        console.log('[push] solicitando permissão...');
         await OneSignal.Notifications.requestPermission();
       } catch (e) {
         console.warn('[push] requestPermission failed', e);
       }
 
       if ('Notification' in window) {
+        console.log('[push] permissão atual:', Notification.permission);
         setPermission(Notification.permission);
-        if (Notification.permission !== 'granted') return false;
+        if (Notification.permission !== 'granted') {
+          console.warn('[push] permissão não concedida, abortando');
+          return false;
+        }
       }
 
       try {
+        console.log('[push] chamando optIn...');
         await OneSignal.User.PushSubscription.optIn();
       } catch (e) {
         console.warn('[push] optIn failed', e);
       }
 
       let pid: string | null = null;
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 30; i++) {
         pid = OneSignal.User?.PushSubscription?.id ?? null;
-        if (pid) break;
+        if (pid) {
+          console.log(`[push] player_id obtido após ${i * 250}ms:`, pid);
+          break;
+        }
         await new Promise((r) => setTimeout(r, 250));
       }
 
@@ -186,8 +203,10 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
         setPlayerId(pid);
         setSubscribed(true);
         await saveSubscription(pid);
+        console.log('[push] inscrição salva com sucesso');
         return true;
       }
+      console.error('[push] timeout: player_id nunca chegou. optedIn=', OneSignal.User?.PushSubscription?.optedIn);
       return false;
     } catch (err) {
       console.error('[push] enable error:', err);
@@ -195,7 +214,7 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
     } finally {
       setLoading(false);
     }
-  }, [initialized, saveSubscription]);
+  }, [initialized, role, userId, saveSubscription]);
 
   const disable = useCallback(async (): Promise<boolean> => {
     if (!initialized) return false;
