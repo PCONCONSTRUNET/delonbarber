@@ -22,14 +22,12 @@ const AdminLogin = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!mounted || !session?.user) return;
 
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
+      const { data: isAdmin } = await supabase.rpc("has_role", {
+        _user_id: session.user.id,
+        _role: "admin",
+      });
 
-      if (roleData) {
+      if (isAdmin) {
         navigate("/admin", { replace: true });
       }
     };
@@ -60,14 +58,12 @@ const AdminLogin = () => {
       }
 
       // Verify admin role
-      const { data: roleData, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
+      const { data: isAdmin, error: roleError } = await supabase.rpc("has_role", {
+        _user_id: data.user.id,
+        _role: "admin",
+      });
 
-      if (roleError || !roleData) {
+      if (roleError || !isAdmin) {
         await supabase.auth.signOut();
         toast.error("Acesso restrito. Esta conta não é administrador.");
         setIsLoading(false);
