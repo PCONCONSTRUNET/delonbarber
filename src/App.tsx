@@ -26,6 +26,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <PushPromptModal />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/servicos" element={<Servicos />} />
