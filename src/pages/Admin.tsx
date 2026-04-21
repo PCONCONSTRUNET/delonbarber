@@ -27,6 +27,8 @@ import { BusinessHoursManager } from '@/components/admin/BusinessHoursManager';
 import { RatingsManager } from '@/components/admin/RatingsManager';
 import { LoyaltyManager } from '@/components/admin/LoyaltyManager';
 import { PushNotificationSetup } from '@/components/admin/PushNotificationSetup';
+import { PushToggle } from '@/components/push/PushToggle';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useIsAdmin, useAdminAppointments, useAdminClients, useAdminServices, useBusinessStatus } from '@/hooks/useAdmin';
 import { useAdminPackages, useClientPackages } from '@/hooks/usePackages';
 import { useAdminNotifications } from '@/hooks/useNotifications';
@@ -69,6 +71,11 @@ export function AdminDashboard() {
   const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment, fetchAppointments } = useAdminAppointments();
   const { isOpen, toggleStatus } = useBusinessStatus();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [adminUserId, setAdminUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setAdminUserId(data.user?.id ?? null));
+  }, []);
 
   // Enable real-time notifications for new appointments
   useAdminNotifications({
@@ -98,8 +105,24 @@ export function AdminDashboard() {
           </div>
         </div>
         
-        {/* Push Notification Setup Card */}
-        <PushNotificationSetup />
+        {/* Push Notification Setup Cards */}
+        <div className="grid gap-3 md:grid-cols-2">
+          <PushNotificationSetup />
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Bell className="w-5 h-5 text-primary" />
+                Push (OneSignal)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground mb-3">
+                Notificações nativas para receber alertas mesmo com o app fechado em iOS e Android.
+              </p>
+              <PushToggle role="admin" userId={adminUserId} />
+            </CardContent>
+          </Card>
+        </div>
         
         <DashboardStats appointments={appointments} />
         

@@ -184,6 +184,28 @@ export function useAdminAppointments() {
       return false;
     }
 
+    // Notify on cancellation by admin
+    if (status === 'cancelled') {
+      const apt = appointments.find(a => a.id === id);
+      if (apt) {
+        const { sendPush, notifyAdmin: notifyAdm } = await import('@/lib/oneSignalPush');
+        notifyAdm(
+          '❌ Agendamento Cancelado',
+          `Agendamento de ${apt.appointment_date} às ${apt.appointment_time?.slice(0, 5)} cancelado.`,
+          '/admin/agenda'
+        );
+        if (apt.user_id) {
+          sendPush({
+            role: 'cliente',
+            user_id: apt.user_id,
+            title: '❌ Agendamento Cancelado',
+            message: `Seu agendamento de ${apt.appointment_date} às ${apt.appointment_time?.slice(0, 5)} foi cancelado.`,
+            url: '/perfil',
+          });
+        }
+      }
+    }
+
     toast({ title: "Atualizado!", description: status === 'no_show' ? "Marcado como falta." : "Status alterado com sucesso." });
     fetchAppointments();
     return true;
@@ -204,6 +226,26 @@ export function useAdminAppointments() {
     if (error) {
       toast({ title: "Erro", description: "Não foi possível atualizar pagamento.", variant: "destructive" });
       return false;
+    }
+
+    if (paymentStatus === 'paid') {
+      const apt = appointments.find(a => a.id === id);
+      if (apt?.user_id) {
+        const { sendPush } = await import('@/lib/oneSignalPush');
+        sendPush({
+          role: 'cliente',
+          user_id: apt.user_id,
+          title: '💳 Pagamento Confirmado',
+          message: `Recebemos seu pagamento de R$ ${Number(apt.total_price || 0).toFixed(2)}. Obrigado!`,
+          url: '/perfil',
+        });
+        sendPush({
+          role: 'admin',
+          title: '💰 Novo Pagamento',
+          message: `Pagamento de R$ ${Number(apt.total_price || 0).toFixed(2)} confirmado.`,
+          url: '/admin/financeiro',
+        });
+      }
     }
 
     toast({ title: "Atualizado!", description: "Pagamento registrado." });

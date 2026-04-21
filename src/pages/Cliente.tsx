@@ -11,6 +11,7 @@ import { useIsAdmin } from '@/hooks/useAdmin';
 import { useAdminNotifications } from '@/hooks/useNotifications';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { Badge } from '@/components/ui/badge';
+import { PushPromptModal } from '@/components/push/PushPromptModal';
 
 const Cliente = () => {
   const navigate = useNavigate();
@@ -94,6 +95,7 @@ const Cliente = () => {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <AnimatedBackground />
+      <PushPromptModal userId={user?.id} />
       
       <main className="pt-16 pb-20 px-4 max-w-lg mx-auto safe-area-top safe-area-bottom">
         {/* Header */}

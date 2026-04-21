@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { useClientNotifications } from "@/hooks/useNotifications";
 import { NotificationHistory } from "@/components/client/NotificationHistory";
 import { MyLoyaltyProgress } from "@/components/client/MyLoyaltyProgress";
+import { PushToggle } from "@/components/push/PushToggle";
+import { notifyAdmin } from "@/lib/oneSignalPush";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -181,6 +183,16 @@ const Perfil = () => {
       .delete()
       .eq('appointment_id', appointmentId)
       .eq('is_manual', false);
+
+    const cancelled = appointments.find(a => a.id === appointmentId);
+    if (cancelled) {
+      const dateStr = format(new Date(cancelled.appointment_date + 'T00:00:00'), 'dd/MM', { locale: ptBR });
+      notifyAdmin(
+        '❌ Agendamento Cancelado',
+        `Cliente cancelou o agendamento de ${dateStr} às ${cancelled.appointment_time.slice(0, 5)}`,
+        '/admin/agenda'
+      );
+    }
 
     toast.success("Agendamento cancelado e horário liberado!");
     setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: 'cancelled' } : a));
@@ -468,7 +480,23 @@ const Perfil = () => {
               </TabsContent>
 
               {/* Notificações Tab */}
-              <TabsContent value="notificacoes" className="mt-4">
+              <TabsContent value="notificacoes" className="mt-4 space-y-4">
+                {userId && (
+                  <Card className="glass-effect border-border">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Bell className="w-4 h-4" />
+                        Notificações Push
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Receba avisos sobre seus agendamentos, confirmações de pagamento e novidades direto no seu celular.
+                      </p>
+                      <PushToggle role="cliente" userId={userId} />
+                    </CardContent>
+                  </Card>
+                )}
                 {userId && <NotificationHistory userId={userId} />}
               </TabsContent>
             </Tabs>
