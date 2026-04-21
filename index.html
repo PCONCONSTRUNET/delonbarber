@@ -10,7 +10,17 @@
     <!-- PWA / iOS push requirements -->
     <!-- Manifest is injected dynamically by src/main.tsx based on the URL path
          so /admin/* installs as a separate PWA from the client app. -->
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#D62828" />
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/OneSignalSDKWorker.js')
+            .then(reg => console.log('SW registered', reg))
+            .catch(err => console.error('SW registration failed', err));
+        });
+      }
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
