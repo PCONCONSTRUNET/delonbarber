@@ -27,6 +27,8 @@ import { BusinessHoursManager } from '@/components/admin/BusinessHoursManager';
 import { RatingsManager } from '@/components/admin/RatingsManager';
 import { LoyaltyManager } from '@/components/admin/LoyaltyManager';
 import { PushNotificationSetup } from '@/components/admin/PushNotificationSetup';
+import { PushToggle } from '@/components/push/PushToggle';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useIsAdmin, useAdminAppointments, useAdminClients, useAdminServices, useBusinessStatus } from '@/hooks/useAdmin';
 import { useAdminPackages, useClientPackages } from '@/hooks/usePackages';
 import { useAdminNotifications } from '@/hooks/useNotifications';
@@ -69,6 +71,11 @@ export function AdminDashboard() {
   const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment, fetchAppointments } = useAdminAppointments();
   const { isOpen, toggleStatus } = useBusinessStatus();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [adminUserId, setAdminUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setAdminUserId(data.user?.id ?? null));
+  }, []);
 
   // Enable real-time notifications for new appointments
   useAdminNotifications({
