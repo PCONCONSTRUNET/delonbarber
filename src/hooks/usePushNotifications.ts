@@ -191,57 +191,127 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
   }, [playerId, userId, initialized, saveSubscription]);
 
   const enable = useCallback(async (): Promise<boolean> => {
-    try {
-      setLoading(true);
+    // Hard timeout: never let UI hang for more than 20s
+    const timeoutPromise = new Promise<boolean>((resolve) => {
+      setTimeout(() => {
+        console.warn('[push] enable() timed out after 20s');
+        resolve(false);
+      }, 20000);
+    });
 
-      // If not yet initialized but on iOS, attempt init now
-      if (!initialized) {
-        try {
-          const { data } = await supabase.functions.invoke('onesignal-config');
-          if (data?.appId) {
-            await initOneSignal(data.appId);
-            setInitialized(true);
+    const enablePromise = (async (): Promise<boolean> => {
+      try {
+        console.log('[push] enable() called. initialized=', initialized);
+
+        // If not yet initialized, attempt init now
+        if (!initialized) {
+          try {
+            console.log('[push] fetching onesignal-config...');
+            const { data, error } = await supabase.functions.invoke('onesignal-config');
+            if (error) console.error('[push] onesignal-config error:', error);
+            if (data?.appId) {
+              console.log('[push] initializing OneSignal...');
+              await initOneSignal(data.appId);
+              setInitialized(true);
+              console.log('[push] OneSignal initialized');
+            } else {
+              console.error('[push] no appId returned');
+              setUnsupportedReason('config-error');
+              return false;
+            }
+          } catch (e) {
+            console.error('[push] retry init failed:', e);
+            setUnsupportedReason('init-error');
+            return false;
           }
-        } catch (e) {
-          console.error('[push] retry init failed:', e);
         }
-      }
 
-      // Request permission and opt-in
-      await OneSignal.Notifications.requestPermission();
-      await OneSignal.User.PushSubscription.optIn();
+        // Check current permission first
+        if ('Notification' in window) {
+          console.log('[push] current permission:', Notification.permission);
+          if (Notification.permission === 'denied') {
+            console.warn('[push] permission previously denied by user');
+            setPermission('denied');
+            setUnsupportedReason('permission-denied');
+            return false;
+          }
+        }
 
-      // Wait for player_id (poll briefly)
-      let pid: string | null = null;
-      for (let i = 0; i < 30; i++) {
-        pid = OneSignal.User.PushSubscription.id ?? null;
-        if (pid) break;
-        await new Promise((r) => setTimeout(r, 250));
-      }
+        // Request permission with explicit timeout
+        console.log('[push] requesting permission...');
+        try {
+          await Promise.race([
+            OneSignal.Notifications.requestPermission(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('requestPermission timeout')), 10000)
+            ),
+          ]);
+        } catch (permErr) {
+          console.error('[push] requestPermission failed:', permErr);
+        }
 
-      if ('Notification' in window) {
-        setPermission(Notification.permission);
-      }
+        // Re-check permission after request
+        if ('Notification' in window) {
+          console.log('[push] permission after request:', Notification.permission);
+          setPermission(Notification.permission);
+          if (Notification.permission !== 'granted') {
+            setUnsupportedReason('permission-denied');
+            return false;
+          }
+        }
 
-      if (pid) {
-        setPlayerId(pid);
-        setSubscribed(true);
-        setUnsupportedReason(null);
-        await saveSubscription(pid);
-        return true;
-      }
+        console.log('[push] opting in...');
+        try {
+          await Promise.race([
+            OneSignal.User.PushSubscription.optIn(),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('optIn timeout')), 10000)
+            ),
+          ]);
+        } catch (optErr) {
+          console.error('[push] optIn failed:', optErr);
+        }
 
-      // No player_id obtained — likely permission denied or iOS standalone issue
-      if (isIOS) {
-        setUnsupportedReason('ios-permission-failed');
+        // Wait for player_id (poll briefly — max ~5s)
+        console.log('[push] polling for player_id...');
+        let pid: string | null = null;
+        for (let i = 0; i < 20; i++) {
+          pid = OneSignal.User?.PushSubscription?.id ?? null;
+          if (pid) {
+            console.log('[push] got player_id:', pid);
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 250));
+        }
+
+        if (pid) {
+          setPlayerId(pid);
+          setSubscribed(true);
+          setUnsupportedReason(null);
+          await saveSubscription(pid);
+          return true;
+        }
+
+        console.warn('[push] no player_id obtained after polling');
+        if (isIOS) {
+          setUnsupportedReason('ios-permission-failed');
+        } else {
+          setUnsupportedReason('no-player-id');
+        }
+        return false;
+      } catch (err) {
+        console.error('[push] enable error:', err);
+        if (isIOS) {
+          setUnsupportedReason('ios-permission-failed');
+        }
+        return false;
       }
-      return false;
-    } catch (err) {
-      console.error('[push] enable error:', err);
-      if (isIOS) {
-        setUnsupportedReason('ios-permission-failed');
-      }
-      return false;
+    })();
+
+    setLoading(true);
+    try {
+      const result = await Promise.race([enablePromise, timeoutPromise]);
+      return result;
     } finally {
       setLoading(false);
     }
