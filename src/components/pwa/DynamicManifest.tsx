@@ -11,7 +11,8 @@ export function DynamicManifest() {
   const location = useLocation();
 
   useEffect(() => {
-    const isAdmin = location.pathname.startsWith("/admin");
+    const normalizedPathname = location.pathname.toLowerCase();
+    const isAdmin = normalizedPathname.startsWith("/admin");
 
     const manifestHref = isAdmin ? "/manifest-admin.json" : "/manifest.json";
     const appTitle = isAdmin ? "Delon Admin" : "Delon Barber";

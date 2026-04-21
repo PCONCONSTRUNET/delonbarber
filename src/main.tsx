@@ -5,7 +5,8 @@ import "./index.css";
 // Inject the correct manifest BEFORE React mounts so iOS Safari sees the
 // right one when the user taps "Add to Home Screen".
 (function injectManifest() {
-  const isAdmin = window.location.pathname.startsWith("/admin");
+  const normalizedPathname = window.location.pathname.toLowerCase();
+  const isAdmin = normalizedPathname.startsWith("/admin");
   const manifestHref = isAdmin ? "/manifest-admin.json" : "/manifest.json";
   const appTitle = isAdmin ? "Delon Admin" : "Delon Barber";
 
