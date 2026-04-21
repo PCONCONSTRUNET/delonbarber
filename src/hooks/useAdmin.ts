@@ -51,12 +51,36 @@ export interface ClientNote {
 export function useIsAdmin() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    const resolveAdminState = async (userId: string | null) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
+      setUserId(session?.user?.id ?? null);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      setUserId(session?.user?.id ?? null);
+      setAuthReady(true);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveAdminRole = async () => {
+      if (!authReady) return;
 
       if (!userId) {
         setIsAdmin(false);
@@ -64,14 +88,14 @@ export function useIsAdmin() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
+      setLoading(true);
 
-      if (!mounted) return;
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'admin',
+      });
+
+      if (cancelled) return;
 
       if (error) {
         console.error('Error checking admin role:', error);
@@ -81,21 +105,12 @@ export function useIsAdmin() {
       setLoading(false);
     };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      void resolveAdminState(session?.user?.id ?? null);
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      void resolveAdminState(session?.user?.id ?? null);
-    });
+    void resolveAdminRole();
 
     return () => {
-      mounted = false;
-      subscription.unsubscribe();
+      cancelled = true;
     };
-  }, []);
+  }, [authReady, userId]);
 
   return { isAdmin, loading };
 }
