@@ -506,22 +506,40 @@ const Perfil = () => {
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={!!cancelId} onOpenChange={(open) => !open && setCancelId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja cancelar? O horário será liberado para outros clientes.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Não, manter</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => cancelId && handleCancelAppointment(cancelId)}
-            >
-              Sim, cancelar
-            </AlertDialogAction>
-          </AlertDialogFooter>
+        <AlertDialogContent className="max-w-[300px] p-0 overflow-hidden border-border/40 rounded-[24px] shadow-2xl bg-gradient-to-b from-card via-card to-background">
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[24px]">
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-40 h-40 bg-destructive/10 rounded-full blur-3xl" />
+          </div>
+
+          <div className="relative z-10 p-4 flex flex-col items-center">
+            <div className="relative mb-2">
+              <div className="absolute inset-0 bg-destructive/30 blur-xl rounded-full" />
+              <div className="relative w-11 h-11 rounded-full bg-gradient-to-br from-destructive to-destructive/80 flex items-center justify-center shadow-lg shadow-destructive/30">
+                <AlertTriangle className="h-5 w-5 text-destructive-foreground" strokeWidth={2.5} />
+              </div>
+            </div>
+
+            <AlertDialogHeader className="space-y-1">
+              <AlertDialogTitle className="text-sm font-bold text-center">
+                Cancelar agendamento?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-[11px] text-muted-foreground text-center leading-relaxed">
+                O horário será liberado para outros clientes.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <AlertDialogFooter className="w-full mt-4 flex-col gap-2 sm:flex-col sm:space-x-0">
+              <AlertDialogAction
+                className="w-full h-9 rounded-full text-sm font-semibold bg-destructive text-destructive-foreground hover:bg-destructive/90 active:scale-[0.98] transition-transform mt-0"
+                onClick={() => cancelId && handleCancelAppointment(cancelId)}
+              >
+                Sim, cancelar
+              </AlertDialogAction>
+              <AlertDialogCancel className="w-full h-9 rounded-full text-sm font-semibold mt-0 active:scale-[0.98] transition-transform">
+                Não, manter
+              </AlertDialogCancel>
+            </AlertDialogFooter>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
 
