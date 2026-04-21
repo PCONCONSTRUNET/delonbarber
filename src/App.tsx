@@ -29,6 +29,7 @@ const App = () => {
           <BrowserRouter>
             <PushPromptModal excludePaths={["/admin", "/login", "/perfil"]} />
             <Routes>
+              <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/" element={<Index />} />
               <Route path="/servicos" element={<Servicos />} />
               <Route path="/agendar" element={<Agendar />} />
