@@ -8,12 +8,12 @@
     <meta name="author" content="Lovable" />
 
     <!-- PWA / iOS push requirements -->
-    <link rel="manifest" href="/manifest.json" />
+    <!-- Manifest is injected dynamically by src/main.tsx based on the URL path
+         so /admin/* installs as a separate PWA from the client app. -->
     <meta name="theme-color" content="#D62828" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Delon Barber" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
