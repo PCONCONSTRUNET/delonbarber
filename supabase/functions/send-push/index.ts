@@ -1,13 +1,12 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface PushPayload {
-  role: 'admin' | 'cliente';
+interface PushRequest {
+  role: "admin" | "cliente";
   user_id?: string;
   title: string;
   message: string;
@@ -15,124 +14,106 @@ interface PushPayload {
   data?: Record<string, unknown>;
 }
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const APP_ID = Deno.env.get('ONESIGNAL_APP_ID')!;
-    const REST_KEY = Deno.env.get('ONESIGNAL_REST_API_KEY')!;
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-    const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
+    const APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
+    const REST_KEY = Deno.env.get("ONESIGNAL_REST_API_KEY");
     if (!APP_ID || !REST_KEY) {
-      throw new Error('OneSignal credentials missing');
-    }
-
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-    const payload: PushPayload = await req.json();
-    const { role, user_id, title, message, url, data } = payload;
-
-    if (!role || !title || !message) {
       return new Response(
-        JSON.stringify({ error: 'role, title and message are required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ error: "OneSignal não configurado" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log('[send-push] Request:', { role, user_id, title });
-
-    // Fetch active player_ids
-    let playerIds: string[] = [];
-
-    if (user_id) {
-      // First try: subscriptions linked to this specific user
-      const { data: userSubs } = await supabase
-        .from('onesignal_subscriptions')
-        .select('player_id')
-        .eq('ativo', true)
-        .eq('role', role)
-        .eq('user_id', user_id);
-
-      playerIds = (userSubs || []).map((s) => s.player_id);
-
-      // Fallback: orphan devices of same role (no user_id linked)
-      if (playerIds.length === 0) {
-        const { data: orphanSubs } = await supabase
-          .from('onesignal_subscriptions')
-          .select('player_id')
-          .eq('ativo', true)
-          .eq('role', role)
-          .is('user_id', null);
-        playerIds = (orphanSubs || []).map((s) => s.player_id);
-      }
-    } else {
-      // No user_id: send to all of role
-      const { data: roleSubs } = await supabase
-        .from('onesignal_subscriptions')
-        .select('player_id')
-        .eq('ativo', true)
-        .eq('role', role);
-      playerIds = (roleSubs || []).map((s) => s.player_id);
+    const body = (await req.json()) as PushRequest;
+    if (!body.role || !body.title || !body.message) {
+      return new Response(
+        JSON.stringify({ error: "role, title e message são obrigatórios" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    console.log(`[send-push] Found ${playerIds.length} player_ids for role=${role}`);
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    let playerIds: string[] = [];
+
+    if (body.user_id) {
+      const { data: subs, error: subsErr } = await supabase
+        .from("push_subscriptions")
+        .select("player_id")
+        .eq("ativo", true)
+        .eq("role", body.role)
+        .eq("user_id", body.user_id);
+      if (subsErr) throw subsErr;
+      playerIds = (subs ?? []).map((s) => s.player_id).filter(Boolean);
+
+      if (playerIds.length === 0) {
+        const { data: orphans } = await supabase
+          .from("push_subscriptions")
+          .select("player_id")
+          .eq("ativo", true)
+          .eq("role", body.role)
+          .is("user_id", null);
+        playerIds = (orphans ?? []).map((s) => s.player_id).filter(Boolean);
+      }
+    } else {
+      const { data: subs, error: subsErr } = await supabase
+        .from("push_subscriptions")
+        .select("player_id")
+        .eq("ativo", true)
+        .eq("role", body.role);
+      if (subsErr) throw subsErr;
+      playerIds = (subs ?? []).map((s) => s.player_id).filter(Boolean);
+    }
 
     if (playerIds.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, sent: 0, message: 'No active subscriptions' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ ok: true, sent: 0, reason: "Nenhum dispositivo inscrito" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Send via OneSignal REST API
-    const oneSignalRes = await fetch('https://onesignal.com/api/v1/notifications', {
-      method: 'POST',
+    const payload = {
+      app_id: APP_ID,
+      include_player_ids: playerIds,
+      headings: { en: body.title, pt: body.title },
+      contents: { en: body.message, pt: body.message },
+      url: body.url,
+      data: body.data ?? {},
+    };
+
+    const resp = await fetch("https://onesignal.com/api/v1/notifications", {
+      method: "POST",
       headers: {
-        'Authorization': `Basic ${REST_KEY}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
+        Authorization: `Basic ${REST_KEY}`,
       },
-      body: JSON.stringify({
-        app_id: APP_ID,
-        include_player_ids: playerIds,
-        headings: { en: title, pt: title },
-        contents: { en: message, pt: message },
-        url: url || undefined,
-        data: data || {},
-        web_push_topic: data?.topic as string | undefined,
-      }),
+      body: JSON.stringify(payload),
     });
 
-    const oneSignalData = await oneSignalRes.json();
-    console.log('[send-push] OneSignal response:', oneSignalData);
+    const result = await resp.json();
 
-    // Handle invalid player_ids
-    if (oneSignalData.errors?.invalid_player_ids?.length > 0) {
-      const invalidIds = oneSignalData.errors.invalid_player_ids;
-      console.log(`[send-push] Marking ${invalidIds.length} invalid player_ids as inactive`);
+    if (result.errors?.invalid_player_ids?.length) {
       await supabase
-        .from('onesignal_subscriptions')
+        .from("push_subscriptions")
         .update({ ativo: false })
-        .in('player_id', invalidIds);
+        .in("player_id", result.errors.invalid_player_ids);
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        sent: playerIds.length,
-        recipients: oneSignalData.recipients ?? 0,
-        notification_id: oneSignalData.id,
-        errors: oneSignalData.errors,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ ok: resp.ok, sent: playerIds.length, result }),
+      { status: resp.ok ? 200 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[send-push] Error:', msg);
+  } catch (e) {
+    console.error("send-push error:", e);
     return new Response(
-      JSON.stringify({ error: msg }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ error: String(e) }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
