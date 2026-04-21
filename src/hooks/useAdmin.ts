@@ -206,6 +206,26 @@ export function useAdminAppointments() {
       return false;
     }
 
+    if (paymentStatus === 'paid') {
+      const apt = appointments.find(a => a.id === id);
+      if (apt?.user_id) {
+        const { sendPush } = await import('@/lib/oneSignalPush');
+        sendPush({
+          role: 'cliente',
+          user_id: apt.user_id,
+          title: '💳 Pagamento Confirmado',
+          message: `Recebemos seu pagamento de R$ ${Number(apt.total_price || 0).toFixed(2)}. Obrigado!`,
+          url: '/perfil',
+        });
+        sendPush({
+          role: 'admin',
+          title: '💰 Novo Pagamento',
+          message: `Pagamento de R$ ${Number(apt.total_price || 0).toFixed(2)} confirmado.`,
+          url: '/admin/financeiro',
+        });
+      }
+    }
+
     toast({ title: "Atualizado!", description: "Pagamento registrado." });
     fetchAppointments();
     return true;

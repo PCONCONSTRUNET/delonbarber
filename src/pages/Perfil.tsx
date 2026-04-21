@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { useClientNotifications } from "@/hooks/useNotifications";
 import { NotificationHistory } from "@/components/client/NotificationHistory";
 import { MyLoyaltyProgress } from "@/components/client/MyLoyaltyProgress";
+import { PushToggle } from "@/components/push/PushToggle";
+import { notifyAdmin } from "@/lib/oneSignalPush";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -181,6 +183,16 @@ const Perfil = () => {
       .delete()
       .eq('appointment_id', appointmentId)
       .eq('is_manual', false);
+
+    const cancelled = appointments.find(a => a.id === appointmentId);
+    if (cancelled) {
+      const dateStr = format(new Date(cancelled.appointment_date + 'T00:00:00'), 'dd/MM', { locale: ptBR });
+      notifyAdmin(
+        '❌ Agendamento Cancelado',
+        `Cliente cancelou o agendamento de ${dateStr} às ${cancelled.appointment_time.slice(0, 5)}`,
+        '/admin/agenda'
+      );
+    }
 
     toast.success("Agendamento cancelado e horário liberado!");
     setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: 'cancelled' } : a));
