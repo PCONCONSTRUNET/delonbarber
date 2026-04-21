@@ -199,7 +199,7 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
 
   const enable = useCallback(async (): Promise<boolean> => {
     setLoading(true);
-    console.log('[push] enable() iniciado', { initialized, role, userId });
+    console.log('[push] enable() iniciado');
     try {
       if (!initialized) {
         const { data, error: cfgErr } = await supabase.functions.invoke('onesignal-config');
@@ -212,65 +212,51 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
       }
 
       if ('Notification' in window && Notification.permission === 'denied') {
-        console.warn('[push] permissão já estava negada');
         setPermission('denied');
         return false;
       }
 
-      // PASSO 1: Pedir permissão nativa (via SDK — usa User Activation do clique)
-      try {
-        console.log('[push] solicitando permissão nativa...');
-        await OneSignal.Notifications.requestPermission();
-      } catch (e) {
-        console.warn('[push] requestPermission falhou', e);
-      }
+      // PASSO 1: Pedir permissão. NÃO esperamos o await — disparamos a chamada
+      // mas resolvemos rápido via Notification.permission (atualiza assim que o usuário toca).
+      OneSignal.Notifications.requestPermission().catch(() => {/* noop */});
 
-      // PASSO 2: Aguardar a permissão ser refletida no navegador
-      // (em iOS isso pode demorar alguns ms depois do usuário tocar em "Permitir")
+      // PASSO 2: Aguardar permissão (poll rápido — 50ms)
       const waitForPermission = async (): Promise<NotificationPermission> => {
         const start = Date.now();
-        while (Date.now() - start < 5000) {
+        while (Date.now() - start < 8000) {
           const p = 'Notification' in window ? Notification.permission : 'default';
           if (p !== 'default') return p;
-          await new Promise((r) => setTimeout(r, 200));
+          await new Promise((r) => setTimeout(r, 50));
         }
         return 'Notification' in window ? Notification.permission : 'default';
       };
       const perm = await waitForPermission();
       setPermission(perm);
-      console.log('[push] permissão pós-prompt:', perm);
 
       if (perm !== 'granted') {
         console.warn('[push] permissão não concedida');
         return false;
       }
 
-      // PASSO 3: Delay crítico — iOS precisa de tempo para o Service Worker
-      // receber o token APNs antes do OneSignal pedir o subscription_id.
-      // Workaround documentado para o bug onde optedIn=true mas id=undefined.
-      await new Promise((r) => setTimeout(r, 1500));
+      // PASSO 3: Opt-in IMEDIATO (sem delay fixo).
+      // O waitForPlayerId já espera o token APNs chegar via event listener,
+      // então não precisa de delay artificial.
+      OneSignal.User.PushSubscription.optIn().catch(() => {/* noop */});
 
-      // PASSO 4: OPT-IN — força o registro do player_id no OneSignal
-      try {
-        console.log('[push] optIn()...');
-        await OneSignal.User.PushSubscription.optIn();
-      } catch (e) {
-        console.warn('[push] optIn falhou', e);
-      }
-
-      // PASSO 5: Aguarda o player_id chegar (combina event + polling, timeout maior pra iOS)
-      const pid = await waitForPlayerId(20000);
+      // PASSO 4: Aguardar o player_id (resolve assim que o token APNs chegar)
+      const pid = await waitForPlayerId(12000);
 
       if (pid) {
         setPlayerId(pid);
         setSubscribed(true);
-        await saveSubscription(pid);
-        console.log('[push] ✅ inscrição completa, pid =', pid);
+        // Não esperar o save — UI já pode liberar
+        saveSubscription(pid);
+        console.log('[push] ✅ inscrição completa');
 
-        // Welcome push depois de garantir que está salvo
-        setTimeout(async () => {
-          try {
-            const { data: welcomeRes, error: welcomeErr } = await supabase.functions.invoke('send-push', {
+        // Welcome push 100% fire-and-forget
+        setTimeout(() => {
+          supabase.functions
+            .invoke('send-push', {
               body: {
                 role,
                 user_id: userId ?? undefined,
@@ -278,23 +264,18 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
                 message: 'Você receberá avisos de novos agendamentos aqui.',
                 url: '/',
               },
-            });
-            console.log('[push] welcome push:', { welcomeRes, welcomeErr });
-          } catch (e) {
-            console.warn('[push] welcome push falhou:', e);
-          }
-        }, 2000);
+            })
+            .catch((e) => console.warn('[push] welcome push falhou:', e));
+        }, 1500);
 
         return true;
       }
 
       const token = OneSignal.User?.PushSubscription?.token;
-      console.error('[push] ❌ player_id não chegou em 20s', {
+      console.error('[push] ❌ player_id não chegou', {
         optedIn: OneSignal.User?.PushSubscription?.optedIn,
         hasToken: !!token,
-        tokenPreview: token ? token.substring(0, 40) + '...' : null,
       });
-
       return false;
     } catch (err) {
       console.error('[push] enable error:', err);
