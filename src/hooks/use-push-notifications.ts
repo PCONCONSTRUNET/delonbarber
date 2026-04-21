@@ -28,15 +28,67 @@ async function initOneSignal(appId: string): Promise<void> {
   if (oneSignalInitPromise) return oneSignalInitPromise;
 
   oneSignalInitPromise = (async () => {
+    console.log('[push] OneSignal.init com appId =', appId);
     await OneSignal.init({
       appId,
       allowLocalhostAsSecureOrigin: true,
       serviceWorkerPath: '/OneSignalSDKWorker.js',
+      serviceWorkerParam: { scope: '/' },
+      autoRegister: false,
+      autoResubscribe: true,
       welcomeNotification: { disable: true, message: '' },
+      notifyButton: { enable: false },
+      promptOptions: { slidedown: { prompts: [] } },
     } as unknown as Parameters<typeof OneSignal.init>[0]);
+    console.log('[push] OneSignal.init RESOLVIDO');
   })();
 
   return oneSignalInitPromise;
+}
+
+/**
+ * Aguarda o OneSignal devolver um player_id após optIn.
+ * Combina polling com event listener para máxima confiabilidade.
+ */
+function waitForPlayerId(timeoutMs = 15000): Promise<string | null> {
+  return new Promise((resolve) => {
+    let resolved = false;
+    const finish = (id: string | null) => {
+      if (resolved) return;
+      resolved = true;
+      resolve(id);
+    };
+
+    // 1) Listener de eventos — preferencial
+    const listener = (event: { current: { id: string | null; optedIn: boolean } }) => {
+      console.log('[push] subscription change event:', event.current);
+      if (event.current.id) finish(event.current.id);
+    };
+    try {
+      OneSignal.User?.PushSubscription?.addEventListener('change', listener);
+    } catch (e) {
+      console.warn('[push] addEventListener falhou', e);
+    }
+
+    // 2) Polling — fallback (alguns dispositivos não disparam o evento)
+    const start = Date.now();
+    const poll = () => {
+      if (resolved) return;
+      const id = OneSignal.User?.PushSubscription?.id ?? null;
+      if (id) {
+        console.log(`[push] player_id via polling em ${Date.now() - start}ms:`, id);
+        finish(id);
+        return;
+      }
+      if (Date.now() - start > timeoutMs) {
+        console.error('[push] timeout aguardando player_id');
+        finish(null);
+        return;
+      }
+      setTimeout(poll, 300);
+    };
+    poll();
+  });
 }
 
 export function usePushNotifications({ role, userId, autoInit = true }: UsePushOptions) {
@@ -93,6 +145,7 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
         OneSignal.User?.PushSubscription?.addEventListener(
           'change',
           (event: { current: { optedIn: boolean; id: string | null } }) => {
+            console.log('[push] global change event:', event.current);
             setSubscribed(event.current.optedIn);
             setPlayerId(event.current.id);
           }
@@ -131,6 +184,7 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
           );
 
         if (error) console.error('[push] save error:', error);
+        else console.log('[push] subscription salva no banco:', pid);
       } catch (err) {
         console.error('[push] saveSubscription threw:', err);
       }
@@ -148,16 +202,13 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
     console.log('[push] enable() iniciado', { initialized, role, userId });
     try {
       if (!initialized) {
-        console.log('[push] buscando config OneSignal...');
         const { data, error: cfgErr } = await supabase.functions.invoke('onesignal-config');
-        console.log('[push] config recebida', { data, cfgErr });
         if (!data?.appId) {
-          console.error('[push] appId vazio', data);
+          console.error('[push] appId vazio', cfgErr);
           return false;
         }
         await initOneSignal(data.appId);
         setInitialized(true);
-        console.log('[push] OneSignal inicializado com appId', data.appId);
       }
 
       if ('Notification' in window && Notification.permission === 'denied') {
@@ -166,48 +217,42 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
         return false;
       }
 
+      // Pedir permissão DIRETA (sem prompt do OneSignal)
       try {
-        console.log('[push] solicitando permissão...');
+        console.log('[push] solicitando permissão nativa...');
         await OneSignal.Notifications.requestPermission();
       } catch (e) {
-        console.warn('[push] requestPermission failed', e);
+        console.warn('[push] requestPermission falhou', e);
       }
 
+      // Algumas versões devolvem o estado em Notification.permission
       if ('Notification' in window) {
-        console.log('[push] permissão atual:', Notification.permission);
         setPermission(Notification.permission);
+        console.log('[push] permissão pós-prompt:', Notification.permission);
         if (Notification.permission !== 'granted') {
-          console.warn('[push] permissão não concedida, abortando');
+          console.warn('[push] permissão não concedida');
           return false;
         }
       }
 
+      // OPT-IN — força o registro do player_id no OneSignal
       try {
-        console.log('[push] chamando optIn...');
+        console.log('[push] optIn()...');
         await OneSignal.User.PushSubscription.optIn();
       } catch (e) {
-        console.warn('[push] optIn failed', e);
+        console.warn('[push] optIn falhou', e);
       }
 
-      let pid: string | null = null;
-      for (let i = 0; i < 30; i++) {
-        pid = OneSignal.User?.PushSubscription?.id ?? null;
-        if (pid) {
-          console.log(`[push] player_id obtido após ${i * 250}ms:`, pid);
-          break;
-        }
-        await new Promise((r) => setTimeout(r, 250));
-      }
+      // Aguarda o player_id chegar (combina event + polling)
+      const pid = await waitForPlayerId(15000);
 
       if (pid) {
         setPlayerId(pid);
         setSubscribed(true);
         await saveSubscription(pid);
-        console.log('[push] inscrição salva com sucesso');
+        console.log('[push] ✅ inscrição completa, pid =', pid);
 
-        // Welcome push so the user sees a confirmation right away
-        // (same UX as competitor apps). Small delay so OneSignal fully
-        // registers the player on their side before targeting it.
+        // Welcome push depois de garantir que está salvo
         setTimeout(async () => {
           try {
             const { data: welcomeRes, error: welcomeErr } = await supabase.functions.invoke('send-push', {
@@ -219,15 +264,16 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
                 url: '/',
               },
             });
-            console.log('[push] welcome push enviado', { welcomeRes, welcomeErr });
+            console.log('[push] welcome push:', { welcomeRes, welcomeErr });
           } catch (e) {
-            console.warn('[push] welcome push falhou (não-crítico):', e);
+            console.warn('[push] welcome push falhou:', e);
           }
-        }, 1500);
+        }, 2000);
 
         return true;
       }
-      console.error('[push] timeout: player_id nunca chegou. optedIn=', OneSignal.User?.PushSubscription?.optedIn);
+
+      console.error('[push] ❌ player_id não chegou. optedIn=', OneSignal.User?.PushSubscription?.optedIn);
       return false;
     } catch (err) {
       console.error('[push] enable error:', err);
