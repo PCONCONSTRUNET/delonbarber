@@ -13,6 +13,7 @@ import Cliente from "./pages/Cliente";
 import Pacotes from "./pages/Pacotes";
 import NotFound from "./pages/NotFound";
 import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminIA, AdminPacotes, AdminAvaliacoes, AdminFidelidade } from "./pages/Admin";
+import { PushPromptModal } from "@/components/push/PushPromptModal";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <PushPromptModal />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/servicos" element={<Servicos />} />
