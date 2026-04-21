@@ -480,7 +480,23 @@ const Perfil = () => {
               </TabsContent>
 
               {/* Notificações Tab */}
-              <TabsContent value="notificacoes" className="mt-4">
+              <TabsContent value="notificacoes" className="mt-4 space-y-4">
+                {userId && (
+                  <Card className="glass-effect border-border">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Bell className="w-4 h-4" />
+                        Notificações Push
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Receba avisos sobre seus agendamentos, confirmações de pagamento e novidades direto no seu celular.
+                      </p>
+                      <PushToggle role="cliente" userId={userId} />
+                    </CardContent>
+                  </Card>
+                )}
                 {userId && <NotificationHistory userId={userId} />}
               </TabsContent>
             </Tabs>

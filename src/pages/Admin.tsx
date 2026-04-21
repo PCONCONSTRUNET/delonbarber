@@ -98,8 +98,24 @@ export function AdminDashboard() {
           </div>
         </div>
         
-        {/* Push Notification Setup Card */}
-        <PushNotificationSetup />
+        {/* Push Notification Setup Cards */}
+        <div className="grid gap-3 md:grid-cols-2">
+          <PushNotificationSetup />
+          <Card className="border-primary/30 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Bell className="w-5 h-5 text-primary" />
+                Push (OneSignal)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground mb-3">
+                Notificações nativas para receber alertas mesmo com o app fechado em iOS e Android.
+              </p>
+              <PushToggle role="admin" userId={user?.id} />
+            </CardContent>
+          </Card>
+        </div>
         
         <DashboardStats appointments={appointments} />
         
