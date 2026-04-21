@@ -143,10 +143,10 @@ export function useMyRatings() {
   }
 
   useEffect(() => {
-    fetchPendingRatings();
+    void fetchPendingRatings();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchPendingRatings();
+      void fetchPendingRatings();
     });
 
     return () => subscription.unsubscribe();

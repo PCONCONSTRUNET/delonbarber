@@ -201,11 +201,11 @@ export function useMyPackages() {
     const handler = (pkgs: MyPackage[]) => setPackages(pkgs);
     subscribers.add(handler);
 
-    fetchMyPackages();
+    void fetchMyPackages();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       cacheEntry = null; // invalidate on auth change
-      fetchMyPackages(true);
+      void fetchMyPackages(true);
     });
 
     return () => {

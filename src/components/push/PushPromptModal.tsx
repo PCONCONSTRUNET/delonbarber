@@ -45,8 +45,10 @@ export function PushPromptModal({ excludePaths = ['/admin', '/login'] }: Props) 
       }
       setAuthChecked(true);
     };
-    check();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => check());
+    void check();
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      void check();
+    });
     return () => {
       mounted = false;
       sub.subscription.unsubscribe();

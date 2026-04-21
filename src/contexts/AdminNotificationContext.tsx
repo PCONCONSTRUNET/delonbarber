@@ -47,10 +47,10 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
       }
     }
 
-    checkAdmin();
+    void checkAdmin();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      checkAdmin();
+      void checkAdmin();
     });
 
     return () => subscription.unsubscribe();
