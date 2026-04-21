@@ -34,8 +34,8 @@ async function initOneSignal(appId: string): Promise<void> {
       appId,
       allowLocalhostAsSecureOrigin: true,
       serviceWorkerPath: '/OneSignalSDKWorker.js',
-      welcomeNotification: { disable: true },
-    } as Parameters<typeof OneSignal.init>[0]);
+      welcomeNotification: { disable: true, message: '' },
+    } as unknown as Parameters<typeof OneSignal.init>[0]);
   })();
 
   return oneSignalInitPromise;
