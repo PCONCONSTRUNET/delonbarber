@@ -86,7 +86,7 @@ export function AdminDashboard() {
   });
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
-  if (!isAdmin) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   return (
     <AdminLayout>
@@ -193,7 +193,7 @@ export function AdminAgenda() {
   }, []);
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
-  if (!isAdmin) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const dayAppointments = appointments.filter(a => a.appointment_date === dateStr);
@@ -306,7 +306,7 @@ export function AdminClientes() {
   const [searchTerm, setSearchTerm] = useState('');
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
-  if (!isAdmin) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   // Filter clients by search term
   const filteredClients = clients.filter(client => {
@@ -391,7 +391,7 @@ export function AdminServicos() {
   const [showForm, setShowForm] = useState(false);
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
-  if (!isAdmin) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   const handleSubmit = async (data: any) => {
     if (editingService) await updateService(editingService.id, data);
@@ -451,7 +451,7 @@ export function AdminFinanceiro() {
   const { appointments, loading } = useAdminAppointments();
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
-  if (!isAdmin) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   return (
     <AdminLayout>
@@ -468,7 +468,7 @@ export function AdminIA() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
-  if (!isAdmin) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   return (
     <AdminLayout>
@@ -488,7 +488,7 @@ export function AdminPacotes() {
   const [activeTab, setActiveTab] = useState('pacotes');
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
-  if (!isAdmin) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   const handleSubmit = async (data: any) => {
     await createPackage(data);
@@ -566,7 +566,7 @@ export function AdminAvaliacoes() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
-  if (!isAdmin) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   return (
     <AdminLayout>
@@ -580,7 +580,7 @@ export function AdminFidelidade() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
-  if (!isAdmin) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   return (
     <AdminLayout>
