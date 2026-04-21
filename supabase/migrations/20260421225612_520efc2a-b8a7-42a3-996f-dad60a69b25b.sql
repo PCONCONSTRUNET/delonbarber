@@ -1,0 +1,1 @@
+DELETE FROM public.push_subscriptions WHERE player_id LIKE 'local-%';
