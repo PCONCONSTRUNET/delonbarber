@@ -1,4 +1,4 @@
-import { Bell, BellOff, Loader2, BellRing } from 'lucide-react';
+import { Bell, BellOff, Loader2, BellRing, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { toast } from 'sonner';
@@ -10,37 +10,42 @@ interface PushToggleProps {
 }
 
 export function PushToggle({ role, userId, variant = 'default' }: PushToggleProps) {
-  const { supported, subscribed, loading, enable, disable } = usePushNotifications({ role, userId });
-
-  // Detect if running inside Lovable preview iframe (push not available there)
-  const isPreview = (() => {
-    try {
-      const host = window.location.hostname;
-      return (
-        window.self !== window.top ||
-        host.includes('id-preview--') ||
-        host.includes('lovableproject.com')
-      );
-    } catch {
-      return true;
-    }
-  })();
+  const { supported, subscribed, loading, enable, disable, unsupportedReason } =
+    usePushNotifications({ role, userId });
 
   if (!supported) {
     if (variant === 'compact') return null;
 
-    if (isPreview) {
-      return (
-        <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground mb-1">📱 Notificações disponíveis no app publicado</p>
-          <p>Abra o app pelo link publicado (delonbarber.lovable.app) ou instale como aplicativo no seu celular para ativar as notificações.</p>
-        </div>
-      );
+    // Friendly message + actionable hint per reason
+    let title = 'Notificações indisponíveis';
+    let message = 'Seu navegador não suporta notificações push.';
+
+    if (unsupportedReason === 'preview') {
+      title = '📱 Notificações disponíveis no app publicado';
+      message =
+        'Abra o app pelo link publicado (delonbarber.lovable.app) e instale na tela inicial para ativar.';
+    } else if (unsupportedReason === 'ios-not-installed') {
+      title = '📲 Instale o app primeiro';
+      message =
+        'No iPhone, toque em Compartilhar → "Adicionar à Tela de Início" e abra o app pelo ícone instalado para ativar as notificações.';
+    } else if (unsupportedReason === 'config-error') {
+      title = '⚠️ Erro de configuração';
+      message = 'Não conseguimos carregar a configuração de notificações. Tente recarregar.';
+    } else if (unsupportedReason === 'no-api') {
+      title = '⚠️ Navegador incompatível';
+      message =
+        'Use o Chrome, Safari (iOS 16.4+) ou Firefox para receber notificações.';
     }
 
     return (
-      <div className="rounded-xl border border-dashed border-muted bg-muted/20 p-3 text-xs text-muted-foreground">
-        Notificações não suportadas neste dispositivo/navegador. No iPhone, instale o app na tela inicial primeiro.
+      <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground mb-1">{title}</p>
+            <p className="text-xs text-muted-foreground">{message}</p>
+          </div>
+        </div>
       </div>
     );
   }
