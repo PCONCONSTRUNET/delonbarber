@@ -18,11 +18,12 @@ export function PushPromptModal({ excludePaths = ['/admin', '/login'] }: Props) 
   const [isAdmin, setIsAdmin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const location = useLocation();
+  const shouldInitPush = !excludePaths.some((p) => location.pathname.startsWith(p));
 
   const { supported, permission, subscribed, loading, enable } = usePushNotifications({
     role: 'cliente',
     userId,
-    autoInit: true,
+    autoInit: shouldInitPush,
   });
 
   useEffect(() => {
