@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CheckCircle, Calendar, Clock } from 'lucide-react';
+import { CheckCircle2, Calendar, Clock } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
@@ -18,7 +18,6 @@ interface PaymentConfirmationDialogProps {
 export function PaymentConfirmationDialog({
   open,
   onOpenChange,
-  appointmentId,
   amount,
   date,
   time,
@@ -26,85 +25,110 @@ export function PaymentConfirmationDialog({
 }: PaymentConfirmationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
-        {/* Success Header */}
-        <div className="bg-green-500/10 p-6 text-center border-b border-border">
+      <DialogContent
+        className="max-w-[340px] sm:max-w-sm p-0 overflow-hidden border-border/40 rounded-[28px] shadow-2xl bg-gradient-to-b from-card via-card to-background"
+      >
+        {/* Glow ambient */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[28px]">
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 bg-green-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
+        </div>
+
+        <div className="relative z-10 p-5 flex flex-col items-center">
+          {/* Success Icon */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', delay: 0.1 }}
-            className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center"
+            initial={{ scale: 0, rotate: -90 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.1 }}
+            className="relative mb-3"
           >
-            <CheckCircle className="h-8 w-8 text-green-500" />
+            <div className="absolute inset-0 bg-green-500/30 blur-xl rounded-full" />
+            <div className="relative w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/30">
+              <CheckCircle2 className="h-7 w-7 text-white" strokeWidth={2.5} />
+            </div>
           </motion.div>
+
+          {/* Title */}
           <motion.h2
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-xl font-bold text-foreground"
+            className="text-lg font-bold text-foreground text-center"
           >
-            Agendamento Confirmado! 🎉
+            Agendamento Confirmado 🎉
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="text-sm text-muted-foreground mt-1"
+            transition={{ delay: 0.25 }}
+            className="text-xs text-muted-foreground mt-1 text-center line-clamp-1"
           >
             {services.join(', ')}
           </motion.p>
-        </div>
 
-        {/* Appointment Details */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="p-4 flex justify-center gap-6 border-b border-border"
-        >
-          <div className="flex items-center gap-2 text-sm">
-            <Calendar className="h-4 w-4 text-primary" />
-            <span className="font-medium">
-              {format(date, "dd 'de' MMMM", { locale: ptBR })}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-4 w-4 text-primary" />
-            <span className="font-medium">{time.slice(0, 5)}</span>
-          </div>
-        </motion.div>
+          {/* Date & Time pill */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-4 flex items-center gap-2 bg-muted/40 backdrop-blur-sm border border-border/40 rounded-full px-4 py-2"
+          >
+            <div className="flex items-center gap-1.5 text-xs">
+              <Calendar className="h-3.5 w-3.5 text-primary" />
+              <span className="font-semibold text-foreground">
+                {format(date, "dd 'de' MMM", { locale: ptBR })}
+              </span>
+            </div>
+            <div className="w-px h-3 bg-border" />
+            <div className="flex items-center gap-1.5 text-xs">
+              <Clock className="h-3.5 w-3.5 text-primary" />
+              <span className="font-semibold text-foreground">{time.slice(0, 5)}</span>
+            </div>
+          </motion.div>
 
-        {/* Payment Info - sem QR Code */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="p-6"
-        >
-          <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-primary mb-1">
+          {/* Amount card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.35 }}
+            className="w-full mt-4 relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4"
+          >
+            {/* Texture overlay */}
+            <div
+              className="absolute inset-0 opacity-[0.03]"
+              style={{
+                backgroundImage:
+                  'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
+                backgroundSize: '12px 12px',
+              }}
+            />
+            <div className="relative text-center">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-0.5">
+                Valor
+              </p>
+              <p className="text-3xl font-bold text-primary leading-none">
                 R$ {amount.toFixed(0)}
               </p>
-              <p className="text-sm text-muted-foreground">
-                Pagamento a ser realizado no local
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                Pagamento no local
               </p>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-border bg-muted/30">
-          <Button
-            onClick={() => onOpenChange(false)}
-            variant="outline"
-            className="w-full"
+          {/* Action */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="w-full mt-4"
           >
-            Fechar
-          </Button>
-          <p className="text-xs text-center text-muted-foreground mt-2">
-            Você também pode pagar na hora do atendimento
-          </p>
+            <Button
+              onClick={() => onOpenChange(false)}
+              className="w-full h-11 rounded-full font-semibold active:scale-[0.98] transition-transform"
+            >
+              Concluir
+            </Button>
+          </motion.div>
         </div>
       </DialogContent>
     </Dialog>
