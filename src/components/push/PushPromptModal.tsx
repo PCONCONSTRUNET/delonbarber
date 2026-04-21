@@ -80,13 +80,32 @@ export function PushPromptModal() {
   }, [authChecked, userId, supported, subscribed, permission, location.pathname]);
 
   const handleEnable = async () => {
-    const ok = await enable();
-    if (ok) {
-      toast.success('Notificações ativadas!');
+    // Safety: close modal automatically if enable() takes longer than 15s
+    const safetyTimer = setTimeout(() => {
+      console.warn('[PushPrompt] enable() taking too long — closing modal');
       localStorage.setItem(STORAGE_KEY, '1');
       setOpen(false);
-    } else {
-      toast.error('Não foi possível ativar. Verifique as permissões.');
+      toast.error('Tempo esgotado. Tente novamente nas configurações.');
+    }, 15000);
+
+    try {
+      const ok = await enable();
+      clearTimeout(safetyTimer);
+      if (ok) {
+        toast.success('Notificações ativadas!');
+        localStorage.setItem(STORAGE_KEY, '1');
+        setOpen(false);
+      } else {
+        toast.error('Não foi possível ativar. Verifique as permissões.');
+        // Close modal even on failure so user isn't stuck
+        localStorage.setItem(STORAGE_KEY, '1');
+        setOpen(false);
+      }
+    } catch (err) {
+      clearTimeout(safetyTimer);
+      console.error('[PushPrompt] handleEnable error:', err);
+      toast.error('Erro ao ativar. Tente novamente.');
+      setOpen(false);
     }
   };
 
