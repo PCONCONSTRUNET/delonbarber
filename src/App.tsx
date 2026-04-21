@@ -28,6 +28,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <DynamicManifest />
             <PushPromptModal excludePaths={["/admin", "/login", "/perfil"]} />
             <Routes>
               <Route path="/admin/login" element={<AdminLogin />} />
