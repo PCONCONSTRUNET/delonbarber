@@ -111,7 +111,7 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
         }
 
         try {
-          await initOneSignal(data.appId);
+          await initOneSignal(data.appId, data.safariWebId);
           setInitialized(true);
           setUnsupportedReason(null);
 
@@ -212,7 +212,7 @@ export function usePushNotifications({ role, userId }: UsePushOptions) {
             if (error) console.error('[push] onesignal-config error:', error);
             if (data?.appId) {
               console.log('[push] initializing OneSignal...');
-              await initOneSignal(data.appId);
+              await initOneSignal(data.appId, data.safariWebId);
               setInitialized(true);
               console.log('[push] OneSignal initialized');
             } else {
