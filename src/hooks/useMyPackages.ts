@@ -34,165 +34,203 @@ export interface MyPackage {
   benefits: MyPackageBenefit[];
 }
 
-export function useMyPackages() {
-  const [packages, setPackages] = useState<MyPackage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+// ---- Module-level cache to avoid duplicate parallel fetches ----
+// Several components call useMyPackages() on the same page; without a cache
+// each one triggers its own waterfall of queries (N+1) which makes the
+// /agendar page very slow.
+type CacheEntry = {
+  userId: string | null;
+  packages: MyPackage[];
+  fetchedAt: number;
+};
+let cacheEntry: CacheEntry | null = null;
+let inflight: Promise<MyPackage[]> | null = null;
+const CACHE_TTL_MS = 30_000; // 30s is plenty for booking flow
 
-  async function fetchMyPackages() {
-    setLoading(true);
+const subscribers = new Set<(pkgs: MyPackage[]) => void>();
+function notifyAll(pkgs: MyPackage[]) {
+  subscribers.forEach((cb) => cb(pkgs));
+}
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setPackages([]);
-      setUserId(null);
-      setLoading(false);
-      return;
-    }
-    
-    setUserId(user.id);
+async function loadPackages(userId: string): Promise<MyPackage[]> {
+  // Single query: client_packages joined with packages
+  const { data: clientPackages, error } = await supabase
+    .from('client_packages')
+    .select(`
+      id,
+      package_id,
+      start_date,
+      end_date,
+      status,
+      packages:package_id ( id, name, price, discount_percent, description )
+    `)
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .gte('end_date', new Date().toISOString().split('T')[0]);
 
-    // Fetch user's active packages
-    const { data: clientPackages, error } = await supabase
-      .from('client_packages')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .gte('end_date', new Date().toISOString().split('T')[0]);
-
-    if (error) {
-      console.error('Error fetching packages:', error);
-      setLoading(false);
-      return;
-    }
-
-    const packagesWithBenefits: MyPackage[] = [];
-
-    // Calculate current week boundaries (Monday to Sunday)
-    const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
-    const weekEnd = endOfWeek(now, { weekStartsOn: 1 }); // Sunday
-
-    for (const cp of clientPackages || []) {
-      // Fetch package details
-      const { data: packageData } = await supabase
-        .from('packages')
-        .select('id, name, price, discount_percent, description')
-        .eq('id', cp.package_id)
-        .single();
-
-      if (!packageData) continue;
-
-      // Fetch benefits for this package with weekly_limit
-      const { data: benefitsData, error: benefitsError } = await supabase
-        .from('package_benefits')
-        .select('id, service_id, quantity, weekly_limit, services(id, name, price)')
-        .eq('package_id', cp.package_id);
-
-      if (benefitsError) {
-        console.error('Error fetching benefits for package:', benefitsError);
-        continue;
-      }
-
-      // Fetch all usage for this client package
-      const { data: usageData, error: usageError } = await supabase
-        .from('client_package_usage')
-        .select('service_id, used_at')
-        .eq('client_package_id', cp.id);
-
-      if (usageError) {
-        console.error('Error fetching usage for package:', usageError);
-      }
-
-      console.log('Package usage data for', cp.id, ':', usageData);
-
-      // Count total usage per service
-      const usageByService = (usageData || []).reduce((acc, u) => {
-        acc[u.service_id] = (acc[u.service_id] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      // Count usage THIS WEEK per service
-      const usageThisWeekByService = (usageData || []).reduce((acc, u) => {
-        const usedAt = new Date(u.used_at);
-        if (usedAt >= weekStart && usedAt <= weekEnd) {
-          acc[u.service_id] = (acc[u.service_id] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
-
-      console.log('Usage by service:', usageByService);
-      console.log('Usage this week:', usageThisWeekByService);
-
-      // Build benefits with usage info
-      const benefits: MyPackageBenefit[] = (benefitsData || []).map((b: any) => {
-        const used = usageByService[b.service_id] || 0;
-        const usedThisWeek = usageThisWeekByService[b.service_id] || 0;
-        const weeklyLimit = b.weekly_limit;
-        
-        return {
-          id: b.id,
-          service_id: b.service_id,
-          quantity: b.quantity,
-          weekly_limit: weeklyLimit,
-          used,
-          used_this_week: usedThisWeek,
-          remaining: b.quantity - used,
-          remaining_this_week: weeklyLimit !== null ? weeklyLimit - usedThisWeek : null,
-          service: b.services,
-        };
-      });
-
-      packagesWithBenefits.push({
-        id: cp.id,
-        package_id: cp.package_id,
-        start_date: cp.start_date,
-        end_date: cp.end_date,
-        status: cp.status as 'active' | 'expired' | 'cancelled',
-        package: packageData,
-        benefits,
-      });
-    }
-
-    setPackages(packagesWithBenefits);
-    setLoading(false);
+  if (error || !clientPackages || clientPackages.length === 0) {
+    if (error) console.error('Error fetching packages:', error);
+    return [];
   }
 
-  useEffect(() => {
-    fetchMyPackages();
+  const packageIds = clientPackages.map((cp: any) => cp.package_id);
+  const clientPackageIds = clientPackages.map((cp: any) => cp.id);
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchMyPackages();
+  // Fetch all benefits and all usage in parallel — only 2 queries total
+  const [benefitsRes, usageRes] = await Promise.all([
+    supabase
+      .from('package_benefits')
+      .select('id, package_id, service_id, quantity, weekly_limit, services(id, name, price)')
+      .in('package_id', packageIds),
+    supabase
+      .from('client_package_usage')
+      .select('client_package_id, service_id, used_at')
+      .in('client_package_id', clientPackageIds),
+  ]);
+
+  const benefitsByPackage: Record<string, any[]> = {};
+  (benefitsRes.data || []).forEach((b: any) => {
+    if (!benefitsByPackage[b.package_id]) benefitsByPackage[b.package_id] = [];
+    benefitsByPackage[b.package_id].push(b);
+  });
+
+  const usageByClientPackage: Record<string, any[]> = {};
+  (usageRes.data || []).forEach((u: any) => {
+    if (!usageByClientPackage[u.client_package_id]) usageByClientPackage[u.client_package_id] = [];
+    usageByClientPackage[u.client_package_id].push(u);
+  });
+
+  const now = new Date();
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+
+  const result: MyPackage[] = [];
+  for (const cp of clientPackages as any[]) {
+    if (!cp.packages) continue;
+    const packageBenefits = benefitsByPackage[cp.package_id] || [];
+    const usageData = usageByClientPackage[cp.id] || [];
+
+    const usageByService = usageData.reduce((acc: Record<string, number>, u: any) => {
+      acc[u.service_id] = (acc[u.service_id] || 0) + 1;
+      return acc;
+    }, {});
+    const usageThisWeekByService = usageData.reduce((acc: Record<string, number>, u: any) => {
+      const usedAt = new Date(u.used_at);
+      if (usedAt >= weekStart && usedAt <= weekEnd) {
+        acc[u.service_id] = (acc[u.service_id] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    const benefits: MyPackageBenefit[] = packageBenefits.map((b: any) => {
+      const used = usageByService[b.service_id] || 0;
+      const usedThisWeek = usageThisWeekByService[b.service_id] || 0;
+      const weeklyLimit = b.weekly_limit;
+      return {
+        id: b.id,
+        service_id: b.service_id,
+        quantity: b.quantity,
+        weekly_limit: weeklyLimit,
+        used,
+        used_this_week: usedThisWeek,
+        remaining: b.quantity - used,
+        remaining_this_week: weeklyLimit !== null ? weeklyLimit - usedThisWeek : null,
+        service: b.services,
+      };
     });
 
-    return () => subscription.unsubscribe();
+    result.push({
+      id: cp.id,
+      package_id: cp.package_id,
+      start_date: cp.start_date,
+      end_date: cp.end_date,
+      status: cp.status as 'active' | 'expired' | 'cancelled',
+      package: cp.packages,
+      benefits,
+    });
+  }
+
+  return result;
+}
+
+async function getPackagesCached(force = false): Promise<MyPackage[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    cacheEntry = { userId: null, packages: [], fetchedAt: Date.now() };
+    return [];
+  }
+
+  const fresh = cacheEntry &&
+    cacheEntry.userId === user.id &&
+    Date.now() - cacheEntry.fetchedAt < CACHE_TTL_MS;
+
+  if (!force && fresh) return cacheEntry!.packages;
+  if (inflight) return inflight;
+
+  inflight = (async () => {
+    try {
+      const pkgs = await loadPackages(user.id);
+      cacheEntry = { userId: user.id, packages: pkgs, fetchedAt: Date.now() };
+      notifyAll(pkgs);
+      return pkgs;
+    } finally {
+      inflight = null;
+    }
+  })();
+  return inflight;
+}
+
+export function useMyPackages() {
+  const [packages, setPackages] = useState<MyPackage[]>(
+    cacheEntry?.packages ?? []
+  );
+  const [loading, setLoading] = useState(!cacheEntry);
+  const [userId, setUserId] = useState<string | null>(cacheEntry?.userId ?? null);
+
+  const fetchMyPackages = useCallback(async (force = false) => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    setUserId(user?.id ?? null);
+    const pkgs = await getPackagesCached(force);
+    setPackages(pkgs);
+    setLoading(false);
   }, []);
 
-  // Check if user has an available benefit for a service (total remaining only, ignoring weekly limits for display)
+  useEffect(() => {
+    // Subscribe to global cache updates so all instances stay in sync
+    const handler = (pkgs: MyPackage[]) => setPackages(pkgs);
+    subscribers.add(handler);
+
+    fetchMyPackages();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      cacheEntry = null; // invalidate on auth change
+      fetchMyPackages(true);
+    });
+
+    return () => {
+      subscribers.delete(handler);
+      subscription.unsubscribe();
+    };
+  }, [fetchMyPackages]);
+
   const hasAvailableBenefit = (serviceId: string): boolean => {
     for (const pkg of packages) {
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
-      if (benefit && benefit.remaining > 0) {
-        return true;
-      }
+      if (benefit && benefit.remaining > 0) return true;
     }
     return false;
   };
 
-  // Get total remaining for a specific service across all packages (total limit only)
   const getRemainingForService = (serviceId: string): number => {
     let total = 0;
     for (const pkg of packages) {
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
-      if (benefit) {
-        total += benefit.remaining;
-      }
+      if (benefit) total += benefit.remaining;
     }
     return Math.max(0, total);
   };
 
-  // Check if a service is blocked due to weekly limit in the CURRENT week (for display purposes)
   const isBlockedByWeeklyLimit = (serviceId: string): boolean => {
     for (const pkg of packages) {
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
@@ -205,16 +243,11 @@ export function useMyPackages() {
     return false;
   };
 
-  // NEW: Check if a specific date's week already has an appointment scheduled for this service
-  // This checks future scheduled appointments, not just usage records
   const isWeekBlockedForDate = useCallback(async (serviceId: string, targetDate: Date): Promise<boolean> => {
     if (!userId) return false;
-    
-    // Get the week boundaries for the target date
     const targetWeekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
     const targetWeekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
-    
-    // Check if user has a weekly limit for this service
+
     let hasWeeklyLimit = false;
     for (const pkg of packages) {
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
@@ -223,17 +256,11 @@ export function useMyPackages() {
         break;
       }
     }
-    
     if (!hasWeeklyLimit) return false;
 
-    // Query for existing appointments (confirmed or pending) in this week that use this service
     const { data: existingAppointments, error } = await supabase
       .from('appointments')
-      .select(`
-        id,
-        appointment_date,
-        appointment_services!inner(service_id)
-      `)
+      .select('id, appointment_date, appointment_services!inner(service_id)')
       .eq('user_id', userId)
       .gte('appointment_date', format(targetWeekStart, 'yyyy-MM-dd'))
       .lte('appointment_date', format(targetWeekEnd, 'yyyy-MM-dd'))
@@ -244,28 +271,19 @@ export function useMyPackages() {
       return false;
     }
 
-    // Check if any of these appointments include this service
-    const hasAppointmentWithService = existingAppointments?.some((apt: any) => 
+    return !!existingAppointments?.some((apt: any) =>
       apt.appointment_services.some((as: any) => as.service_id === serviceId)
     );
-
-    return !!hasAppointmentWithService;
   }, [userId, packages]);
 
-  // NEW: Get count of appointments already scheduled in a specific week for a service
   const getScheduledCountForWeek = useCallback(async (serviceId: string, targetDate: Date): Promise<number> => {
     if (!userId) return 0;
-    
     const targetWeekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
     const targetWeekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
 
     const { data: existingAppointments, error } = await supabase
       .from('appointments')
-      .select(`
-        id,
-        appointment_date,
-        appointment_services!inner(service_id)
-      `)
+      .select('id, appointment_date, appointment_services!inner(service_id)')
       .eq('user_id', userId)
       .gte('appointment_date', format(targetWeekStart, 'yyyy-MM-dd'))
       .lte('appointment_date', format(targetWeekEnd, 'yyyy-MM-dd'))
@@ -276,12 +294,11 @@ export function useMyPackages() {
       return 0;
     }
 
-    return existingAppointments?.filter((apt: any) => 
+    return existingAppointments?.filter((apt: any) =>
       apt.appointment_services.some((as: any) => as.service_id === serviceId)
     ).length || 0;
   }, [userId]);
 
-  // Get weekly limit info for a service
   const getWeeklyLimitInfo = (serviceId: string): { limit: number; used: number; remaining: number } | null => {
     for (const pkg of packages) {
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
@@ -296,11 +313,11 @@ export function useMyPackages() {
     return null;
   };
 
-  return { 
-    packages, 
-    loading, 
-    fetchMyPackages, 
-    hasAvailableBenefit, 
+  return {
+    packages,
+    loading,
+    fetchMyPackages: () => fetchMyPackages(true),
+    hasAvailableBenefit,
     getRemainingForService,
     isBlockedByWeeklyLimit,
     isWeekBlockedForDate,
