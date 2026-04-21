@@ -50,7 +50,11 @@ async function initOneSignal(appId: string): Promise<void> {
  * Aguarda o OneSignal devolver um player_id após optIn.
  * Combina polling com event listener para máxima confiabilidade.
  */
-function waitForPlayerId(timeoutMs = 15000): Promise<string | null> {
+function waitForPlayerId(timeoutMs = 12000): Promise<string | null> {
+  // Resolve imediatamente se já existe
+  const existing = OneSignal.User?.PushSubscription?.id ?? null;
+  if (existing) return Promise.resolve(existing);
+
   return new Promise((resolve) => {
     let resolved = false;
     const finish = (id: string | null) => {
@@ -59,33 +63,29 @@ function waitForPlayerId(timeoutMs = 15000): Promise<string | null> {
       resolve(id);
     };
 
-    // 1) Listener de eventos — preferencial
+    // 1) Listener de eventos — dispara assim que o token APNs chega
     const listener = (event: { current: { id: string | null; optedIn: boolean } }) => {
-      console.log('[push] subscription change event:', event.current);
       if (event.current.id) finish(event.current.id);
     };
     try {
       OneSignal.User?.PushSubscription?.addEventListener('change', listener);
-    } catch (e) {
-      console.warn('[push] addEventListener falhou', e);
-    }
+    } catch {/* noop */}
 
-    // 2) Polling — fallback (alguns dispositivos não disparam o evento)
+    // 2) Polling rápido — 100ms (resolve em <500ms na maioria dos casos)
     const start = Date.now();
     const poll = () => {
       if (resolved) return;
       const id = OneSignal.User?.PushSubscription?.id ?? null;
       if (id) {
-        console.log(`[push] player_id via polling em ${Date.now() - start}ms:`, id);
+        console.log(`[push] player_id em ${Date.now() - start}ms`);
         finish(id);
         return;
       }
       if (Date.now() - start > timeoutMs) {
-        console.error('[push] timeout aguardando player_id');
         finish(null);
         return;
       }
-      setTimeout(poll, 300);
+      setTimeout(poll, 100);
     };
     poll();
   });
