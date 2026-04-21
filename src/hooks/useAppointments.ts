@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { sendPushToAdmins } from '@/lib/pushNotifications';
+import { notifyAdmin } from '@/lib/oneSignalPush';
 
 export interface Service {
   id: string;
@@ -447,10 +448,10 @@ export function useAppointments() {
     }
 
     // Notify admins via push notification (DB trigger already creates the notification record)
-    sendPushToAdmins(
-      '📅 Novo Agendamento',
-      `${selectedServices.map(s => s.name).join(', ')} para ${date.toLocaleDateString('pt-BR')} às ${time.slice(0, 5)}`
-    );
+    const pushTitle = '📅 Novo Agendamento';
+    const pushBody = `${selectedServices.map(s => s.name).join(', ')} para ${date.toLocaleDateString('pt-BR')} às ${time.slice(0, 5)}`;
+    sendPushToAdmins(pushTitle, pushBody);
+    notifyAdmin(pushTitle, pushBody, '/admin/agenda');
 
     // Show appropriate toast message
     if (benefitsToUse.length > 0) {
