@@ -97,27 +97,33 @@ export function PushPromptModal() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleDismiss()}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
-        <DialogHeader>
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <Bell className="h-7 w-7 text-primary" />
+      <DialogContent className="max-w-[320px] p-5 rounded-2xl gap-3">
+        <DialogHeader className="space-y-2">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <Bell className="h-5 w-5 text-primary" />
           </div>
-          <DialogTitle className="text-center text-xl">Receba avisos de agendamento</DialogTitle>
-          <DialogDescription className="text-center">
-            Ative as notificações para receber lembretes, confirmações e novidades direto no seu
-            celular — mesmo com o app fechado.
+          <DialogTitle className="text-center text-base font-semibold">
+            Ativar notificações?
+          </DialogTitle>
+          <DialogDescription className="text-center text-xs leading-relaxed">
+            Receba lembretes e confirmações dos seus agendamentos.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="flex-col gap-2 sm:flex-col">
+        <DialogFooter className="flex-col gap-1.5 sm:flex-col mt-1">
           <Button
             onClick={handleEnable}
             disabled={loading}
-            size="lg"
-            className="w-full h-12 rounded-xl active:scale-[0.98] transition-transform"
+            size="sm"
+            className="w-full h-10 rounded-xl active:scale-[0.98] transition-transform text-sm font-medium"
           >
-            {loading ? 'Ativando...' : '🔔 Ativar notificações'}
+            {loading ? 'Ativando...' : 'Ativar'}
           </Button>
-          <Button variant="ghost" onClick={handleDismiss} className="w-full">
+          <Button
+            variant="ghost"
+            onClick={handleDismiss}
+            size="sm"
+            className="w-full h-9 text-xs text-muted-foreground"
+          >
             Agora não
           </Button>
         </DialogFooter>
