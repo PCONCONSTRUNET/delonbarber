@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
-import { notifyAdmin } from '@/lib/oneSignalPush';
+import { notifyAdmin, notifyClient } from '@/lib/oneSignalPush';
 
 export interface Service {
   id: string;
