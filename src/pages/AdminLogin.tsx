@@ -75,6 +75,7 @@ const AdminLogin = () => {
       }
 
       toast.success("Bem-vindo, admin!");
+      setIsLoading(false);
       navigate("/admin", { replace: true });
     } catch (err) {
       console.error(err);
