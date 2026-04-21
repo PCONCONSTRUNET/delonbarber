@@ -72,6 +72,10 @@ export function PushPromptModal() {
   useEffect(() => {
     if (!authChecked) return;
     if (!userId) return; // only logged-in clients
+    if (isAdmin) {
+      console.log('[PushPrompt] user is admin, skipping client prompt');
+      return;
+    }
     if (EXCLUDED_PATHS.some((p) => location.pathname.startsWith(p))) return;
     if (!supported) {
       console.log('[PushPrompt] not supported, skipping');
@@ -96,7 +100,7 @@ export function PushPromptModal() {
       setOpen(true);
     }, 500);
     return () => clearTimeout(t);
-  }, [authChecked, userId, supported, subscribed, permission, location.pathname]);
+  }, [authChecked, userId, isAdmin, supported, subscribed, permission, location.pathname]);
 
   const handleEnable = async () => {
     // Safety: close modal automatically if enable() takes longer than 15s
