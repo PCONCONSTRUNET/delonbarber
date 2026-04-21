@@ -13,6 +13,7 @@ import Cliente from "./pages/Cliente";
 import Pacotes from "./pages/Pacotes";
 import NotFound from "./pages/NotFound";
 import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminIA, AdminPacotes, AdminAvaliacoes, AdminFidelidade } from "./pages/Admin";
+import { PushPromptModal } from "@/components/push/PushPromptModal";
 
 const queryClient = new QueryClient();
 
