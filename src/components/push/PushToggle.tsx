@@ -1,4 +1,4 @@
-import { Bell, BellOff, Loader2, BellRing, Bug } from 'lucide-react';
+import { Bell, BellOff, Loader2, BellRing, Bug, Send } from 'lucide-react';
 import { useState } from 'react';
 import OneSignal from 'react-onesignal';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,39 @@ export function PushToggle({ role, userId, variant = 'default' }: PushToggleProp
     usePushNotifications({ role, userId });
   const [diagLoading, setDiagLoading] = useState(false);
   const [diagInfo, setDiagInfo] = useState<string | null>(null);
+  const [testLoading, setTestLoading] = useState(false);
+
+  const sendTestPush = async () => {
+    setTestLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-push', {
+        body: {
+          role,
+          title: '🔔 Push de teste',
+          message: `Se você está vendo isso, as notificações estão funcionando! (${new Date().toLocaleTimeString('pt-BR')})`,
+          url: role === 'admin' ? '/admin' : '/cliente',
+          ...(role === 'cliente' && userId ? { user_id: userId } : {}),
+        },
+      });
+      if (error) {
+        console.error('[test push] error:', error);
+        toast.error(`Erro ao enviar: ${error.message}`);
+        return;
+      }
+      console.log('[test push] result:', data);
+      const sent = (data as any)?.sent ?? 0;
+      if (sent > 0) {
+        toast.success(`Enviado para ${sent} dispositivo(s). Aguarde alguns segundos.`, { duration: 6000 });
+      } else {
+        toast.warning(`Nenhum dispositivo recebeu. Motivo: ${(data as any)?.reason ?? 'desconhecido'}`, { duration: 6000 });
+      }
+    } catch (err) {
+      console.error('[test push] threw:', err);
+      toast.error('Falha ao chamar send-push');
+    } finally {
+      setTestLoading(false);
+    }
+  };
 
   const handleToggle = async () => {
     if (subscribed) {
@@ -166,6 +199,19 @@ export function PushToggle({ role, userId, variant = 'default' }: PushToggleProp
           </>
         )}
       </Button>
+
+      {subscribed && (
+        <Button
+          onClick={sendTestPush}
+          disabled={testLoading}
+          variant="secondary"
+          size="sm"
+          className="gap-2 w-full sm:w-auto h-10 rounded-xl active:scale-[0.98] transition-transform"
+        >
+          {testLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          Enviar push de teste
+        </Button>
+      )}
 
       <Button
         onClick={runDiagnostic}
