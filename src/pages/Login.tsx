@@ -1,5 +1,5 @@
 // v4 - test auto deploy
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Scissors, Mail, Lock, User, Phone, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import { toast } from "sonner";
 import { z } from "zod";
 import { motion } from "framer-motion";
@@ -31,7 +32,7 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "signup" ? "signup" : "login");
-  const loginFallbackRef = useRef<number | null>(null);
+  const { user, isReady } = useAuthReady();
   
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -44,33 +45,8 @@ const Login = () => {
   const [signupPassword, setSignupPassword] = useState("");
 
   useEffect(() => {
-    let mounted = true;
-    let isInitialCheck = true;
-
-    // Check current session first
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      if (session?.user) {
-        navigate("/cliente");
-      }
-      isInitialCheck = false;
-    });
-
-    // Listen for auth changes (login events)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-      // Only redirect on explicit sign-in events, not on initial session restore
-      if (event === 'SIGNED_IN' && session?.user && !isInitialCheck) {
-        navigate("/cliente");
-      }
-    });
-
-    return () => {
-      mounted = false;
-      if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+    if (isReady && user) navigate("/cliente", { replace: true });
+  }, [isReady, user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,18 +58,12 @@ const Login = () => {
     }
 
     setIsLoading(true);
-    if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
-    loginFallbackRef.current = window.setTimeout(() => {
-      window.location.replace("/cliente");
-    }, 2500);
     
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: loginEmail.trim(),
         password: loginPassword,
       });
-
-      if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
@@ -105,9 +75,8 @@ const Login = () => {
       }
 
       toast.success("Login realizado com sucesso!");
-      window.location.replace("/cliente");
+      navigate("/cliente", { replace: true });
     } catch (error) {
-      if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
       console.error("Erro no login:", error);
       toast.error("Erro ao entrar. Tente novamente.");
     } finally {
