@@ -12,7 +12,6 @@ export function useAuthReady() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
       setUser(session?.user ?? null);
-      setIsReady(true);
     });
 
     supabase.auth.getSession()
