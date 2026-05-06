@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
         .eq("role", body.role)
         .eq("user_id", body.user_id);
       if (subsErr) throw subsErr;
-      playerIds = (subs ?? []).map((s) => s.player_id).filter(Boolean);
+      playerIds = (subs ?? []).map((s) => String(s.player_id).trim()).filter(Boolean);
 
       if (playerIds.length === 0) {
         const { data: orphans } = await supabase
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
           .eq("ativo", true)
           .eq("role", body.role)
           .is("user_id", null);
-        playerIds = (orphans ?? []).map((s) => s.player_id).filter(Boolean);
+        playerIds = (orphans ?? []).map((s) => String(s.player_id).trim()).filter(Boolean);
       }
     } else {
       const { data: subs, error: subsErr } = await supabase
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
         .eq("ativo", true)
         .eq("role", body.role);
       if (subsErr) throw subsErr;
-      playerIds = (subs ?? []).map((s) => s.player_id).filter(Boolean);
+      playerIds = (subs ?? []).map((s) => String(s.player_id).trim()).filter(Boolean);
     }
 
     if (playerIds.length === 0) {
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
 
     const payload = {
       app_id: APP_ID,
-      include_player_ids: playerIds,
+      include_subscription_ids: [...new Set(playerIds)],
       headings: { en: body.title, pt: body.title },
       contents: { en: body.message, pt: body.message },
       url: body.url,
@@ -98,15 +98,16 @@ Deno.serve(async (req) => {
 
     const result = await resp.json();
 
-    if (result.errors?.invalid_player_ids?.length) {
+    const invalidIds = result.errors?.invalid_player_ids ?? result.errors?.invalid_subscription_ids ?? [];
+    if (invalidIds.length) {
       await supabase
         .from("push_subscriptions")
         .update({ ativo: false })
-        .in("player_id", result.errors.invalid_player_ids);
+        .in("player_id", invalidIds);
     }
 
     return new Response(
-      JSON.stringify({ ok: resp.ok, sent: playerIds.length, result }),
+      JSON.stringify({ ok: resp.ok, sent: [...new Set(playerIds)].length, result }),
       { status: resp.ok ? 200 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
