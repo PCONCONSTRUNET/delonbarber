@@ -25,9 +25,8 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
 
   // Check if user is admin
   useEffect(() => {
-    async function checkAdmin() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
+    async function checkAdmin(userId?: string | null) {
+      if (!userId) {
         setIsAdmin(false);
         return;
       }
@@ -35,7 +34,7 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
       const { data: roles } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', session.user.id)
+        .eq('user_id', userId)
         .eq('role', 'admin');
 
       const hasAdminRole = roles && roles.length > 0;
@@ -47,10 +46,12 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
       }
     }
 
-    void checkAdmin();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      void checkAdmin(session?.user?.id ?? null);
+    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      void checkAdmin();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      void checkAdmin(session?.user?.id ?? null);
     });
 
     return () => subscription.unsubscribe();
