@@ -51,7 +51,9 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      void checkAdmin(session?.user?.id ?? null);
+      setTimeout(() => {
+        void checkAdmin(session?.user?.id ?? null);
+      }, 0);
     });
 
     return () => subscription.unsubscribe();
