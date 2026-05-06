@@ -27,6 +27,44 @@ const signupSchema = z.object({
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
+const AUTH_TIMEOUT_MS = 8_000;
+
+async function signInFast(email: string, password: string) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: {
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+      signal: controller.signal,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(payload.error_description || payload.msg || "Email ou senha incorretos");
+    }
+
+    if (!payload.access_token || !payload.refresh_token) {
+      throw new Error("Não foi possível iniciar a sessão");
+    }
+
+    const { error } = await supabase.auth.setSession({
+      access_token: payload.access_token,
+      refresh_token: payload.refresh_token,
+    });
+
+    if (error) throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -60,25 +98,14 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail.trim(),
-        password: loginPassword,
-      });
-
-      if (error) {
-        if (error.message.includes("Invalid login credentials")) {
-          toast.error("Email ou senha incorretos");
-        } else {
-          toast.error(error.message);
-        }
-        return;
-      }
+      await signInFast(loginEmail.trim(), loginPassword);
 
       toast.success("Login realizado com sucesso!");
       navigate("/cliente", { replace: true });
     } catch (error) {
       console.error("Erro no login:", error);
-      toast.error("Erro ao entrar. Tente novamente.");
+      const message = error instanceof Error ? error.message : "Erro ao entrar. Tente novamente.";
+      toast.error(message.includes("Invalid login credentials") ? "Email ou senha incorretos" : message);
     } finally {
       setIsLoading(false);
     }
