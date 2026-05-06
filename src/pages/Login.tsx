@@ -1,5 +1,5 @@
 // v4 - test auto deploy
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Scissors, Mail, Lock, User, Phone, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import { toast } from "sonner";
 import { z } from "zod";
 import { motion } from "framer-motion";
@@ -26,12 +27,64 @@ const signupSchema = z.object({
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
+const AUTH_TIMEOUT_MS = 8_000;
+
+function persistAuthSession(payload: any) {
+  const projectRef = new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0];
+  const expiresIn = Number(payload.expires_in ?? 3600);
+  const expiresAt = Number(payload.expires_at ?? Math.floor(Date.now() / 1000) + expiresIn);
+
+  localStorage.setItem(`sb-${projectRef}-auth-token`, JSON.stringify({
+    access_token: payload.access_token,
+    refresh_token: payload.refresh_token,
+    token_type: payload.token_type ?? 'bearer',
+    expires_in: expiresIn,
+    expires_at: expiresAt,
+    user: payload.user ?? null,
+  }));
+}
+
+async function signInFast(email: string, password: string) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: {
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+      signal: controller.signal,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(payload.error_description || payload.msg || "Email ou senha incorretos");
+    }
+
+    if (!payload.access_token || !payload.refresh_token) {
+      throw new Error("Não foi possível iniciar a sessão");
+    }
+
+    persistAuthSession(payload);
+    void supabase.auth.setSession({
+      access_token: payload.access_token,
+      refresh_token: payload.refresh_token,
+    }).catch(() => undefined);
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "signup" ? "signup" : "login");
-  const loginFallbackRef = useRef<number | null>(null);
+  const { user, isReady } = useAuthReady();
   
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -44,33 +97,8 @@ const Login = () => {
   const [signupPassword, setSignupPassword] = useState("");
 
   useEffect(() => {
-    let mounted = true;
-    let isInitialCheck = true;
-
-    // Check current session first
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      if (session?.user) {
-        navigate("/cliente");
-      }
-      isInitialCheck = false;
-    });
-
-    // Listen for auth changes (login events)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-      // Only redirect on explicit sign-in events, not on initial session restore
-      if (event === 'SIGNED_IN' && session?.user && !isInitialCheck) {
-        navigate("/cliente");
-      }
-    });
-
-    return () => {
-      mounted = false;
-      if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+    if (isReady && user) navigate("/cliente", { replace: true });
+  }, [isReady, user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,34 +110,16 @@ const Login = () => {
     }
 
     setIsLoading(true);
-    if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
-    loginFallbackRef.current = window.setTimeout(() => {
-      window.location.replace("/cliente");
-    }, 2500);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail.trim(),
-        password: loginPassword,
-      });
-
-      if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
-
-      if (error) {
-        if (error.message.includes("Invalid login credentials")) {
-          toast.error("Email ou senha incorretos");
-        } else {
-          toast.error(error.message);
-        }
-        return;
-      }
+      await signInFast(loginEmail.trim(), loginPassword);
 
       toast.success("Login realizado com sucesso!");
       window.location.replace("/cliente");
     } catch (error) {
-      if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
       console.error("Erro no login:", error);
-      toast.error("Erro ao entrar. Tente novamente.");
+      const message = error instanceof Error ? error.message : "Erro ao entrar. Tente novamente.";
+      toast.error(message.includes("Invalid login credentials") ? "Email ou senha incorretos" : message);
     } finally {
       setIsLoading(false);
     }

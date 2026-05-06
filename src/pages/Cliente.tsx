@@ -6,17 +6,16 @@ import { Button } from '@/components/ui/button';
 import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
 import { supabase } from '@/integrations/supabase/client';
-import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useIsAdmin } from '@/hooks/useAdmin';
 import { useAdminNotifications } from '@/hooks/useNotifications';
 import { useMyPackages } from '@/hooks/useMyPackages';
+import { useAuthReady } from '@/hooks/useAuthReady';
 import { Badge } from '@/components/ui/badge';
 
 
 const Cliente = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isReady } = useAuthReady();
   const [pendingCount, setPendingCount] = useState(0);
   const { isAdmin } = useIsAdmin();
   const { packages } = useMyPackages();
@@ -49,39 +48,15 @@ const Cliente = () => {
   }, [isAdmin]);
 
   useEffect(() => {
-    let mounted = true;
-
-    // Check current session first to avoid redirecting during auth restoration
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      if (!session) {
-        navigate('/login');
-      } else {
-        setUser(session.user);
-      }
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      if (session?.user) {
-        setUser(session.user);
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+    if (isReady && !user) navigate('/login', { replace: true });
+  }, [isReady, user, navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
   };
 
-  if (loading) {
+  if (!isReady) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
