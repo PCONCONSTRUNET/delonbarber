@@ -29,6 +29,21 @@ const signupSchema = z.object({
 
 const AUTH_TIMEOUT_MS = 8_000;
 
+function persistAuthSession(payload: any) {
+  const projectRef = new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0];
+  const expiresIn = Number(payload.expires_in ?? 3600);
+  const expiresAt = Number(payload.expires_at ?? Math.floor(Date.now() / 1000) + expiresIn);
+
+  localStorage.setItem(`sb-${projectRef}-auth-token`, JSON.stringify({
+    access_token: payload.access_token,
+    refresh_token: payload.refresh_token,
+    token_type: payload.token_type ?? 'bearer',
+    expires_in: expiresIn,
+    expires_at: expiresAt,
+    user: payload.user ?? null,
+  }));
+}
+
 async function signInFast(email: string, password: string) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
@@ -54,12 +69,11 @@ async function signInFast(email: string, password: string) {
       throw new Error("Não foi possível iniciar a sessão");
     }
 
-    const { error } = await supabase.auth.setSession({
+    persistAuthSession(payload);
+    void supabase.auth.setSession({
       access_token: payload.access_token,
       refresh_token: payload.refresh_token,
-    });
-
-    if (error) throw error;
+    }).catch(() => undefined);
   } finally {
     window.clearTimeout(timeout);
   }
@@ -101,7 +115,7 @@ const Login = () => {
       await signInFast(loginEmail.trim(), loginPassword);
 
       toast.success("Login realizado com sucesso!");
-      navigate("/cliente", { replace: true });
+      window.location.replace("/cliente");
     } catch (error) {
       console.error("Erro no login:", error);
       const message = error instanceof Error ? error.message : "Erro ao entrar. Tente novamente.";
