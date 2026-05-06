@@ -81,23 +81,29 @@ const Login = () => {
 
     setIsLoading(true);
     
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail.trim(),
+        password: loginPassword,
+      });
 
-    if (error) {
-      if (error.message.includes("Invalid login credentials")) {
-        toast.error("Email ou senha incorretos");
-      } else {
-        toast.error(error.message);
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+          toast.error("Email ou senha incorretos");
+        } else {
+          toast.error(error.message);
+        }
+        return;
       }
-      setIsLoading(false);
-      return;
-    }
 
-    toast.success("Login realizado com sucesso!");
-    setIsLoading(false);
+      toast.success("Login realizado com sucesso!");
+      navigate("/cliente", { replace: true });
+    } catch (error) {
+      console.error("Erro no login:", error);
+      toast.error("Erro ao entrar. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
