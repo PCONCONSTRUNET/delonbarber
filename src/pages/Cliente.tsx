@@ -51,18 +51,7 @@ const Cliente = () => {
   useEffect(() => {
     let mounted = true;
 
-    // Set up listener FIRST to catch token refresh events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      if (!session) {
-        navigate('/login');
-      } else {
-        setUser(session.user);
-        setLoading(false);
-      }
-    });
-
-    // Then check current session
+    // Check current session first to avoid redirecting during auth restoration
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
       if (!session) {
@@ -71,6 +60,14 @@ const Cliente = () => {
         setUser(session.user);
       }
       setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      if (session?.user) {
+        setUser(session.user);
+        setLoading(false);
+      }
     });
 
     return () => {
