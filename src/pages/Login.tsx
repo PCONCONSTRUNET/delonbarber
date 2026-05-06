@@ -1,5 +1,5 @@
 // v4 - test auto deploy
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "signup" ? "signup" : "login");
+  const loginFallbackRef = useRef<number | null>(null);
   
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -66,6 +67,7 @@ const Login = () => {
 
     return () => {
       mounted = false;
+      if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
       subscription.unsubscribe();
     };
   }, [navigate]);
@@ -80,12 +82,18 @@ const Login = () => {
     }
 
     setIsLoading(true);
+    if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
+    loginFallbackRef.current = window.setTimeout(() => {
+      window.location.replace("/cliente");
+    }, 2500);
     
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: loginEmail.trim(),
         password: loginPassword,
       });
+
+      if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
@@ -97,8 +105,9 @@ const Login = () => {
       }
 
       toast.success("Login realizado com sucesso!");
-      navigate("/cliente", { replace: true });
+      window.location.replace("/cliente");
     } catch (error) {
+      if (loginFallbackRef.current) window.clearTimeout(loginFallbackRef.current);
       console.error("Erro no login:", error);
       toast.error("Erro ao entrar. Tente novamente.");
     } finally {
