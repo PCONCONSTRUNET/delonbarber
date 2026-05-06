@@ -446,18 +446,12 @@ export function useAppointments() {
       }
     }
 
-    // Notify admins via OneSignal push (DB trigger already creates the notification record)
+    // Push para admin é disparado pelo trigger do banco (send_push_on_new_appointment).
+    // Aqui só notificamos o cliente que o agendamento foi auto-confirmado.
     const servicesLabel = selectedServices.map(s => s.name).join(', ');
     const dateLabel = date.toLocaleDateString('pt-BR');
     const timeLabel = time.slice(0, 5);
 
-    notifyAdmin(
-      '📅 Novo Agendamento',
-      `${servicesLabel} para ${dateLabel} às ${timeLabel}`,
-      '/admin/agenda'
-    );
-
-    // Notify the client that their appointment was auto-confirmed
     notifyClient(
       user.id,
       '✅ Agendamento Confirmado',
