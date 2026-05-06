@@ -48,7 +48,9 @@ export function PushPromptModal({ excludePaths = ['/admin', '/login'] }: Props) 
       void check(session?.user?.id ?? null);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      void check(session?.user?.id ?? null);
+      setTimeout(() => {
+        void check(session?.user?.id ?? null);
+      }, 0);
     });
     return () => {
       mounted = false;
