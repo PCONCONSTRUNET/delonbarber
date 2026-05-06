@@ -28,10 +28,9 @@ export function PushPromptModal({ excludePaths = ['/admin', '/login'] }: Props) 
 
   useEffect(() => {
     let mounted = true;
-    const check = async () => {
-      const { data } = await supabase.auth.getUser();
+    const check = async (sessionUserId?: string | null) => {
       if (!mounted) return;
-      const uid = data.user?.id ?? null;
+      const uid = sessionUserId ?? null;
       setUserId(uid);
       if (uid) {
         const { data: roles } = await supabase
@@ -45,9 +44,11 @@ export function PushPromptModal({ excludePaths = ['/admin', '/login'] }: Props) 
       }
       setAuthChecked(true);
     };
-    void check();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      void check();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      void check(session?.user?.id ?? null);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      void check(session?.user?.id ?? null);
     });
     return () => {
       mounted = false;
