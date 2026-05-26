@@ -3,21 +3,32 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { AdminNotificationProvider } from "@/contexts/AdminNotificationContext";
 import Index from "./pages/Index";
-import Servicos from "./pages/Servicos";
-import Agendar from "./pages/Agendar";
 import Login from "./pages/Login";
-import Perfil from "./pages/Perfil";
-import Cliente from "./pages/Cliente";
-import Pacotes from "./pages/Pacotes";
-import NotFound from "./pages/NotFound";
-import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminIA, AdminPacotes, AdminAvaliacoes, AdminFidelidade } from "./pages/Admin";
-import AdminLogin from "./pages/AdminLogin";
 import { PushPromptModal } from "@/components/push/PushPromptModal";
 import { DynamicManifest } from "@/components/pwa/DynamicManifest";
 
+// Code-splitting: client routes loaded on demand
+const Servicos = lazy(() => import("./pages/Servicos"));
+const Agendar = lazy(() => import("./pages/Agendar"));
+const Perfil = lazy(() => import("./pages/Perfil"));
+const Cliente = lazy(() => import("./pages/Cliente"));
+const Pacotes = lazy(() => import("./pages/Pacotes"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Admin remains eagerly loaded (unchanged behavior)
+import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminIA, AdminPacotes, AdminAvaliacoes, AdminFidelidade } from "./pages/Admin";
+import AdminLogin from "./pages/AdminLogin";
+
 const queryClient = new QueryClient();
+
+const RouteFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+  </div>
+);
 
 const App = () => {
 
