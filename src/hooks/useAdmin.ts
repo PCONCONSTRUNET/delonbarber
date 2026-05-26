@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -115,105 +116,95 @@ export function useIsAdmin() {
   return { isAdmin, loading };
 }
 
-export function useAdminAppointments() {
-  const [appointments, setAppointments] = useState<AdminAppointment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+// Query key compartilhada entre componentes admin
+const ADMIN_APPOINTMENTS_KEY = ['admin', 'appointments'] as const;
 
-  async function fetchAppointments() {
-    setLoading(true);
+async function fetchAdminAppointmentsQuery(): Promise<AdminAppointment[]> {
+  // Performance: limit query to a relevant window (last 90 days + future 180 days).
+  const today = new Date();
+  const past = new Date(today);
+  past.setDate(past.getDate() - 90);
+  const future = new Date(today);
+  future.setDate(future.getDate() + 180);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    // Performance: limit query to a relevant window (last 90 days + future 180 days).
-    // The full history is loaded on-demand by specific screens (financeiro, cliente).
-    const today = new Date();
-    const past = new Date(today);
-    past.setDate(past.getDate() - 90);
-    const future = new Date(today);
-    future.setDate(future.getDate() + 180);
-    const fmt = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const { data: appointmentsData, error } = await supabase
+    .from('appointments')
+    .select(`
+      *,
+      profiles!appointments_user_id_fkey(name, phone)
+    `)
+    .gte('appointment_date', fmt(past))
+    .lte('appointment_date', fmt(future))
+    .order('appointment_date', { ascending: true })
+    .order('appointment_time', { ascending: true });
 
-    // Single query with JOINs for profiles, restricted by date window
-    const { data: appointmentsData, error } = await supabase
-      .from('appointments')
-      .select(`
-        *,
-        profiles!appointments_user_id_fkey(name, phone)
-      `)
-      .gte('appointment_date', fmt(past))
-      .lte('appointment_date', fmt(future))
-      .order('appointment_date', { ascending: true })
-      .order('appointment_time', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching appointments:', error);
-      setLoading(false);
-      return;
-    }
-
-    if (!appointmentsData || appointmentsData.length === 0) {
-      setAppointments([]);
-      setLoading(false);
-      return;
-    }
-
-    // Fetch all services in a single batch query
-    const appointmentIds = appointmentsData.map(apt => apt.id);
-    const { data: servicesData } = await supabase
-      .from('appointment_services')
-      .select('appointment_id, service_id, price_at_booking, services(id, name)')
-      .in('appointment_id', appointmentIds);
-
-    // Create lookup map for O(1) access
-    const servicesByAppointment = new Map<string, { id: string; name: string; price: number }[]>();
-    (servicesData || []).forEach((s: any) => {
-      if (!servicesByAppointment.has(s.appointment_id)) {
-        servicesByAppointment.set(s.appointment_id, []);
-      }
-      servicesByAppointment.get(s.appointment_id)!.push({
-        id: s.services?.id,
-        name: s.services?.name,
-        price: s.price_at_booking
-      });
-    });
-
-    // Map appointments with all data
-    const appointmentsWithServices: AdminAppointment[] = appointmentsData.map((apt: any) => ({
-      ...apt,
-      profile: apt.profiles || { name: null, phone: null },
-      services: servicesByAppointment.get(apt.id) || []
-    }));
-
-    setAppointments(appointmentsWithServices);
-    setLoading(false);
+  if (error) {
+    console.error('Error fetching appointments:', error);
+    throw error;
   }
 
-  // Debounce ref for realtime refetches to avoid storms during bulk changes
+  if (!appointmentsData || appointmentsData.length === 0) {
+    return [];
+  }
+
+  const appointmentIds = appointmentsData.map(apt => apt.id);
+  const { data: servicesData } = await supabase
+    .from('appointment_services')
+    .select('appointment_id, service_id, price_at_booking, services(id, name)')
+    .in('appointment_id', appointmentIds);
+
+  const servicesByAppointment = new Map<string, { id: string; name: string; price: number }[]>();
+  (servicesData || []).forEach((s: any) => {
+    if (!servicesByAppointment.has(s.appointment_id)) {
+      servicesByAppointment.set(s.appointment_id, []);
+    }
+    servicesByAppointment.get(s.appointment_id)!.push({
+      id: s.services?.id,
+      name: s.services?.name,
+      price: s.price_at_booking,
+    });
+  });
+
+  return appointmentsData.map((apt: any) => ({
+    ...apt,
+    profile: apt.profiles || { name: null, phone: null },
+    services: servicesByAppointment.get(apt.id) || [],
+  })) as AdminAppointment[];
+}
+
+export function useAdminAppointments() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: appointments = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ADMIN_APPOINTMENTS_KEY,
+    queryFn: fetchAdminAppointmentsQuery,
+    staleTime: 30_000,
+  });
+
+  const fetchAppointments = async () => {
+    await refetch();
+  };
+
+  // Realtime: invalida o cache compartilhado (debounced)
   const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    fetchAppointments();
-
-    const scheduleRefetch = () => {
+    const scheduleInvalidate = () => {
       if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
       refetchTimerRef.current = setTimeout(() => {
-        fetchAppointments();
+        queryClient.invalidateQueries({ queryKey: ADMIN_APPOINTMENTS_KEY });
       }, 600);
     };
 
-    // Subscribe to realtime changes (debounced)
     const channel = supabase
       .channel('admin-appointments')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointments'
-        },
-        () => {
-          scheduleRefetch();
-        }
+        { event: '*', schema: 'public', table: 'appointments' },
+        () => { scheduleInvalidate(); }
       )
       .subscribe();
 
@@ -221,12 +212,11 @@ export function useAdminAppointments() {
       if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [queryClient]);
 
   async function updateAppointmentStatus(id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show') {
     const updateData: any = { status };
-    
-    // When marking as no_show, reset payment to remove revenue
+
     if (status === 'no_show') {
       updateData.payment_status = 'pending';
       updateData.payment_method = null;
@@ -243,7 +233,6 @@ export function useAdminAppointments() {
       return false;
     }
 
-    // Notify on cancellation by admin
     if (status === 'cancelled') {
       const apt = appointments.find(a => a.id === id);
       if (apt) {
@@ -266,14 +255,14 @@ export function useAdminAppointments() {
     }
 
     toast({ title: "Atualizado!", description: status === 'no_show' ? "Marcado como falta." : "Status alterado com sucesso." });
-    fetchAppointments();
+    queryClient.invalidateQueries({ queryKey: ADMIN_APPOINTMENTS_KEY });
     return true;
   }
 
   async function updatePaymentStatus(id: string, paymentStatus: string, paymentMethod?: string) {
-    const updateData: any = { 
+    const updateData: any = {
       payment_status: paymentStatus,
-      payment_date: paymentStatus === 'paid' ? new Date().toISOString() : null
+      payment_date: paymentStatus === 'paid' ? new Date().toISOString() : null,
     };
     if (paymentMethod) updateData.payment_method = paymentMethod;
 
@@ -308,44 +297,18 @@ export function useAdminAppointments() {
     }
 
     toast({ title: "Atualizado!", description: "Pagamento registrado." });
-    fetchAppointments();
+    queryClient.invalidateQueries({ queryKey: ADMIN_APPOINTMENTS_KEY });
     return true;
   }
 
   async function deleteAppointment(id: string) {
     try {
-      // First delete related records in order
-      // 1. Delete blocked_slots referencing this appointment
-      await supabase
-        .from('blocked_slots')
-        .delete()
-        .eq('appointment_id', id);
+      await supabase.from('blocked_slots').delete().eq('appointment_id', id);
+      await supabase.from('client_package_usage').delete().eq('appointment_id', id);
+      await supabase.from('loyalty_rewards').delete().eq('appointment_id', id);
+      await supabase.from('ratings').delete().eq('appointment_id', id);
+      await supabase.from('notifications').delete().eq('appointment_id', id);
 
-      // 2. Delete client_package_usage referencing this appointment
-      await supabase
-        .from('client_package_usage')
-        .delete()
-        .eq('appointment_id', id);
-
-      // 3. Delete loyalty_rewards referencing this appointment
-      await supabase
-        .from('loyalty_rewards')
-        .delete()
-        .eq('appointment_id', id);
-
-      // 4. Delete ratings referencing this appointment
-      await supabase
-        .from('ratings')
-        .delete()
-        .eq('appointment_id', id);
-
-      // 5. Delete notifications referencing this appointment
-      await supabase
-        .from('notifications')
-        .delete()
-        .eq('appointment_id', id);
-
-      // 6. Delete appointment_services
       const { error: servicesError } = await supabase
         .from('appointment_services')
         .delete()
@@ -357,7 +320,6 @@ export function useAdminAppointments() {
         return false;
       }
 
-      // 7. Finally delete the appointment
       const { error, data } = await supabase
         .from('appointments')
         .delete()
@@ -370,7 +332,6 @@ export function useAdminAppointments() {
         return false;
       }
 
-      // Check if anything was actually deleted
       if (!data || data.length === 0) {
         console.error('No appointment deleted - may not have permission');
         toast({ title: "Erro", description: "Agendamento não encontrado ou sem permissão.", variant: "destructive" });
@@ -378,7 +339,7 @@ export function useAdminAppointments() {
       }
 
       toast({ title: "Excluído!", description: "Agendamento removido." });
-      fetchAppointments();
+      queryClient.invalidateQueries({ queryKey: ADMIN_APPOINTMENTS_KEY });
       return true;
     } catch (err) {
       console.error('Unexpected error deleting appointment:', err);
@@ -390,13 +351,10 @@ export function useAdminAppointments() {
   return { appointments, loading, fetchAppointments, updateAppointmentStatus, updatePaymentStatus, deleteAppointment };
 }
 
-export function useAdminClients() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+const ADMIN_CLIENTS_KEY = ['admin', 'clients'] as const;
 
-  async function fetchClients() {
-    setLoading(true);
+async function fetchAdminClientsQuery(): Promise<Client[]> {
+
 
     // Fetch profiles, guest_clients, and appointments in parallel
     const [profilesResult, guestClientsResult, appointmentsResult, guestAppointmentsResult] = await Promise.all([
@@ -421,9 +379,9 @@ export function useAdminClients() {
 
     if (profilesResult.error) {
       console.error('Error fetching clients:', profilesResult.error);
-      setLoading(false);
-      return;
+      throw profilesResult.error;
     }
+
 
     const profiles = profilesResult.data || [];
     const guestClients = guestClientsResult.data || [];
@@ -535,9 +493,20 @@ export function useAdminClients() {
     // Sort by created_at descending
     allClients.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    setClients(allClients);
-    setLoading(false);
+    return allClients;
   }
+
+export function useAdminClients() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: clients = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ADMIN_CLIENTS_KEY,
+    queryFn: fetchAdminClientsQuery,
+    staleTime: 60_000,
+  });
+
+  const fetchClients = async () => { await refetch(); };
 
   async function deleteClient(userId: string, isGuest: boolean = false) {
     try {
@@ -654,7 +623,8 @@ export function useAdminClients() {
       }
 
       toast({ title: "Cliente excluído!", description: "Todos os dados foram removidos." });
-      fetchClients();
+      queryClient.invalidateQueries({ queryKey: ADMIN_CLIENTS_KEY });
+      queryClient.invalidateQueries({ queryKey: ADMIN_APPOINTMENTS_KEY });
       return true;
     } catch (error) {
       console.error('Error deleting client:', error);
@@ -663,41 +633,38 @@ export function useAdminClients() {
     }
   }
 
-  useEffect(() => {
-    fetchClients();
-  }, []);
-
   return { clients, loading, fetchClients, deleteClient };
 }
 
+
 export function useClientNotes(clientId: string | null) {
-  const [notes, setNotes] = useState<ClientNote[]>([]);
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const queryKey = ['admin', 'client-notes', clientId] as const;
 
-  async function fetchNotes() {
-    if (!clientId) return;
-    setLoading(true);
+  const { data: notes = [], isLoading: loading, refetch } = useQuery({
+    queryKey,
+    queryFn: async (): Promise<ClientNote[]> => {
+      if (!clientId) return [];
+      const { data, error } = await supabase
+        .from('client_notes')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!clientId,
+    staleTime: 60_000,
+  });
 
-    const { data, error } = await supabase
-      .from('client_notes')
-      .select('*')
-      .eq('client_id', clientId)
-      .order('created_at', { ascending: false });
-
-    if (!error) setNotes(data || []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    fetchNotes();
-  }, [clientId]);
+  const fetchNotes = async () => { await refetch(); };
 
   async function addNote(note: string) {
     if (!clientId) return false;
 
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     const { error } = await supabase
       .from('client_notes')
       .insert({ client_id: clientId, note, admin_id: user?.id });
@@ -708,34 +675,36 @@ export function useClientNotes(clientId: string | null) {
     }
 
     toast({ title: "Nota adicionada!" });
-    fetchNotes();
+    queryClient.invalidateQueries({ queryKey });
     return true;
   }
 
   return { notes, loading, addNote, fetchNotes };
 }
 
+const ADMIN_SERVICES_KEY = ['admin', 'services'] as const;
+
 export function useAdminServices() {
-  const [services, setServices] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  async function fetchServices() {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .eq('is_active', true)
-      .order('category', { ascending: true })
-      .order('price', { ascending: false });
+  const { data: services = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ADMIN_SERVICES_KEY,
+    queryFn: async (): Promise<any[]> => {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('is_active', true)
+        .order('category', { ascending: true })
+        .order('price', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 5 * 60_000, // serviços mudam raramente
+  });
 
-    if (!error) setServices(data || []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    fetchServices();
-  }, []);
+  const fetchServices = async () => { await refetch(); };
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ADMIN_SERVICES_KEY });
 
   async function createService(service: any) {
     const { error } = await supabase.from('services').insert(service);
@@ -744,7 +713,7 @@ export function useAdminServices() {
       return false;
     }
     toast({ title: "Serviço criado!" });
-    fetchServices();
+    invalidate();
     return true;
   }
 
@@ -755,33 +724,30 @@ export function useAdminServices() {
       return false;
     }
     toast({ title: "Serviço atualizado!" });
-    fetchServices();
+    invalidate();
     return true;
   }
 
   async function deleteService(id: string) {
-    console.log('Deleting service:', id);
     const { error, data } = await supabase
       .from('services')
       .update({ is_active: false })
       .eq('id', id)
       .select();
-    
-    console.log('Delete result:', { error, data });
-    
+
     if (error) {
       console.error('Delete service error:', error);
       toast({ title: "Erro", description: error.message || "Não foi possível remover.", variant: "destructive" });
       return false;
     }
-    
+
     if (!data || data.length === 0) {
       toast({ title: "Erro", description: "Serviço não encontrado ou sem permissão.", variant: "destructive" });
       return false;
     }
-    
+
     toast({ title: "Serviço removido!" });
-    fetchServices();
+    invalidate();
     return true;
   }
 
@@ -789,25 +755,23 @@ export function useAdminServices() {
 }
 
 export function useBusinessStatus() {
-  const [isOpen, setIsOpen] = useState(true);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const queryKey = ['admin', 'business-status'] as const;
 
-  async function fetchStatus() {
-    const today = new Date().getDay();
-    const { data } = await supabase
-      .from('business_hours')
-      .select('is_open')
-      .eq('day_of_week', today)
-      .single();
-
-    setIsOpen(data?.is_open ?? false);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    fetchStatus();
-  }, []);
+  const { data: isOpen = true, isLoading: loading } = useQuery({
+    queryKey,
+    queryFn: async (): Promise<boolean> => {
+      const today = new Date().getDay();
+      const { data } = await supabase
+        .from('business_hours')
+        .select('is_open')
+        .eq('day_of_week', today)
+        .single();
+      return data?.is_open ?? false;
+    },
+    staleTime: 60_000,
+  });
 
   async function toggleStatus() {
     const today = new Date().getDay();
@@ -821,9 +785,12 @@ export function useBusinessStatus() {
       return;
     }
 
-    setIsOpen(!isOpen);
+    // Atualização otimista + invalidar
+    queryClient.setQueryData(queryKey, !isOpen);
+    queryClient.invalidateQueries({ queryKey });
     toast({ title: isOpen ? "Barbearia fechada!" : "Barbearia aberta!" });
   }
 
   return { isOpen, loading, toggleStatus };
 }
+
