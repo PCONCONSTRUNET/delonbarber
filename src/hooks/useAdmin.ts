@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -122,14 +122,26 @@ export function useAdminAppointments() {
 
   async function fetchAppointments() {
     setLoading(true);
-    
-    // Single query with JOINs for profiles
+
+    // Performance: limit query to a relevant window (last 90 days + future 180 days).
+    // The full history is loaded on-demand by specific screens (financeiro, cliente).
+    const today = new Date();
+    const past = new Date(today);
+    past.setDate(past.getDate() - 90);
+    const future = new Date(today);
+    future.setDate(future.getDate() + 180);
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    // Single query with JOINs for profiles, restricted by date window
     const { data: appointmentsData, error } = await supabase
       .from('appointments')
       .select(`
         *,
         profiles!appointments_user_id_fkey(name, phone)
       `)
+      .gte('appointment_date', fmt(past))
+      .lte('appointment_date', fmt(future))
       .order('appointment_date', { ascending: true })
       .order('appointment_time', { ascending: true });
 
@@ -176,10 +188,20 @@ export function useAdminAppointments() {
     setLoading(false);
   }
 
+  // Debounce ref for realtime refetches to avoid storms during bulk changes
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     fetchAppointments();
 
-    // Subscribe to realtime changes
+    const scheduleRefetch = () => {
+      if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
+      refetchTimerRef.current = setTimeout(() => {
+        fetchAppointments();
+      }, 600);
+    };
+
+    // Subscribe to realtime changes (debounced)
     const channel = supabase
       .channel('admin-appointments')
       .on(
@@ -189,14 +211,14 @@ export function useAdminAppointments() {
           schema: 'public',
           table: 'appointments'
         },
-        (payload) => {
-          console.log('Realtime update:', payload);
-          fetchAppointments();
+        () => {
+          scheduleRefetch();
         }
       )
       .subscribe();
 
     return () => {
+      if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
       supabase.removeChannel(channel);
     };
   }, []);
