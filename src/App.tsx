@@ -44,12 +44,12 @@ const App = () => {
             <Routes>
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/" element={<Index />} />
-              <Route path="/servicos" element={<Servicos />} />
-              <Route path="/agendar" element={<Agendar />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/perfil" element={<Perfil />} />
-              <Route path="/cliente" element={<Cliente />} />
-              <Route path="/pacotes" element={<Pacotes />} />
+              <Route path="/servicos" element={<Suspense fallback={<RouteFallback />}><Servicos /></Suspense>} />
+              <Route path="/agendar" element={<Suspense fallback={<RouteFallback />}><Agendar /></Suspense>} />
+              <Route path="/perfil" element={<Suspense fallback={<RouteFallback />}><Perfil /></Suspense>} />
+              <Route path="/cliente" element={<Suspense fallback={<RouteFallback />}><Cliente /></Suspense>} />
+              <Route path="/pacotes" element={<Suspense fallback={<RouteFallback />}><Pacotes /></Suspense>} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/agenda" element={<AdminAgenda />} />
               <Route path="/admin/clientes" element={<AdminClientes />} />
@@ -59,7 +59,7 @@ const App = () => {
               <Route path="/admin/pacotes" element={<AdminPacotes />} />
               <Route path="/admin/avaliacoes" element={<AdminAvaliacoes />} />
               <Route path="/admin/fidelidade" element={<AdminFidelidade />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
             </Routes>
           </BrowserRouter>
         </AdminNotificationProvider>
