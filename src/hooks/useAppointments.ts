@@ -101,7 +101,8 @@ export function useAppointments() {
     let query = supabase
       .from('appointments')
       .select('*')
-      .order('appointment_date', { ascending: false });
+      .order('appointment_date', { ascending: false })
+      .limit(50); // Most recent 50 is enough for client history view
     
     // Filter by user_id for non-admin users
     if (user) {

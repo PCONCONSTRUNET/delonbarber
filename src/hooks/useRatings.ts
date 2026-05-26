@@ -22,7 +22,7 @@ export function useRatings() {
 
   async function fetchPublicRatings() {
     setLoading(true);
-    
+
     const { data, error } = await supabase
       .from('ratings')
       .select('*')
@@ -36,21 +36,29 @@ export function useRatings() {
       return;
     }
 
-    // Fetch profiles for each rating
-    const ratingsWithProfiles: Rating[] = [];
-    
-    for (const rating of data || []) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('name, avatar_url')
-        .eq('user_id', rating.user_id)
-        .maybeSingle();
-
-      ratingsWithProfiles.push({
-        ...rating,
-        profile: profileData || { name: null, avatar_url: null }
-      });
+    const list = data || [];
+    if (list.length === 0) {
+      setRatings([]);
+      setLoading(false);
+      return;
     }
+
+    // Batch-fetch profiles in a single query (was N+1)
+    const userIds = Array.from(new Set(list.map(r => r.user_id))).filter(Boolean);
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('user_id, name, avatar_url')
+      .in('user_id', userIds);
+
+    const profileByUser = new Map<string, { name: string | null; avatar_url: string | null }>();
+    (profilesData || []).forEach((p: any) => {
+      profileByUser.set(p.user_id, { name: p.name, avatar_url: p.avatar_url });
+    });
+
+    const ratingsWithProfiles: Rating[] = list.map(rating => ({
+      ...rating,
+      profile: profileByUser.get(rating.user_id) || { name: null, avatar_url: null }
+    }));
 
     setRatings(ratingsWithProfiles);
     setLoading(false);
@@ -160,10 +168,13 @@ export function useAverageRating() {
   const [count, setCount] = useState(0);
 
   async function fetchAverage() {
+    // Cap to last 500 ratings — sufficient for average and avoids unbounded scans
     const { data } = await supabase
       .from('ratings')
       .select('rating')
-      .eq('is_public', true);
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .limit(500);
 
     if (data && data.length > 0) {
       const sum = data.reduce((acc, r) => acc + r.rating, 0);
