@@ -638,33 +638,33 @@ export function useAdminClients() {
 
 
 export function useClientNotes(clientId: string | null) {
-  const [notes, setNotes] = useState<ClientNote[]>([]);
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const queryKey = ['admin', 'client-notes', clientId] as const;
 
-  async function fetchNotes() {
-    if (!clientId) return;
-    setLoading(true);
+  const { data: notes = [], isLoading: loading, refetch } = useQuery({
+    queryKey,
+    queryFn: async (): Promise<ClientNote[]> => {
+      if (!clientId) return [];
+      const { data, error } = await supabase
+        .from('client_notes')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!clientId,
+    staleTime: 60_000,
+  });
 
-    const { data, error } = await supabase
-      .from('client_notes')
-      .select('*')
-      .eq('client_id', clientId)
-      .order('created_at', { ascending: false });
-
-    if (!error) setNotes(data || []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    fetchNotes();
-  }, [clientId]);
+  const fetchNotes = async () => { await refetch(); };
 
   async function addNote(note: string) {
     if (!clientId) return false;
 
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     const { error } = await supabase
       .from('client_notes')
       .insert({ client_id: clientId, note, admin_id: user?.id });
@@ -675,34 +675,36 @@ export function useClientNotes(clientId: string | null) {
     }
 
     toast({ title: "Nota adicionada!" });
-    fetchNotes();
+    queryClient.invalidateQueries({ queryKey });
     return true;
   }
 
   return { notes, loading, addNote, fetchNotes };
 }
 
+const ADMIN_SERVICES_KEY = ['admin', 'services'] as const;
+
 export function useAdminServices() {
-  const [services, setServices] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  async function fetchServices() {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .eq('is_active', true)
-      .order('category', { ascending: true })
-      .order('price', { ascending: false });
+  const { data: services = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ADMIN_SERVICES_KEY,
+    queryFn: async (): Promise<any[]> => {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('is_active', true)
+        .order('category', { ascending: true })
+        .order('price', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 5 * 60_000, // serviços mudam raramente
+  });
 
-    if (!error) setServices(data || []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    fetchServices();
-  }, []);
+  const fetchServices = async () => { await refetch(); };
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ADMIN_SERVICES_KEY });
 
   async function createService(service: any) {
     const { error } = await supabase.from('services').insert(service);
@@ -711,7 +713,7 @@ export function useAdminServices() {
       return false;
     }
     toast({ title: "Serviço criado!" });
-    fetchServices();
+    invalidate();
     return true;
   }
 
@@ -722,33 +724,30 @@ export function useAdminServices() {
       return false;
     }
     toast({ title: "Serviço atualizado!" });
-    fetchServices();
+    invalidate();
     return true;
   }
 
   async function deleteService(id: string) {
-    console.log('Deleting service:', id);
     const { error, data } = await supabase
       .from('services')
       .update({ is_active: false })
       .eq('id', id)
       .select();
-    
-    console.log('Delete result:', { error, data });
-    
+
     if (error) {
       console.error('Delete service error:', error);
       toast({ title: "Erro", description: error.message || "Não foi possível remover.", variant: "destructive" });
       return false;
     }
-    
+
     if (!data || data.length === 0) {
       toast({ title: "Erro", description: "Serviço não encontrado ou sem permissão.", variant: "destructive" });
       return false;
     }
-    
+
     toast({ title: "Serviço removido!" });
-    fetchServices();
+    invalidate();
     return true;
   }
 
