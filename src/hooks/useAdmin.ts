@@ -379,9 +379,9 @@ async function fetchAdminClientsQuery(): Promise<Client[]> {
 
     if (profilesResult.error) {
       console.error('Error fetching clients:', profilesResult.error);
-      setLoading(false);
-      return;
+      throw profilesResult.error;
     }
+
 
     const profiles = profilesResult.data || [];
     const guestClients = guestClientsResult.data || [];
