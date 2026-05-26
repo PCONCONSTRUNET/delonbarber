@@ -16,18 +16,9 @@ export function MyPackagesBenefits({ compact = false }: MyPackagesBenefitsProps)
   const { packages, loading } = useMyPackages();
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-4">
-        <motion.span
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-          className="text-2xl"
-        >
-          👑
-        </motion.span>
-      </div>
-    );
+    return null;
   }
+
 
   if (packages.length === 0) {
     return null;
