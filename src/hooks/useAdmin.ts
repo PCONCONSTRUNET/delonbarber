@@ -351,13 +351,10 @@ export function useAdminAppointments() {
   return { appointments, loading, fetchAppointments, updateAppointmentStatus, updatePaymentStatus, deleteAppointment };
 }
 
-export function useAdminClients() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+const ADMIN_CLIENTS_KEY = ['admin', 'clients'] as const;
 
-  async function fetchClients() {
-    setLoading(true);
+async function fetchAdminClientsQuery(): Promise<Client[]> {
+
 
     // Fetch profiles, guest_clients, and appointments in parallel
     const [profilesResult, guestClientsResult, appointmentsResult, guestAppointmentsResult] = await Promise.all([
