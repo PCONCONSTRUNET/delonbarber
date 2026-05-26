@@ -50,8 +50,6 @@ export interface ClientNote {
 }
 
 export function useIsAdmin() {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
@@ -77,41 +75,29 @@ export function useIsAdmin() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const resolveAdminRole = async () => {
-      if (!authReady) return;
-
-      if (!userId) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-
+  // Cacheado via React Query: ao trocar de aba no admin não dispara nova checagem,
+  // eliminando o loader de tela cheia entre navegações.
+  const { data: isAdmin = false, isLoading, isFetched } = useQuery({
+    queryKey: ['admin', 'is-admin', userId],
+    queryFn: async () => {
+      if (!userId) return false;
       const { data, error } = await supabase.rpc('has_role', {
         _user_id: userId,
         _role: 'admin',
       });
-
-      if (cancelled) return;
-
       if (error) {
         console.error('Error checking admin role:', error);
+        return false;
       }
+      return Boolean(data);
+    },
+    enabled: authReady && !!userId,
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+  });
 
-      setIsAdmin(Boolean(data));
-      setLoading(false);
-    };
-
-    void resolveAdminRole();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authReady, userId]);
+  // Só exibe loading na PRIMEIRA verificação. Em trocas de aba o cache responde imediato.
+  const loading = !authReady || (!!userId && isLoading && !isFetched);
 
   return { isAdmin, loading };
 }
