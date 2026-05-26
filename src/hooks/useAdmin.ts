@@ -493,9 +493,20 @@ async function fetchAdminClientsQuery(): Promise<Client[]> {
     // Sort by created_at descending
     allClients.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    setClients(allClients);
-    setLoading(false);
+    return allClients;
   }
+
+export function useAdminClients() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: clients = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ADMIN_CLIENTS_KEY,
+    queryFn: fetchAdminClientsQuery,
+    staleTime: 60_000,
+  });
+
+  const fetchClients = async () => { await refetch(); };
 
   async function deleteClient(userId: string, isGuest: boolean = false) {
     try {
