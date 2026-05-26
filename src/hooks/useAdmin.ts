@@ -755,25 +755,23 @@ export function useAdminServices() {
 }
 
 export function useBusinessStatus() {
-  const [isOpen, setIsOpen] = useState(true);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const queryKey = ['admin', 'business-status'] as const;
 
-  async function fetchStatus() {
-    const today = new Date().getDay();
-    const { data } = await supabase
-      .from('business_hours')
-      .select('is_open')
-      .eq('day_of_week', today)
-      .single();
-
-    setIsOpen(data?.is_open ?? false);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    fetchStatus();
-  }, []);
+  const { data: isOpen = true, isLoading: loading } = useQuery({
+    queryKey,
+    queryFn: async (): Promise<boolean> => {
+      const today = new Date().getDay();
+      const { data } = await supabase
+        .from('business_hours')
+        .select('is_open')
+        .eq('day_of_week', today)
+        .single();
+      return data?.is_open ?? false;
+    },
+    staleTime: 60_000,
+  });
 
   async function toggleStatus() {
     const today = new Date().getDay();
@@ -787,9 +785,12 @@ export function useBusinessStatus() {
       return;
     }
 
-    setIsOpen(!isOpen);
+    // Atualização otimista + invalidar
+    queryClient.setQueryData(queryKey, !isOpen);
+    queryClient.invalidateQueries({ queryKey });
     toast({ title: isOpen ? "Barbearia fechada!" : "Barbearia aberta!" });
   }
 
   return { isOpen, loading, toggleStatus };
 }
+
