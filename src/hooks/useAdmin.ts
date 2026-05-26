@@ -623,7 +623,8 @@ export function useAdminClients() {
       }
 
       toast({ title: "Cliente excluído!", description: "Todos os dados foram removidos." });
-      fetchClients();
+      queryClient.invalidateQueries({ queryKey: ADMIN_CLIENTS_KEY });
+      queryClient.invalidateQueries({ queryKey: ADMIN_APPOINTMENTS_KEY });
       return true;
     } catch (error) {
       console.error('Error deleting client:', error);
@@ -632,12 +633,9 @@ export function useAdminClients() {
     }
   }
 
-  useEffect(() => {
-    fetchClients();
-  }, []);
-
   return { clients, loading, fetchClients, deleteClient };
 }
+
 
 export function useClientNotes(clientId: string | null) {
   const [notes, setNotes] = useState<ClientNote[]>([]);
