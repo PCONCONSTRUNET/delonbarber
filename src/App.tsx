@@ -22,7 +22,17 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminIA, AdminPacotes, AdminAvaliacoes, AdminFidelidade } from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000, // dados considerados frescos por 30s -> evita refetch ao trocar de aba
+      gcTime: 5 * 60_000, // mantém cache por 5min mesmo sem consumidores
+      refetchOnWindowFocus: true, // atualiza ao voltar pra aba
+      refetchOnReconnect: true,
+      retry: 1,
+    },
+  },
+});
 
 const RouteFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
