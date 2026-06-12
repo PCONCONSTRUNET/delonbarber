@@ -19,6 +19,7 @@ interface DateTimeSelectionProps {
   onSelectDate: (date: Date | undefined) => void;
   onSelectTime: (time: string) => void;
   selectedServices?: Service[];
+  isRefreshing?: boolean;
 }
 
 export function DateTimeSelection({
@@ -28,7 +29,8 @@ export function DateTimeSelection({
   selectedTime,
   onSelectDate,
   onSelectTime,
-  selectedServices = []
+  selectedServices = [],
+  isRefreshing = false
 }: DateTimeSelectionProps) {
   const { packages } = useMyPackages();
   const { isExclusive: isExclusiveClient } = useIsExclusiveClient();
@@ -317,6 +319,23 @@ export function DateTimeSelection({
         <div className="flex items-center gap-2 mb-3">
           <Clock className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">Horários</h3>
+          {isRefreshing ? (
+            <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+              <motion.span
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                className="inline-block"
+              >
+                ⏳
+              </motion.span>
+              Atualizando...
+            </span>
+          ) : (
+            <span className="ml-auto flex items-center gap-1 text-xs text-green-500/70">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+              Ao vivo
+            </span>
+          )}
         </div>
 
         {!selectedDate ? (

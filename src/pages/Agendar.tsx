@@ -54,7 +54,7 @@ const Agendar = () => {
   const { services, loading: servicesLoading } = useServices();
   const { businessHours, loading: hoursLoading } = useBusinessHours();
   const { appointments, loading: appointmentsLoading, createAppointment, cancelAppointment } = useAppointments();
-  const bookedSlots = useBookedSlots(selectedDate);
+  const { bookedSlots, isRefreshing, refresh: refreshSlots } = useBookedSlots(selectedDate);
   const { isAdmin } = useIsAdmin();
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -83,6 +83,13 @@ const Agendar = () => {
     setSelectedTime(undefined);
   };
 
+  // Whenever user reaches step 2, force-refresh slots so they see live data
+  useEffect(() => {
+    if (currentStep === 2) {
+      refreshSlots();
+    }
+  }, [currentStep]);
+
   const canProceed = () => {
     switch (currentStep) {
       case 1: return selectedServices.length > 0;
@@ -103,6 +110,14 @@ const Agendar = () => {
     setIsSubmitting(true);
     const result = await createAppointment(selectedServices, selectedDate, selectedTime, notes, paymentMethod);
     setIsSubmitting(false);
+
+    if (!result) {
+      // Booking failed (conflict or error) — refresh slots so the UI reflects the real state
+      refreshSlots();
+      setSelectedTime(undefined); // clear selected time so user must pick again
+      setCurrentStep(2);           // send back to step 2
+      return;
+    }
 
     if (result) {
       // Only show payment dialog for PIX (and not for subscriber)
@@ -328,6 +343,7 @@ const Agendar = () => {
                       onSelectDate={handleDateSelect}
                       onSelectTime={setSelectedTime}
                       selectedServices={selectedServices}
+                      isRefreshing={isRefreshing}
                     />
                   )}
                 </motion.div>

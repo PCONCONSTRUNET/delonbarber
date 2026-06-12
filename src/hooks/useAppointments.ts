@@ -388,11 +388,27 @@ export function useAppointments() {
 
     if (aptError) {
       console.error('Error creating appointment:', aptError);
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar o agendamento.",
-        variant: "destructive"
-      });
+      // Detect conflict errors raised by the DB trigger
+      const msg: string = aptError.message || '';
+      if (msg.includes('SLOT_CONFLICT')) {
+        toast({
+          title: "⚠️ Horário indisponível",
+          description: "Este horário acabou de ser ocupado por outro cliente. Por favor, escolha outro horário.",
+          variant: "destructive"
+        });
+      } else if (msg.includes('SLOT_BLOCKED')) {
+        toast({
+          title: "⚠️ Horário bloqueado",
+          description: "Este horário está bloqueado pelo administrador. Por favor, escolha outro horário.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível criar o agendamento. Tente novamente.",
+          variant: "destructive"
+        });
+      }
       return null;
     }
 
@@ -544,53 +560,65 @@ function calculateBlockedSlots(startTime: string, durationMinutes: number): stri
 
 export function useBookedSlots(date: Date | undefined) {
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    async function fetchBookedSlots() {
-      if (!date) return;
+  async function fetchBookedSlots(targetDate?: Date) {
+    const d = targetDate ?? date;
+    if (!d) return;
 
-      const dateStr = format(date, 'yyyy-MM-dd');
+    setIsRefreshing(true);
+    const dateStr = format(d, 'yyyy-MM-dd');
 
-      // Fetch booked appointments WITH total_duration to calculate blocked slots
-      const { data: appointments, error: aptError } = await supabase
-        .from('appointments')
-        .select('appointment_time, total_duration')
-        .eq('appointment_date', dateStr)
-        .in('status', ['pending', 'confirmed']);
+    // Fetch booked appointments WITH total_duration to calculate blocked slots
+    const { data: appointments, error: aptError } = await supabase
+      .from('appointments')
+      .select('appointment_time, total_duration')
+      .eq('appointment_date', dateStr)
+      .in('status', ['pending', 'confirmed']);
 
-      if (aptError) {
-        console.error('Error fetching booked slots:', aptError);
-      }
-
-      // Fetch blocked slots
-      const { data: blockedSlots, error: blockedError } = await supabase
-        .from('blocked_slots')
-        .select('blocked_time')
-        .eq('blocked_date', dateStr);
-
-      if (blockedError) {
-        console.error('Error fetching blocked slots:', blockedError);
-      }
-
-      // Calculate all blocked times based on appointment duration
-      const allBookedTimes: string[] = [];
-      
-      for (const apt of appointments || []) {
-        const duration = apt.total_duration || 30; // Default to 30 minutes if not set
-        const blockedForAppointment = calculateBlockedSlots(apt.appointment_time, duration);
-        allBookedTimes.push(...blockedForAppointment);
-      }
-      
-      // Add manually blocked slots
-      const blockedTimes = blockedSlots?.map(b => b.blocked_time) || [];
-      
-      // Merge and deduplicate
-      const allBlockedSlots = [...new Set([...allBookedTimes, ...blockedTimes])];
-      setBookedSlots(allBlockedSlots);
+    if (aptError) {
+      console.error('Error fetching booked slots:', aptError);
     }
 
+    // Fetch blocked slots (manual blocks)
+    const { data: blockedSlots, error: blockedError } = await supabase
+      .from('blocked_slots')
+      .select('blocked_time')
+      .eq('blocked_date', dateStr);
+
+    if (blockedError) {
+      console.error('Error fetching blocked slots:', blockedError);
+    }
+
+    // Calculate all blocked times based on appointment duration
+    const allBookedTimes: string[] = [];
+    
+    for (const apt of appointments || []) {
+      const duration = apt.total_duration || 30;
+      const blockedForAppointment = calculateBlockedSlots(apt.appointment_time, duration);
+      allBookedTimes.push(...blockedForAppointment);
+    }
+    
+    // Add manually blocked slots
+    const blockedTimes = blockedSlots?.map(b => b.blocked_time) || [];
+    
+    // Merge and deduplicate
+    const allBlockedSlots = [...new Set([...allBookedTimes, ...blockedTimes])];
+    setBookedSlots(allBlockedSlots);
+    setIsRefreshing(false);
+  }
+
+  // Reload whenever the date changes
+  useEffect(() => {
     fetchBookedSlots();
   }, [date]);
 
-  return bookedSlots;
+  // Poll every 20 seconds so two clients don't see stale data simultaneously
+  useEffect(() => {
+    if (!date) return;
+    const interval = setInterval(() => fetchBookedSlots(), 20_000);
+    return () => clearInterval(interval);
+  }, [date]);
+
+  return { bookedSlots, isRefreshing, refresh: () => fetchBookedSlots() };
 }
