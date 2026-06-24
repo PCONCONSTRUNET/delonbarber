@@ -27,57 +27,7 @@ const signupSchema = z.object({
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
-const AUTH_TIMEOUT_MS = 8_000;
-
-function persistAuthSession(payload: any) {
-  const projectRef = new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0];
-  const expiresIn = Number(payload.expires_in ?? 3600);
-  const expiresAt = Number(payload.expires_at ?? Math.floor(Date.now() / 1000) + expiresIn);
-
-  localStorage.setItem(`sb-${projectRef}-auth-token`, JSON.stringify({
-    access_token: payload.access_token,
-    refresh_token: payload.refresh_token,
-    token_type: payload.token_type ?? 'bearer',
-    expires_in: expiresIn,
-    expires_at: expiresAt,
-    user: payload.user ?? null,
-  }));
-}
-
-async function signInFast(email: string, password: string) {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: {
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-      signal: controller.signal,
-    });
-
-    const payload = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(payload.error_description || payload.msg || "Email ou senha incorretos");
-    }
-
-    if (!payload.access_token || !payload.refresh_token) {
-      throw new Error("Não foi possível iniciar a sessão");
-    }
-
-    persistAuthSession(payload);
-    void supabase.auth.setSession({
-      access_token: payload.access_token,
-      refresh_token: payload.refresh_token,
-    }).catch(() => undefined);
-  } finally {
-    window.clearTimeout(timeout);
-  }
-}
+// Authentication logic now directly uses Supabase SDK methods for better stability
 
 const Login = () => {
   const navigate = useNavigate();
@@ -112,10 +62,15 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      await signInFast(loginEmail.trim(), loginPassword);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail.trim(),
+        password: loginPassword,
+      });
+
+      if (error) throw error;
 
       toast.success("Login realizado com sucesso!");
-      window.location.replace("/cliente");
+      // O useEffect com useAuthReady cuidará do redirecionamento para evitar race conditions
     } catch (error) {
       console.error("Erro no login:", error);
       const message = error instanceof Error ? error.message : "Erro ao entrar. Tente novamente.";
@@ -142,13 +97,14 @@ const Login = () => {
 
     setIsLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: signupEmail,
       password: signupPassword,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
         data: {
           name: signupName,
+          phone: signupPhone, // Salvar o telefone diretamente nos metadados é mais seguro
         },
       },
     });
@@ -163,12 +119,21 @@ const Login = () => {
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("profiles").update({ phone: signupPhone }).eq("user_id", user.id);
+    // Se o usuário foi criado, atualizar o profile com o telefone
+    if (data.user) {
+      await supabase.from("profiles").update({ phone: signupPhone }).eq("user_id", data.user.id);
     }
 
-    toast.success("Conta criada com sucesso!");
+    // Verifica se a sessão foi criada automaticamente
+    if (data.session) {
+      toast.success("Conta criada com sucesso!");
+      // O useEffect cuidará do redirecionamento para /cliente
+    } else {
+      // Se não tem sessão, significa que precisa de confirmação de email
+      toast.success("Conta criada! Verifique seu email para confirmar.");
+      setActiveTab("login"); // Volta para a tab de login
+    }
+    
     setIsLoading(false);
   };
 
