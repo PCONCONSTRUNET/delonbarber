@@ -11,6 +11,7 @@ export function AnimatedBackground() {
     if (!ctx) return;
 
     let animationId: number;
+    let isPaused = false;
     let particles: Array<{
       x: number;
       y: number;
@@ -42,6 +43,9 @@ export function AnimatedBackground() {
     };
 
     const animate = () => {
+      // Pausa o loop quando a aba/app está em background (crítico para PWA iOS)
+      if (isPaused) return;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Draw gradient overlay
@@ -97,18 +101,34 @@ export function AnimatedBackground() {
       animationId = requestAnimationFrame(animate);
     };
 
+    // Pausa/retoma animação quando o PWA vai para background e volta (iOS critical fix)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isPaused = true;
+        cancelAnimationFrame(animationId);
+      } else {
+        isPaused = false;
+        animate();
+      }
+    };
+
+    const handleResize = () => {
+      resize();
+      createParticles();
+    };
+
     resize();
     createParticles();
     animate();
 
-    window.addEventListener("resize", () => {
-      resize();
-      createParticles();
-    });
+    window.addEventListener("resize", handleResize);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      isPaused = true;
       cancelAnimationFrame(animationId);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", handleResize);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -117,11 +137,11 @@ export function AnimatedBackground() {
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none"
       style={{
+        // Não usar translateZ(0) — cria GPU layer separado que trava o
+        // compositor do WebKit no iOS PWA causando tela preta na navegação
         background: "transparent",
         zIndex: 0,
-        WebkitTransform: "translateZ(0)",
-        transform: "translateZ(0)",
-        willChange: "auto",
+        willChange: "contents",
       }}
     />
   );

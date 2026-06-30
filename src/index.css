@@ -77,6 +77,14 @@
     @apply border-border;
   }
 
+  /* #root e body com background explícito previne tela preta durante
+     lazy-load do Suspense e ao retornar de background no PWA iOS */
+  html, body, #root {
+    background-color: hsl(0 0% 4%);
+    min-height: 100%;
+    min-height: 100dvh;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', sans-serif;
