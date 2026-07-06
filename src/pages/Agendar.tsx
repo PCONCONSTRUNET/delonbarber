@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, History, ArrowLeft, LogOut, User as UserIcon, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Footer } from '@/components/layout/Footer';
-import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ServiceSelection } from '@/components/agendar/ServiceSelection';
@@ -157,7 +156,6 @@ const Agendar = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24 overflow-x-hidden relative">
-      <AnimatedBackground />
       
       <main className="relative z-10 pt-4 sm:pt-6 pb-20 px-3 sm:px-4 max-w-lg mx-auto safe-area-top">
         {/* Header com botão voltar */}

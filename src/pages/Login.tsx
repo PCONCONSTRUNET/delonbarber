@@ -1,7 +1,6 @@
 // v4 - test auto deploy
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,7 +138,6 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
-      <AnimatedBackground />
       
       <main className="pt-24 pb-24 flex items-center justify-center min-h-screen">
         <div className="container px-4">

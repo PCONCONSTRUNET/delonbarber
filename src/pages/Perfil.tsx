@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "@/components/layout/Footer";
-import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -241,7 +240,6 @@ const Perfil = () => {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      <AnimatedBackground />
       
       <main className="pt-6 pb-24 safe-area-top">
         <div className="container mx-auto px-4">

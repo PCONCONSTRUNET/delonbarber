@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "@/components/layout/Footer";
-import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 import { PublicRatings } from "@/components/ratings/PublicRatings";
 import { InstallAppDialog } from "@/components/pwa/InstallAppDialog";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,6 @@ const Index = () => {
   const [installDialogOpen, setInstallDialogOpen] = useState(false);
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      <AnimatedBackground />
       
       {/* Install App Button - mobile optimized */}
       <div className="fixed top-3 right-3 z-50 safe-area-top">

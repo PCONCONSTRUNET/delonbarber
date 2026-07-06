@@ -15,7 +15,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
 import { PixQRCode } from '@/components/payments/PixQRCode';
 import { PixIcon } from '@/components/icons/PixIcon';
 import { supabase } from '@/integrations/supabase/client';
@@ -255,7 +254,6 @@ const Pacotes = () => {
 
   return (
     <div className="min-h-screen bg-background pb-8 overflow-x-hidden">
-      <AnimatedBackground />
       
       <main className="pt-4 sm:pt-6 px-3 sm:px-4 max-w-lg mx-auto safe-area-top">
         {/* Header */}
