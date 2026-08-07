@@ -187,7 +187,7 @@ export function DateTimeSelection({
     }
 
     return slots;
-  }, [selectedDate, businessHours]);
+  }, [selectedDate, businessHours, selectedServices]);
 
   // Check if a date is blocked due to VIP weekly limit
   const isDateBlockedByVip = (date: Date): boolean => {
