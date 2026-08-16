@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
-import { notifyAdmin, notifyClient } from '@/lib/oneSignalPush';
+import { notifyAdmin } from '@/lib/oneSignalPush';
+
 
 export interface Service {
   id: string;
@@ -388,8 +389,14 @@ export function useAppointments() {
 
     if (aptError) {
       console.error('Error creating appointment:', aptError);
-      // Detect conflict errors raised by the DB trigger
-      const msg: string = aptError.message || '';
+      console.error('aptError details:', JSON.stringify(aptError, null, 2));
+      // Detect conflict/block errors raised by the DB trigger
+      // The PostgreSQL RAISE EXCEPTION message can appear in message, details, or hint
+      const msg: string = [
+        aptError.message || '',
+        (aptError as any).details || '',
+        (aptError as any).hint || '',
+      ].join(' ');
       if (msg.includes('SLOT_CONFLICT')) {
         toast({
           title: "⚠️ Horário indisponível",
@@ -402,10 +409,28 @@ export function useAppointments() {
           description: "Este horário está bloqueado pelo administrador. Por favor, escolha outro horário.",
           variant: "destructive"
         });
+      } else if (msg.includes('CLOSED_DAY')) {
+        toast({
+          title: "⚠️ Dia fechado",
+          description: "O estabelecimento não atende neste dia da semana. Escolha outra data.",
+          variant: "destructive"
+        });
+      } else if (msg.includes('OUTSIDE_HOURS')) {
+        toast({
+          title: "⚠️ Fora do horário",
+          description: "O horário selecionado está fora do horário de funcionamento. Escolha um horário dentro do expediente.",
+          variant: "destructive"
+        });
+      } else if (msg.includes('LUNCH_BREAK')) {
+        toast({
+          title: "⚠️ Intervalo de almoço",
+          description: "Este horário coincide com o intervalo de almoço. Por favor, escolha outro horário.",
+          variant: "destructive"
+        });
       } else {
         toast({
           title: "Erro",
-          description: "Não foi possível criar o agendamento. Tente novamente.",
+          description: `Não foi possível criar o agendamento. Tente novamente. (${aptError.message || aptError.code || 'erro desconhecido'})`,
           variant: "destructive"
         });
       }
@@ -464,17 +489,7 @@ export function useAppointments() {
     }
 
     // Push para admin é disparado pelo trigger do banco (send_push_on_new_appointment).
-    // Aqui só notificamos o cliente que o agendamento foi auto-confirmado.
-    const servicesLabel = selectedServices.map(s => s.name).join(', ');
-    const dateLabel = date.toLocaleDateString('pt-BR');
-    const timeLabel = time.slice(0, 5);
-
-    notifyClient(
-      user.id,
-      '✅ Agendamento Confirmado',
-      `Seu horário de ${servicesLabel} em ${dateLabel} às ${timeLabel} está confirmado!`,
-      '/perfil'
-    );
+    // Notificação para o cliente foi desabilitada para evitar conflitos de SW no iOS PWA.
 
     // Show appropriate toast message
     if (benefitsToUse.length > 0) {

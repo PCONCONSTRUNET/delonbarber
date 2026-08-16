@@ -197,18 +197,22 @@ export function useMyPackages() {
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+
     // Subscribe to global cache updates so all instances stay in sync
-    const handler = (pkgs: MyPackage[]) => setPackages(pkgs);
+    const handler = (pkgs: MyPackage[]) => { if (mounted) setPackages(pkgs); };
     subscribers.add(handler);
 
     void fetchMyPackages();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      if (!mounted) return;
       cacheEntry = null; // invalidate on auth change
       void fetchMyPackages(true);
     });
 
     return () => {
+      mounted = false;
       subscribers.delete(handler);
       subscription.unsubscribe();
     };

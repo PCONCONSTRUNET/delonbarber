@@ -34,15 +34,6 @@
       })();
     </script>
     <meta name="theme-color" content="#D62828" />
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/OneSignalSDKWorker.js')
-            .then(reg => console.log('SW registered', reg))
-            .catch(err => console.error('SW registration failed', err));
-        });
-      }
-    </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

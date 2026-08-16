@@ -7,7 +7,6 @@ import { lazy, Suspense } from "react";
 import { AdminNotificationProvider } from "@/contexts/AdminNotificationContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import { PushPromptModal } from "@/components/push/PushPromptModal";
 import { DynamicManifest } from "@/components/pwa/DynamicManifest";
 
 // Code-splitting: client routes loaded on demand
@@ -50,7 +49,6 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <DynamicManifest />
-            <PushPromptModal excludePaths={["/admin", "/login", "/perfil"]} />
             <Routes>
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/" element={<Index />} />

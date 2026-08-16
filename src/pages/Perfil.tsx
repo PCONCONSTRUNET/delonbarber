@@ -8,13 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Phone, Mail, Camera, Loader2, Save, Bell, Calendar, Clock, ArrowLeft, Gift, DollarSign, Star, Trophy, X, AlertTriangle } from "lucide-react";
+import { User, Phone, Mail, Camera, Loader2, Save, Calendar, Clock, ArrowLeft, Gift, DollarSign, Star, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useClientNotifications } from "@/hooks/useNotifications";
-import { NotificationHistory } from "@/components/client/NotificationHistory";
 import { MyLoyaltyProgress } from "@/components/client/MyLoyaltyProgress";
-import { PushToggle } from "@/components/push/PushToggle";
 import { notifyAdmin } from "@/lib/oneSignalPush";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -387,7 +385,7 @@ const Perfil = () => {
 
             {/* Tabs for different sections */}
             <Tabs defaultValue="fidelidade" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 h-10 xs:h-11 p-1">
+              <TabsList className="grid w-full grid-cols-2 h-10 xs:h-11 p-1">
                 <TabsTrigger value="fidelidade" className="text-[10px] xs:text-xs flex items-center gap-0.5 xs:gap-1 px-1 xs:px-2">
                   <Gift className="h-3 w-3 xs:h-3.5 xs:w-3.5" />
                   <span className="truncate">Fidelidade</span>
@@ -395,10 +393,6 @@ const Perfil = () => {
                 <TabsTrigger value="agendamentos" className="text-[10px] xs:text-xs flex items-center gap-0.5 xs:gap-1 px-1 xs:px-2">
                   <Calendar className="h-3 w-3 xs:h-3.5 xs:w-3.5" />
                   <span className="truncate">Histórico</span>
-                </TabsTrigger>
-                <TabsTrigger value="notificacoes" className="text-[10px] xs:text-xs flex items-center gap-0.5 xs:gap-1 px-1 xs:px-2">
-                  <Bell className="h-3 w-3 xs:h-3.5 xs:w-3.5" />
-                  <span className="truncate">Avisos</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -477,26 +471,6 @@ const Perfil = () => {
                 </Card>
               </TabsContent>
 
-              {/* Notificações Tab */}
-              <TabsContent value="notificacoes" className="mt-4 space-y-4">
-                {userId && (
-                  <Card className="glass-effect border-border">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Bell className="w-4 h-4" />
-                        Notificações Push
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Receba avisos sobre seus agendamentos, confirmações de pagamento e novidades direto no seu celular.
-                      </p>
-                      <PushToggle role="cliente" userId={userId} />
-                    </CardContent>
-                  </Card>
-                )}
-                {userId && <NotificationHistory userId={userId} />}
-              </TabsContent>
             </Tabs>
           </div>
         </div>

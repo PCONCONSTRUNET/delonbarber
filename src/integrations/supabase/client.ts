@@ -8,9 +8,31 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Fallback seguro: em iOS PWA, localStorage pode lançar SecurityError ou
+// QuotaExceededError. Se isso acontecer, usamos um storage em memória para
+// não crashar o app inteiro (ErrorBoundary irá capturar de qualquer forma).
+function getSafeStorage(): Storage {
+  try {
+    localStorage.setItem('__test__', '1');
+    localStorage.removeItem('__test__');
+    return localStorage;
+  } catch {
+    // localStorage inacessível — usa memória como fallback
+    const store: Record<string, string> = {};
+    return {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => { store[k] = v; },
+      removeItem: (k: string) => { delete store[k]; },
+      clear: () => { Object.keys(store).forEach(k => delete store[k]); },
+      key: (i: number) => Object.keys(store)[i] ?? null,
+      get length() { return Object.keys(store).length; },
+    } as Storage;
+  }
+}
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: getSafeStorage(),
     persistSession: true,
     autoRefreshToken: true,
   }

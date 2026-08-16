@@ -202,8 +202,8 @@ export function DateTimeSelection({
     const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     const isBlockedByVipLimit = isDateBlockedByVip(date);
-    // Saturday (6) is exclusive - only allowed for exclusive clients
-    const isSaturdayRestricted = dayOfWeek === 6 && isExclusiveClient;
+    // Saturday (6) is exclusive - blocked for NON-exclusive clients
+    const isSaturdayRestricted = dayOfWeek === 6 && !isExclusiveClient;
     
     return isPast || !dayHours?.is_open || isBlockedByVipLimit || isSaturdayRestricted;
   };
