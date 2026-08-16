@@ -22,9 +22,8 @@ if ('serviceWorker' in navigator) {
 }
 
 // ─── HACK: Forçar Layout Mobile no iOS PWA ────────────────────────────────────
-// Como o WKWebView às vezes trava em 980px (modo desktop) e ignora a tag viewport,
-// nós forçamos o #root a ter a largura da tela do celular e usamos transform: scale
-// para anular o "shrink" do iOS. Isso deixa tudo gigante e alinhado perfeitamente!
+// Resolve o bug dos 980px do iOS usando 'zoom' (que preserva o scroll original),
+// e corrige o tamanho de telas de 100vh para não empurrar o conteúdo pra baixo.
 try {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -33,34 +32,26 @@ try {
                       
   if (isIOS && isStandalone) {
     if (window.innerWidth > 500 && window.screen.width < 500) {
-      const scaleFactor = window.innerWidth / window.screen.width;
+      const zoomFactor = window.innerWidth / window.screen.width;
       
-      // Quando a página carregar, aplicamos o hack no root
       const applyHack = () => {
-        const root = document.getElementById('root');
-        if (root) {
-          root.style.width = window.screen.width + 'px';
-          root.style.height = window.screen.height + 'px';
-          root.style.transformOrigin = 'top left';
-          root.style.transform = `scale(${scaleFactor})`;
-          root.style.overflow = 'hidden';
-          root.style.position = 'absolute';
-          root.style.top = '0';
-          root.style.left = '0';
-          document.body.style.overflow = 'hidden';
-          document.body.style.width = window.innerWidth + 'px';
-          document.body.style.height = window.innerHeight + 'px';
-          
-          // Corrigir o alinhamento vertical forçando o min-height exato
-          const style = document.createElement('style');
-          style.innerHTML = `
-            .min-h-\\[100dvh\\], .min-h-screen, .h-screen, .h-\\[100dvh\\], .min-h-\\[100vh\\] {
-              min-height: ${window.screen.height}px !important;
-              height: ${window.screen.height}px !important;
-            }
-          `;
-          document.head.appendChild(style);
-        }
+        // 1. Aplica o zoom nativo no HTML (Isso aumenta tudo, e preserva o Scroll vertical!)
+        document.documentElement.style.setProperty('zoom', zoomFactor.toString(), 'important');
+        
+        // 2. O zoom quebra a altura das telas de login (100dvh). 
+        // Para corrigir, a altura CSS precisa ser a altura física dividida pelo zoom.
+        const correctedHeight = window.screen.height / zoomFactor;
+        
+        const style = document.createElement('style');
+        style.innerHTML = `
+          .min-h-\\[100dvh\\], .min-h-screen, .min-h-\\[100vh\\] {
+            min-height: ${correctedHeight}px !important;
+          }
+          .h-screen, .h-\\[100dvh\\] {
+            height: ${correctedHeight}px !important;
+          }
+        `;
+        document.head.appendChild(style);
       };
       
       if (document.readyState === 'loading') {
