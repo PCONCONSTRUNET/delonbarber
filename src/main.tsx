@@ -21,16 +21,15 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ─── HACK: Forçar Layout Mobile no iOS PWA ────────────────────────────────────
-// Resolve o bug dos 980px do iOS usando 'zoom' (que preserva o scroll original),
+// ─── HACK: Forçar Layout Mobile no iOS (Safari e PWA) ────────────────────────
+// Resolve o bug dos 980px do iOS (seja por PWA em cache ou "Request Desktop Website" no Safari)
+// usando 'zoom' (que preserva o scroll original),
 // e corrige o tamanho de telas de 100vh para não empurrar o conteúdo pra baixo.
 try {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                      ('standalone' in navigator && (navigator as any).standalone === true);
                       
-  if (isIOS && isStandalone) {
+  if (isIOS) {
     if (window.innerWidth > 500 && window.screen.width < 500) {
       const zoomFactor = window.innerWidth / window.screen.width;
       
