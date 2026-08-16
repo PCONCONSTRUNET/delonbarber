@@ -21,9 +21,10 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ─── HACK: Forçar Zoom Matemático no iOS PWA ────────────────────────────────
+// ─── HACK: Forçar Viewport Correto no iOS PWA ────────────────────────────────
 // Como o WKWebView do iOS PWA às vezes trava em 980px (modo desktop) e se recusa
-// a ler a tag viewport, calculamos a proporção exata para dar o zoom perfeito.
+// a ler a tag viewport corretamente, nós reescrevemos a tag explicitamente
+// com a largura real da tela, o que resolve o bug de zoom sem quebrar o alinhamento.
 try {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -33,15 +34,21 @@ try {
   if (isIOS && isStandalone) {
     // Se a largura da tela lida pelo iOS for bizarramente grande (> 500px) num celular
     if (window.innerWidth > 500 && window.screen.width < 500) {
-      const zoomFactor = window.innerWidth / window.screen.width;
-      document.documentElement.style.setProperty('zoom', zoomFactor.toString(), 'important');
-    } else {
-      // Se estiver normal, só garante um pequeno aumento extra
-      document.documentElement.style.setProperty('zoom', '1.05', 'important');
+      // Remover qualquer zoom anterior caso exista
+      document.documentElement.style.removeProperty('zoom');
+      
+      // Forçar o viewport para a largura exata da tela (ex: width=390) em vez de device-width
+      let viewportMeta = document.querySelector('meta[name="viewport"]');
+      if (!viewportMeta) {
+        viewportMeta = document.createElement('meta');
+        viewportMeta.setAttribute('name', 'viewport');
+        document.head.appendChild(viewportMeta);
+      }
+      viewportMeta.setAttribute('content', `width=${window.screen.width}, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover`);
     }
   }
 } catch (e) {
-  console.error("Erro ao aplicar zoom no iOS PWA", e);
+  console.error("Erro ao aplicar viewport fix no iOS PWA", e);
 }
 
 createRoot(document.getElementById("root")!).render(
