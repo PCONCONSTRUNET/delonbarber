@@ -50,6 +50,16 @@ try {
           document.body.style.overflow = 'hidden';
           document.body.style.width = window.innerWidth + 'px';
           document.body.style.height = window.innerHeight + 'px';
+          
+          // Corrigir o alinhamento vertical forçando o min-height exato
+          const style = document.createElement('style');
+          style.innerHTML = `
+            .min-h-\\[100dvh\\], .min-h-screen, .h-screen, .h-\\[100dvh\\], .min-h-\\[100vh\\] {
+              min-height: ${window.screen.height}px !important;
+              height: ${window.screen.height}px !important;
+            }
+          `;
+          document.head.appendChild(style);
         }
       };
       
