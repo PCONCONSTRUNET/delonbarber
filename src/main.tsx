@@ -21,10 +21,10 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ─── HACK: Forçar Viewport Correto no iOS PWA ────────────────────────────────
-// Como o WKWebView do iOS PWA às vezes trava em 980px (modo desktop) e se recusa
-// a ler a tag viewport corretamente, nós reescrevemos a tag explicitamente
-// com a largura real da tela, o que resolve o bug de zoom sem quebrar o alinhamento.
+// ─── HACK: Forçar Layout Mobile no iOS PWA ────────────────────────────────────
+// Como o WKWebView às vezes trava em 980px (modo desktop) e ignora a tag viewport,
+// nós forçamos o #root a ter a largura da tela do celular e usamos transform: scale
+// para anular o "shrink" do iOS. Isso deixa tudo gigante e alinhado perfeitamente!
 try {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -32,23 +32,36 @@ try {
                       ('standalone' in navigator && (navigator as any).standalone === true);
                       
   if (isIOS && isStandalone) {
-    // Se a largura da tela lida pelo iOS for bizarramente grande (> 500px) num celular
     if (window.innerWidth > 500 && window.screen.width < 500) {
-      // Remover qualquer zoom anterior caso exista
-      document.documentElement.style.removeProperty('zoom');
+      const scaleFactor = window.innerWidth / window.screen.width;
       
-      // Forçar o viewport para a largura exata da tela (ex: width=390) em vez de device-width
-      let viewportMeta = document.querySelector('meta[name="viewport"]');
-      if (!viewportMeta) {
-        viewportMeta = document.createElement('meta');
-        viewportMeta.setAttribute('name', 'viewport');
-        document.head.appendChild(viewportMeta);
+      // Quando a página carregar, aplicamos o hack no root
+      const applyHack = () => {
+        const root = document.getElementById('root');
+        if (root) {
+          root.style.width = window.screen.width + 'px';
+          root.style.height = window.screen.height + 'px';
+          root.style.transformOrigin = 'top left';
+          root.style.transform = `scale(${scaleFactor})`;
+          root.style.overflow = 'hidden';
+          root.style.position = 'absolute';
+          root.style.top = '0';
+          root.style.left = '0';
+          document.body.style.overflow = 'hidden';
+          document.body.style.width = window.innerWidth + 'px';
+          document.body.style.height = window.innerHeight + 'px';
+        }
+      };
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', applyHack);
+      } else {
+        applyHack();
       }
-      viewportMeta.setAttribute('content', `width=${window.screen.width}, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover`);
     }
   }
 } catch (e) {
-  console.error("Erro ao aplicar viewport fix no iOS PWA", e);
+  console.error("Erro ao aplicar layout fix no iOS PWA", e);
 }
 
 createRoot(document.getElementById("root")!).render(
