@@ -33,7 +33,7 @@ export function DateTimeSelection({
   isRefreshing = false
 }: DateTimeSelectionProps) {
   const { packages } = useMyPackages();
-  const { isExclusive: isExclusiveClient } = useIsExclusiveClient();
+  const { isExclusive: isExclusiveClient, loading: isExclusiveClientLoading } = useIsExclusiveClient();
   const [blockedWeekDates, setBlockedWeekDates] = useState<Date[]>([]);
   const [isVipBooking, setIsVipBooking] = useState(false);
 
@@ -202,8 +202,8 @@ export function DateTimeSelection({
     const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     const isBlockedByVipLimit = isDateBlockedByVip(date);
-    // Saturday (6) is blocked for exclusive clients (Subscribers)
-    const isSaturdayRestricted = dayOfWeek === 6 && isExclusiveClient;
+    // Saturday (6) is blocked for exclusive clients (Subscribers), or while loading to prevent race conditions
+    const isSaturdayRestricted = dayOfWeek === 6 && (isExclusiveClient || isExclusiveClientLoading);
     
     return isPast || !dayHours?.is_open || isBlockedByVipLimit || isSaturdayRestricted;
   };
