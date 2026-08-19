@@ -40,6 +40,7 @@ export interface Client {
   total_spent: number;
   last_appointment: string | null;
   is_guest: boolean; // true if from guest_clients table
+  has_active_package?: boolean;
 }
 
 export interface ClientNote {
@@ -342,8 +343,8 @@ const ADMIN_CLIENTS_KEY = ['admin', 'clients'] as const;
 async function fetchAdminClientsQuery(): Promise<Client[]> {
 
 
-    // Fetch profiles, guest_clients, and appointments in parallel
-    const [profilesResult, guestClientsResult, appointmentsResult, guestAppointmentsResult] = await Promise.all([
+    // Fetch profiles, guest_clients, appointments, and active packages in parallel
+    const [profilesResult, guestClientsResult, appointmentsResult, guestAppointmentsResult, activePackagesResult] = await Promise.all([
       supabase
         .from('profiles')
         .select('*')
@@ -360,7 +361,11 @@ async function fetchAdminClientsQuery(): Promise<Client[]> {
         .from('appointments')
         .select('guest_client_id, total_price, appointment_date, status')
         .not('guest_client_id', 'is', null)
-        .neq('status', 'cancelled')
+        .neq('status', 'cancelled'),
+      supabase
+        .from('client_packages')
+        .select('user_id')
+        .eq('status', 'active')
     ]);
 
     if (profilesResult.error) {
@@ -373,6 +378,7 @@ async function fetchAdminClientsQuery(): Promise<Client[]> {
     const guestClients = guestClientsResult.data || [];
     const appointments = appointmentsResult.data || [];
     const guestAppointments = guestAppointmentsResult.data || [];
+    const activePackageUserIds = new Set((activePackagesResult.data || []).map(p => p.user_id));
 
     // Pre-compute stats by user_id using a Map for O(1) lookups
     const statsByUser = new Map<string, {
@@ -447,7 +453,8 @@ async function fetchAdminClientsQuery(): Promise<Client[]> {
         total_appointments: stats.total_appointments,
         total_spent: stats.total_spent,
         last_appointment: stats.last_appointment,
-        is_guest: false
+        is_guest: false,
+        has_active_package: activePackageUserIds.has(profile.user_id)
       };
     });
 
@@ -469,7 +476,8 @@ async function fetchAdminClientsQuery(): Promise<Client[]> {
         total_appointments: stats.total_appointments || guest.total_visits || 0,
         total_spent: stats.total_spent || Number(guest.total_spent) || 0,
         last_appointment: stats.last_appointment || guest.last_visit_at,
-        is_guest: true
+        is_guest: true,
+        has_active_package: false
       };
     });
 

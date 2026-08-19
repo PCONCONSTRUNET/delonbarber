@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Phone, Calendar, DollarSign, Eye, Trash2, Link, Star } from 'lucide-react';
+import { User, Phone, Calendar, DollarSign, Eye, Trash2, Link, Star, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Client } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
@@ -48,9 +48,15 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
                   <User className="h-4 w-4 text-primary shrink-0" />
                   <span className="font-semibold text-sm md:text-base truncate">{client.name || 'Sem nome'}</span>
                   {!client.is_guest && exclusiveIds.includes(client.user_id) && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-yellow-500/10 text-yellow-600 border-yellow-500/30" title="Sábado Bloqueado">
                       <Star className="h-2.5 w-2.5 mr-0.5 fill-yellow-500" />
                       Exclusivo
+                    </Badge>
+                  )}
+                  {client.has_active_package && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+                      <Crown className="h-2.5 w-2.5 mr-0.5" />
+                      Assinante
                     </Badge>
                   )}
                   {client.is_guest && (
@@ -102,7 +108,7 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
                       e.stopPropagation();
                       toggleExclusive(client.user_id);
                     }}
-                    title={exclusiveIds.includes(client.user_id) ? 'Remover exclusividade' : 'Marcar como exclusivo (sábado)'}
+                    title={exclusiveIds.includes(client.user_id) ? 'Remover status de exclusivo' : 'Marcar como exclusivo (bloqueia sábado)'}
                   >
                     <Star className={cn("h-3.5 w-3.5", exclusiveIds.includes(client.user_id) && "fill-yellow-500")} />
                   </Button>

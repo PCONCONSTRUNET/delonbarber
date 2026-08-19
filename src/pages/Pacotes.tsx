@@ -208,6 +208,11 @@ const Pacotes = () => {
         status: 'active', // Auto-activate subscription
       });
 
+      if (!error) {
+        // Auto-mark as exclusive so Saturdays are blocked
+        await supabase.from('exclusive_clients').upsert({ user_id: user.id }, { onConflict: 'user_id' });
+      }
+
       if (error) {
         console.error('Error subscribing:', error);
         toast({

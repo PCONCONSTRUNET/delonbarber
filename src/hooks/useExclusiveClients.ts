@@ -33,7 +33,7 @@ export function useExclusiveClients() {
       
       if (!error) {
         setExclusiveIds(prev => prev.filter(id => id !== userId));
-        toast({ title: 'Cliente removido dos exclusivos' });
+        toast({ title: 'Status de exclusivo removido' });
       }
     } else {
       const { data: { user } } = await supabase.auth.getUser();
@@ -43,7 +43,7 @@ export function useExclusiveClients() {
       
       if (!error) {
         setExclusiveIds(prev => [...prev, userId]);
-        toast({ title: 'Cliente marcado como exclusivo ⭐' });
+        toast({ title: 'Cliente marcado como exclusivo ⭐ (Sábado Bloqueado)' });
       }
     }
   };
