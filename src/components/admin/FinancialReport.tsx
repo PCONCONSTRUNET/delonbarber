@@ -11,6 +11,7 @@ import { PixQRCode } from '@/components/payments/PixQRCode';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateRange } from 'react-day-picker';
+import jsPDF from 'jspdf';
 
 type FilterType = 'today' | 'weekly' | 'monthly' | 'custom';
 
@@ -167,38 +168,66 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
   };
 
   const generateReceipt = (apt: AdminAppointment) => {
-    const receipt = `
-═══════════════════════════════
-     BARBEARIA ALAN DELON
-        RECIBO DE PAGAMENTO
-═══════════════════════════════
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: [80, 150] // Formato de cupom não fiscal (80mm)
+    });
 
-Data: ${format(new Date(apt.appointment_date), "dd/MM/yyyy")}
-Hora: ${apt.appointment_time.slice(0, 5)}
+    let y = 10;
+    
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("BARBEARIA ALAN DELON", 40, y, { align: "center" });
+    
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("RECIBO DE PAGAMENTO", 40, y, { align: "center" });
+    
+    y += 10;
+    doc.setFontSize(9);
+    doc.text(`Data: ${format(new Date(apt.appointment_date), "dd/MM/yyyy")}`, 5, y);
+    doc.text(`Hora: ${apt.appointment_time.slice(0, 5)}`, 45, y);
+    
+    y += 8;
+    doc.text(`Cliente: ${apt.profile?.name || 'N/A'}`, 5, y);
+    
+    y += 10;
+    doc.setFont("helvetica", "bold");
+    doc.text("Serviços:", 5, y);
+    doc.setFont("helvetica", "normal");
+    
+    y += 6;
+    apt.services.forEach(s => {
+      doc.text(`• ${s.name}`, 5, y);
+      doc.text(`R$ ${Number(s.price).toFixed(2)}`, 75, y, { align: "right" });
+      y += 6;
+    });
+    
+    y += 4;
+    doc.line(5, y, 75, y);
+    
+    y += 8;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL:", 5, y);
+    doc.text(`R$ ${Number(apt.total_price).toFixed(2)}`, 75, y, { align: "right" });
+    
+    y += 8;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Pagamento: ${apt.payment_method ? paymentMethodLabels[apt.payment_method] : 'N/A'}`, 5, y);
+    
+    y += 6;
+    doc.text("Status: PAGO", 5, y);
+    
+    y += 12;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "italic");
+    doc.text("Obrigado pela preferência!", 40, y, { align: "center" });
 
-Cliente: ${apt.profile?.name || 'N/A'}
-
-Serviços:
-${apt.services.map(s => `  • ${s.name} - R$ ${Number(s.price).toFixed(2)}`).join('\n')}
-
-───────────────────────────────
-TOTAL: R$ ${Number(apt.total_price).toFixed(2)}
-───────────────────────────────
-
-Pagamento: ${apt.payment_method ? paymentMethodLabels[apt.payment_method] : 'N/A'}
-Status: PAGO
-
-═══════════════════════════════
-    Obrigado pela preferência!
-═══════════════════════════════
-    `.trim();
-
-    const blob = new Blob([receipt], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `recibo-${apt.id.slice(0, 8)}.txt`;
-    a.click();
+    doc.save(`recibo-${apt.id.slice(0, 8)}.pdf`);
   };
 
   return (
