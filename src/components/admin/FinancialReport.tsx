@@ -91,8 +91,19 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
     }
   });
 
-  const paidAppointments = filteredAppointments.filter(a => a.payment_status === 'paid' && a.status !== 'no_show');
-  const pendingAppointments = filteredAppointments.filter(a => a.payment_status === 'pending' && a.status === 'completed');
+  const sortByDateDesc = (a: AdminAppointment, b: AdminAppointment) => {
+    const dateA = new Date(`${a.appointment_date}T${a.appointment_time || '00:00:00'}`);
+    const dateB = new Date(`${b.appointment_date}T${b.appointment_time || '00:00:00'}`);
+    return dateB.getTime() - dateA.getTime();
+  };
+
+  const paidAppointments = filteredAppointments
+    .filter(a => a.payment_status === 'paid' && a.status !== 'no_show')
+    .sort(sortByDateDesc);
+    
+  const pendingAppointments = filteredAppointments
+    .filter(a => a.payment_status === 'pending' && a.status === 'completed')
+    .sort(sortByDateDesc);
 
   const totalRevenue = paidAppointments.reduce((sum, a) => sum + Number(a.total_price || 0), 0);
   const pendingRevenue = pendingAppointments.reduce((sum, a) => sum + Number(a.total_price || 0), 0);

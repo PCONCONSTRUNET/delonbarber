@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminAppointment } from '@/hooks/useAdmin';
@@ -108,9 +110,7 @@ export function ReportExport({ appointments }: ReportExportProps) {
       const paidTotal = filtered.filter(a => a.payment_status === 'paid').reduce((sum, a) => sum + Number(a.total_price || 0), 0);
       const pendingTotal = filtered.filter(a => a.payment_status !== 'paid' && a.status === 'completed').reduce((sum, a) => sum + Number(a.total_price || 0), 0);
       const completedCount = filtered.filter(a => a.status === 'completed').length;
-      const cancelledCount = filtered.filter(a => a.status === 'cancelled').length;
-
-      // Payment breakdown
+      
       const paymentBreakdown = filtered
         .filter(a => a.payment_status === 'paid')
         .reduce((acc, apt) => {
@@ -119,52 +119,67 @@ export function ReportExport({ appointments }: ReportExportProps) {
           return acc;
         }, {} as Record<string, number>);
 
-      const report = `
-╔══════════════════════════════════════════════════════════════╗
-║              RELATÓRIO FINANCEIRO - BARBEARIA                ║
-║                     ${label.toUpperCase().padStart(20).padEnd(35)}║
-╠══════════════════════════════════════════════════════════════╣
+      const doc = new jsPDF();
+      
+      // Title
+      doc.setFontSize(18);
+      doc.text('DRE - Demonstração do Resultado do Exercício', 14, 22);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Período: ${label.replace('_', ' ').toUpperCase()}`, 14, 30);
+      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, 14, 36);
 
-📊 RESUMO GERAL
-───────────────────────────────────────────────────────────────
-  Total de Agendamentos:        ${filtered.length}
-  Atendimentos Concluídos:      ${completedCount}
-  Cancelamentos:                ${cancelledCount}
-  
-💰 FINANCEIRO
-───────────────────────────────────────────────────────────────
-  Total Faturado:               R$ ${paidTotal.toFixed(2)}
-  Pagamentos Pendentes:         R$ ${pendingTotal.toFixed(2)}
-  Ticket Médio:                 R$ ${completedCount > 0 ? (paidTotal / completedCount).toFixed(2) : '0.00'}
+      // Receitas
+      autoTable(doc, {
+        startY: 42,
+        head: [['Receitas (Faturamento Pago)', 'Valor (R$)']],
+        body: [
+          ...Object.entries(paymentBreakdown).map(([method, amount]) => [
+            paymentMethodLabels[method] || method,
+            amount.toFixed(2)
+          ]),
+          ['Receitas Pendentes', pendingTotal.toFixed(2)],
+        ],
+        foot: [['Total Faturado', paidTotal.toFixed(2)]],
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185] },
+        footStyles: { fillColor: [41, 128, 185] }
+      });
 
-💳 FATURAMENTO POR MÉTODO DE PAGAMENTO
-───────────────────────────────────────────────────────────────
-${Object.entries(paymentBreakdown).map(([method, amount]) => 
-  `  ${(paymentMethodLabels[method] || method).padEnd(25)} R$ ${amount.toFixed(2)}`
-).join('\n')}
+      // Indicadores
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 10,
+        head: [['Indicadores', 'Quantidade / Valor']],
+        body: [
+          ['Total de Agendamentos', filtered.length.toString()],
+          ['Atendimentos Concluídos', completedCount.toString()],
+          ['Ticket Médio', `R$ ${completedCount > 0 ? (paidTotal / completedCount).toFixed(2) : '0.00'}`],
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [46, 204, 113] }
+      });
 
-📋 LISTA DE ATENDIMENTOS
-═══════════════════════════════════════════════════════════════
-${filtered.map(apt => `
-  ${format(new Date(apt.appointment_date), 'dd/MM')} ${apt.appointment_time.slice(0, 5)} | ${(apt.guest_name || apt.profile?.name || 'Cliente').padEnd(20)} | R$ ${Number(apt.total_price || 0).toFixed(0).padStart(6)} | ${statusLabels[apt.status] || apt.status}`
-).join('')}
+      // Detalhamento dos Pagamentos
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 15,
+        head: [['Data', 'Cliente', 'Status', 'Método', 'Valor (R$)']],
+        body: filtered.map(apt => [
+          format(new Date(apt.appointment_date), 'dd/MM/yyyy'),
+          apt.guest_name || apt.profile?.name || 'Cliente',
+          statusLabels[apt.status] || apt.status,
+          apt.payment_method ? (paymentMethodLabels[apt.payment_method] || apt.payment_method) : '-',
+          Number(apt.total_price || 0).toFixed(2)
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [52, 73, 94] }
+      });
 
-═══════════════════════════════════════════════════════════════
-  Relatório gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}
-═══════════════════════════════════════════════════════════════
-      `.trim();
-
-      const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `relatorio_${label}.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      toast.success('Relatório exportado com sucesso!');
+      doc.save(`dre_financeiro_${label}.pdf`);
+      toast.success('DRE em PDF exportado com sucesso!');
     } catch (error) {
-      toast.error('Erro ao exportar relatório');
+      console.error(error);
+      toast.error('Erro ao exportar PDF');
     } finally {
       setIsExporting(false);
     }
