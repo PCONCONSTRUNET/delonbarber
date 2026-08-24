@@ -10,6 +10,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { PixQRCode } from '@/components/payments/PixQRCode';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { DateRange } from 'react-day-picker';
 
 type FilterType = 'today' | 'weekly' | 'monthly' | 'custom';
 
@@ -53,7 +54,7 @@ const filterLabels: Record<FilterType, string> = {
 
 export function FinancialReport({ appointments }: FinancialReportProps) {
   const [filter, setFilter] = useState<FilterType>('today');
-  const [customDate, setCustomDate] = useState<Date>(new Date());
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>({ from: new Date(), to: new Date() });
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [pixModal, setPixModal] = useState<{ open: boolean; appointment: AdminAppointment | null }>({
     open: false,
@@ -71,7 +72,13 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
       case 'monthly':
         return { start: startOfMonth(now), end: endOfMonth(now) };
       case 'custom':
-        return { start: startOfDay(customDate), end: endOfDay(customDate) };
+        if (customDateRange?.from) {
+          return { 
+            start: startOfDay(customDateRange.from), 
+            end: customDateRange.to ? endOfDay(customDateRange.to) : endOfDay(customDateRange.from) 
+          };
+        }
+        return { start: startOfDay(now), end: endOfDay(now) };
       default:
         return { start: startOfDay(now), end: endOfDay(now) };
     }
@@ -139,14 +146,22 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
       case 'monthly':
         return format(now, 'MMMM yyyy', { locale: ptBR });
       case 'custom':
-        return format(customDate, "dd 'de' MMMM", { locale: ptBR });
+        if (customDateRange?.from) {
+          if (customDateRange.to) {
+            return `${format(customDateRange.from, 'dd/MM/yyyy')} - ${format(customDateRange.to, 'dd/MM/yyyy')}`;
+          }
+          return format(customDateRange.from, "dd 'de' MMMM", { locale: ptBR });
+        }
+        return 'Data Personalizada';
     }
   };
 
-  const handleSelectDate = (date: Date | undefined) => {
-    if (date) {
-      setCustomDate(date);
+  const handleSelectDateRange = (range: DateRange | undefined) => {
+    setCustomDateRange(range);
+    if (range?.from) {
       setFilter('custom');
+    }
+    if (range?.from && range?.to) {
       setCalendarOpen(false);
     }
   };
@@ -212,15 +227,20 @@ Status: PAGO
                 className="flex-1 sm:flex-none gap-1"
               >
                 <CalendarDays className="h-4 w-4" />
-                {filter === 'custom' ? format(customDate, 'dd/MM') : 'Data'}
+                {filter === 'custom' && customDateRange?.from
+                  ? customDateRange.to 
+                    ? `${format(customDateRange.from, 'dd/MM')} - ${format(customDateRange.to, 'dd/MM')}`
+                    : format(customDateRange.from, 'dd/MM')
+                  : 'Data'}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 z-50 bg-popover" align="start">
               <CalendarComponent
-                mode="single"
-                selected={customDate}
-                onSelect={handleSelectDate}
+                mode="range"
+                selected={customDateRange}
+                onSelect={handleSelectDateRange}
                 locale={ptBR}
+                numberOfMonths={2}
               />
             </PopoverContent>
           </Popover>
