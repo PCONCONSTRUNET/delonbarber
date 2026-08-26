@@ -177,6 +177,7 @@ export function QuickBookingModal({
           guest_phone: finalGuestPhone,
           guest_client_id: guestClientId,
           notes: 'Agendamento manual via agenda',
+          is_force_booking: true,
         })
         .select('id')
         .single();
