@@ -19,8 +19,6 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { AdminNotificationBell } from './AdminNotificationBell';
-import { CalendarPlus } from 'lucide-react';
-
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Calendar, label: 'Agenda', path: '/admin/agenda' },
