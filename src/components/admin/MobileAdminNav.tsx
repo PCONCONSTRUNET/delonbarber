@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AdminNotificationBell } from './AdminNotificationBell';
 import { Button } from '@/components/ui/button';
+import { CalendarPlus } from 'lucide-react';
 
 const mainItems = [
   { icon: LayoutDashboard, label: 'Home', path: '/admin' },
@@ -29,6 +30,7 @@ const moreItems = [
   { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
   { icon: Star, label: 'Avaliações', path: '/admin/avaliacoes' },
   { icon: Gift, label: 'Fidelidade', path: '/admin/fidelidade' },
+  { icon: CalendarPlus, label: 'Agendamento manual', path: '/admin/agendamento-manual' },
 ];
 
 export function MobileAdminNav() {

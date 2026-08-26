@@ -439,8 +439,7 @@ export function QuickBookingModal({
                     <SelectItem value="pending">⏳ Pendente (Pagar depois)</SelectItem>
                     <SelectItem value="pix">PIX</SelectItem>
                     <SelectItem value="cash">Dinheiro</SelectItem>
-                    <SelectItem value="credit">Cartão de Crédito</SelectItem>
-                    <SelectItem value="debit">Cartão de Débito</SelectItem>
+                    <SelectItem value="credit">Cartão</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
