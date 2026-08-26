@@ -416,7 +416,7 @@ export function ManualBooking() {
                           </p>
                         </div>
                         <span className={cn(
-                          "font-bold",
+                          "font-bold flex-shrink-0 whitespace-nowrap",
                           service.price === 0 ? "text-primary" : "text-foreground"
                         )}>
                           {service.price === 0 ? 'VIP' : `R$ ${service.price.toFixed(2)}`}
