@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Phone, Scissors, AlertCircle } from 'lucide-react';
+import { Clock, User, Phone, Scissors, AlertCircle, Search, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminClients } from '@/hooks/useAdmin';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -33,10 +34,14 @@ export function QuickBookingModal({
   selectedTime,
   onSuccess,
 }: QuickBookingModalProps) {
+  const { clients } = useAdminClients();
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
 
@@ -63,6 +68,9 @@ export function QuickBookingModal({
       setSelectedServices([]);
       setClientName('');
       setClientPhone('');
+      setClientSearch('');
+      setSelectedClient(null);
+      setShowSearchResults(false);
     }
   }, [open]);
 
@@ -94,8 +102,8 @@ export function QuickBookingModal({
       return;
     }
 
-    if (!clientName.trim()) {
-      toast.error('Digite o nome do cliente');
+    if (!selectedClient && !clientName.trim()) {
+      toast.error('Digite o nome do cliente ou busque um cadastrado');
       return;
     }
 
@@ -110,33 +118,46 @@ export function QuickBookingModal({
         return;
       }
 
-      // Check or create guest client
       let guestClientId: string | null = null;
-      const phoneClean = clientPhone.replace(/\D/g, '');
+      let finalUserId = user.id;
+      let finalGuestName: string | null = clientName.trim();
+      let finalGuestPhone: string | null = clientPhone.replace(/\D/g, '') || null;
 
-      if (phoneClean) {
-        // Check if guest client exists
-        const { data: existingGuest } = await supabase
-          .from('guest_clients')
-          .select('id')
-          .eq('phone', phoneClean)
-          .single();
-
-        if (existingGuest) {
-          guestClientId = existingGuest.id;
+      if (selectedClient) {
+        if (!selectedClient.is_guest) {
+           finalUserId = selectedClient.user_id;
+           finalGuestName = null;
+           finalGuestPhone = null;
         } else {
-          // Create new guest client
-          const { data: newGuest, error: guestError } = await supabase
+           guestClientId = selectedClient.id;
+           finalGuestName = selectedClient.name;
+           finalGuestPhone = selectedClient.phone;
+        }
+      } else {
+        if (finalGuestPhone) {
+          // Check if guest client exists
+          const { data: existingGuest } = await supabase
             .from('guest_clients')
-            .insert({
-              name: clientName.trim(),
-              phone: phoneClean,
-            })
             .select('id')
+            .eq('phone', finalGuestPhone)
             .single();
 
-          if (!guestError && newGuest) {
-            guestClientId = newGuest.id;
+          if (existingGuest) {
+            guestClientId = existingGuest.id;
+          } else {
+            // Create new guest client
+            const { data: newGuest, error: guestError } = await supabase
+              .from('guest_clients')
+              .insert({
+                name: finalGuestName,
+                phone: finalGuestPhone,
+              })
+              .select('id')
+              .single();
+
+            if (!guestError && newGuest) {
+              guestClientId = newGuest.id;
+            }
           }
         }
       }
@@ -145,15 +166,15 @@ export function QuickBookingModal({
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
         .insert({
-          user_id: user.id,
+          user_id: finalUserId,
           appointment_date: selectedDate,
           appointment_time: selectedTime,
           status: 'confirmed',
           total_price: totalPrice,
           total_duration: totalDuration,
           payment_status: 'pending',
-          guest_name: clientName.trim(),
-          guest_phone: phoneClean || null,
+          guest_name: finalGuestName,
+          guest_phone: finalGuestPhone,
           guest_client_id: guestClientId,
           notes: 'Agendamento manual via agenda',
         })
@@ -235,12 +256,78 @@ export function QuickBookingModal({
             </div>
           </div>
 
+          {/* Registered Client Search */}
+          <div className="space-y-2 relative">
+            <Label className="text-xs sm:text-sm font-semibold flex items-center gap-1 text-primary">
+              <User className="h-3 w-3 sm:h-4 sm:w-4" />
+              Cliente já cadastrado
+            </Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome..."
+                value={selectedClient ? selectedClient.name : clientSearch}
+                onChange={(e) => {
+                  setClientSearch(e.target.value);
+                  setSelectedClient(null);
+                  setShowSearchResults(true);
+                }}
+                onFocus={() => setShowSearchResults(true)}
+                className="pl-9 pr-9 h-9 sm:h-10 text-sm"
+              />
+              {selectedClient && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedClient(null);
+                    setClientSearch('');
+                    setClientName('');
+                    setClientPhone('');
+                  }}
+                  className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            
+            {showSearchResults && clientSearch && !selectedClient && (
+              <div className="absolute top-[100%] left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto bg-card border rounded-lg shadow-lg">
+                {clients.filter(c => c.name?.toLowerCase().includes(clientSearch.toLowerCase())).length > 0 ? (
+                  clients.filter(c => c.name?.toLowerCase().includes(clientSearch.toLowerCase())).slice(0, 5).map(c => (
+                    <div
+                      key={c.id}
+                      className="px-3 py-2 text-sm hover:bg-muted cursor-pointer flex flex-col"
+                      onClick={() => {
+                        setSelectedClient(c);
+                        setShowSearchResults(false);
+                        setClientSearch('');
+                        setClientName(c.name || '');
+                        setClientPhone(c.phone || '');
+                      }}
+                    >
+                      <span className="font-medium">{c.name}</span>
+                      {c.phone && <span className="text-xs text-muted-foreground">{c.phone}</span>}
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum cliente encontrado</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="py-2">
+             <Label className="text-xs sm:text-sm text-muted-foreground font-semibold flex items-center gap-1">
+                Cliente sem cadastro
+             </Label>
+          </div>
+
           {/* Client info - grid on mobile */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mt-0">
             <div className="space-y-1">
               <Label htmlFor="clientName" className="flex items-center gap-1 text-xs sm:text-sm">
-                <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                Nome *
+                Nome {!selectedClient && '*'}
               </Label>
               <Input
                 id="clientName"
@@ -248,13 +335,12 @@ export function QuickBookingModal({
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="João Silva"
                 className="h-8 sm:h-10 text-sm"
-                autoFocus
+                disabled={!!selectedClient}
               />
             </div>
 
             <div className="space-y-1">
               <Label htmlFor="clientPhone" className="flex items-center gap-1 text-xs sm:text-sm">
-                <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
                 Telefone
               </Label>
               <Input
@@ -263,6 +349,7 @@ export function QuickBookingModal({
                 onChange={(e) => setClientPhone(e.target.value)}
                 placeholder="11999999999"
                 className="h-8 sm:h-10 text-sm"
+                disabled={!!selectedClient}
               />
             </div>
           </div>

@@ -155,7 +155,7 @@ export function TimelineAppointments({
             const slotMin = parseInt(timeSlot.slice(3, 5));
             // Only mark as past if viewing today and the time has passed
             const isPast = isViewingToday && (slotHour < currentHour || (slotHour === currentHour && slotMin < currentMin));
-            const isFreeSlot = !hasAppointments && !isBlocked && !isPast;
+            const isFreeSlot = !hasAppointments && !isBlocked;
 
             return (
               <div key={timeSlot} className="relative flex">
@@ -203,7 +203,7 @@ export function TimelineAppointments({
                   )}
                   
                   {/* Blocked indicator (occupied by another appointment but not the start slot) */}
-                  {!hasAppointments && isBlocked && !isPast && (
+                  {!hasAppointments && isBlocked && (
                     <div className="w-full h-10 rounded-lg bg-muted/30 flex items-center justify-center">
                       <span className="text-xs text-muted-foreground/50">Ocupado</span>
                     </div>
