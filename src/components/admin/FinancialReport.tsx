@@ -189,7 +189,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
     
     y += 10;
     doc.setFontSize(9);
-    doc.text(`Data: ${format(new Date(apt.appointment_date), "dd/MM/yyyy")}`, 5, y);
+    doc.text(`Data: ${format(parseISO(apt.appointment_date + 'T12:00:00'), "dd/MM/yyyy")}`, 5, y);
     doc.text(`Hora: ${apt.appointment_time.slice(0, 5)}`, 45, y);
     
     y += 8;
@@ -375,7 +375,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
                       <div>
                         <p className="font-medium">{apt.guest_name || apt.profile?.name || 'Cliente'}</p>
                         <p className="text-xs text-muted-foreground">
-                          {format(new Date(apt.appointment_date), 'dd/MM')} • {apt.appointment_time.slice(0, 5)}
+                          {format(parseISO(apt.appointment_date + 'T12:00:00'), 'dd/MM')} • {apt.appointment_time.slice(0, 5)}
                         </p>
                       </div>
                       <span className="font-semibold">R$ {Number(apt.total_price).toFixed(0)}</span>
@@ -401,7 +401,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
                 <div>
                   <p className="font-medium">{apt.guest_name || apt.profile?.name || 'Cliente'}</p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(apt.appointment_date), 'dd/MM')} - {apt.services.map(s => s.name).join(', ')}
+                    {format(parseISO(apt.appointment_date + 'T12:00:00'), 'dd/MM')} - {apt.services.map(s => s.name).join(', ')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -442,7 +442,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
                     <div>
                       <p className="font-medium">{apt.guest_name || apt.profile?.name || 'Cliente'}</p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(apt.appointment_date), 'dd/MM')} - {apt.services.map(s => s.name).join(', ')}
+                        {format(parseISO(apt.appointment_date + 'T12:00:00'), 'dd/MM')} - {apt.services.map(s => s.name).join(', ')}
                       </p>
                     </div>
                   </div>
