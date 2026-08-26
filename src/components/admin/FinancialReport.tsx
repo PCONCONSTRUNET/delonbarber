@@ -89,11 +89,13 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
 
   const filteredAppointments = appointments.filter(a => {
     try {
-      // Parse the date string correctly to avoid timezone issues
       const dateStr = a.appointment_date;
       if (!dateStr) return false;
-      const date = parseISO(dateStr + 'T00:00:00');
-      return isWithinInterval(date, { start: periodStart, end: periodEnd });
+      // Use string comparison to avoid all timezone issues
+      const { start, end } = getDateRange();
+      const startStr = format(start, 'yyyy-MM-dd');
+      const endStr = format(end, 'yyyy-MM-dd');
+      return dateStr >= startStr && dateStr <= endStr;
     } catch {
       return false;
     }
@@ -110,7 +112,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
     .sort(sortByDateDesc);
     
   const pendingAppointments = filteredAppointments
-    .filter(a => a.payment_status === 'pending' && a.status === 'completed')
+    .filter(a => a.payment_status === 'pending' && (a.status === 'completed' || a.status === 'confirmed'))
     .sort(sortByDateDesc);
 
   const totalRevenue = paidAppointments.reduce((sum, a) => sum + Number(a.total_price || 0), 0);
