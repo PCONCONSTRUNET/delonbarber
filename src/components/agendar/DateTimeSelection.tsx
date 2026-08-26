@@ -372,18 +372,30 @@ export function DateTimeSelection({
               const isBooked = bookedSlots.includes(slot) || hasConflict;
               const isSelected = selectedTime === slot;
 
+              // Block past time slots when selected date is today
+              const isToday = selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+              let isPastSlot = false;
+              if (isToday) {
+                const now = new Date();
+                const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                const slotMinutes = slotHour * 60 + slotMin;
+                isPastSlot = slotMinutes <= nowMinutes;
+              }
+
+              const isDisabled = isBooked || isPastSlot;
+
               return (
                 <motion.button
                   key={slot}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.015 }}
-                  whileTap={!isBooked ? { scale: 0.95 } : {}}
-                  onClick={() => !isBooked && onSelectTime(slot)}
-                  disabled={isBooked}
+                  whileTap={!isDisabled ? { scale: 0.95 } : {}}
+                  onClick={() => !isDisabled && onSelectTime(slot)}
+                  disabled={isDisabled}
                   className={cn(
                     "py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
-                    isBooked
+                    isDisabled
                       ? "bg-muted/50 text-muted-foreground/50 cursor-not-allowed line-through"
                       : isSelected
                       ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
