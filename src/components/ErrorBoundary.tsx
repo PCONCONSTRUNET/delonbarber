@@ -29,18 +29,39 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary] Erro capturado:', error, info.componentStack);
+    
+    // Tenta uma recuperação automática silenciosa (recarregar a página 1 vez)
+    // Isso resolve 99% dos problemas transitórios de rede no 5G (ChunkLoadError, falhas de fetch, cache corrompido)
+    const hasAutoReloaded = sessionStorage.getItem('__error_boundary_auto_reloaded');
+    
+    if (!hasAutoReloaded) {
+      sessionStorage.setItem('__error_boundary_auto_reloaded', 'true');
+      console.log('Tentando recuperação automática silenciosa...');
+      
+      // Limpa possível estado corrompido antes do auto-reload
+      try {
+        const keys = Object.keys(localStorage).filter(
+          (k) => k.startsWith('sb-') || k.includes('supabase')
+        );
+        keys.forEach((k) => localStorage.removeItem(k));
+      } catch {
+        // Ignora
+      }
+      
+      window.location.reload();
+    }
   }
 
   handleReload = () => {
-    // Tenta limpar possível estado corrompido antes de recarregar
+    // Limpa a flag de reload e o cache local ao clicar no botão manual
     try {
-      // Remove apenas chaves do Supabase que podem estar corrompidas
       const keys = Object.keys(localStorage).filter(
         (k) => k.startsWith('sb-') || k.includes('supabase')
       );
       keys.forEach((k) => localStorage.removeItem(k));
+      sessionStorage.removeItem('__error_boundary_auto_reloaded');
     } catch {
-      // localStorage pode estar inacessível — sem problema, recarrega mesmo assim
+      // Ignora
     }
     window.location.reload();
   };
@@ -94,12 +115,25 @@ export class ErrorBoundary extends Component<Props, State> {
             style={{
               fontSize: 14,
               color: 'rgba(255,255,255,0.5)',
-              marginBottom: 32,
+              marginBottom: 16,
               maxWidth: 280,
               lineHeight: 1.6,
             }}
           >
             O app encontrou um problema inesperado. Recarregue para continuar.
+          </p>
+
+          <p
+            style={{
+              fontSize: 10,
+              color: 'rgba(255,255,255,0.3)',
+              marginBottom: 32,
+              maxWidth: 280,
+              lineHeight: 1.4,
+              wordBreak: 'break-word'
+            }}
+          >
+            Erro: {this.state.errorMessage}
           </p>
 
           <button
