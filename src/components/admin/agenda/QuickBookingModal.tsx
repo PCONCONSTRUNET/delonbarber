@@ -240,7 +240,7 @@ export function QuickBookingModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3 overflow-y-auto flex-1">
+        <div className="space-y-2.5 sm:space-y-3 overflow-y-auto flex-1">
           {/* Time info */}
           <div className="p-2 sm:p-3 rounded-lg bg-muted/50 flex items-center gap-2 sm:gap-3">
             <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
@@ -257,7 +257,7 @@ export function QuickBookingModal({
           </div>
 
           {/* Registered Client Search */}
-          <div className="space-y-2 relative">
+          <div className="space-y-1 relative">
             <Label className="text-xs sm:text-sm font-semibold flex items-center gap-1 text-primary">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               Cliente já cadastrado
@@ -317,14 +317,14 @@ export function QuickBookingModal({
             )}
           </div>
 
-          <div className="py-2">
+          <div className="pt-2 pb-1">
              <Label className="text-xs sm:text-sm text-muted-foreground font-semibold flex items-center gap-1">
                 Cliente sem cadastro
              </Label>
           </div>
 
           {/* Client info - grid on mobile */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-3 mt-0">
             <div className="space-y-1">
               <Label htmlFor="clientName" className="flex items-center gap-1 text-xs sm:text-sm">
                 Nome {!selectedClient && '*'}
@@ -357,7 +357,7 @@ export function QuickBookingModal({
           {/* Services selection */}
           <div className="space-y-1">
             <Label className="text-xs sm:text-sm">Serviços *</Label>
-            <ScrollArea className="h-[120px] sm:h-[160px] border rounded-lg p-1.5 sm:p-2">
+            <ScrollArea className="h-[100px] sm:h-[160px] border rounded-lg p-1.5 sm:p-2">
               {loadingServices ? (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-xs sm:text-sm text-muted-foreground">Carregando...</p>
