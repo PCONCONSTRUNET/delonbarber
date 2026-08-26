@@ -35,27 +35,14 @@ const statusConfig = {
   no_show: { label: 'Falta', bg: 'bg-orange-500', border: 'border-l-orange-500' },
 };
 
-// Generate time slots based on business hours
-// For admin, always generate slots even if closed (admin can book exceptions)
+// Generate 24 hours time slots for admin
+// Admin can book at any time of the day
 const generateTimeSlots = (businessHours?: BusinessHour | null) => {
   const slots: string[] = [];
   
-  // Default hours if no business hours provided
-  let startHour = 8;
-  let endHour = 18;
-  
-  // Use business hours if available (even if is_open is false, for admin exceptions)
-  if (businessHours) {
-    startHour = parseInt(businessHours.open_time.slice(0, 2));
-    endHour = parseInt(businessHours.close_time.slice(0, 2));
-  }
-  
-  for (let hour = startHour; hour <= endHour; hour++) {
+  for (let hour = 0; hour < 24; hour++) {
     slots.push(`${String(hour).padStart(2, '0')}:00`);
-    // Add half hour slots
-    if (hour < endHour) {
-      slots.push(`${String(hour).padStart(2, '0')}:30`);
-    }
+    slots.push(`${String(hour).padStart(2, '0')}:30`);
   }
   return slots;
 };

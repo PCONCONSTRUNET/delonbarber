@@ -191,7 +191,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
     doc.text(`Hora: ${apt.appointment_time.slice(0, 5)}`, 45, y);
     
     y += 8;
-    doc.text(`Cliente: ${apt.profile?.name || 'N/A'}`, 5, y);
+    doc.text(`Cliente: ${apt.guest_name || apt.profile?.name || 'N/A'}`, 5, y);
     
     y += 10;
     doc.setFont("helvetica", "bold");
@@ -338,7 +338,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
       {/* Payment Methods Breakdown Cards */}
       {Object.keys(paymentBreakdown).length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {['pix', 'cash', 'card'].map((method) => {
+          {Object.keys(paymentBreakdown).map((method) => {
             const data = paymentBreakdown[method];
             if (!data) return null;
             
@@ -358,7 +358,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
                     <div className={`p-2 rounded-lg ${bgColor}`}>
                       <Icon className={`h-5 w-5 ${textColor}`} />
                     </div>
-                    <h4 className="font-semibold">{paymentMethodLabels[method]}</h4>
+                    <h4 className="font-semibold">{paymentMethodLabels[method] || 'Outros'}</h4>
                   </div>
                   <Badge variant="secondary">{data.count} pedido(s)</Badge>
                 </div>
@@ -371,7 +371,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
                   {appointmentsByMethod[method]?.map(apt => (
                     <div key={apt.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-muted/30">
                       <div>
-                        <p className="font-medium">{apt.profile?.name || 'Cliente'}</p>
+                        <p className="font-medium">{apt.guest_name || apt.profile?.name || 'Cliente'}</p>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(apt.appointment_date), 'dd/MM')} • {apt.appointment_time.slice(0, 5)}
                         </p>
@@ -397,7 +397,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
             {pendingAppointments.map(apt => (
               <div key={apt.id} className="flex items-center justify-between p-3 rounded-lg bg-yellow-500/10">
                 <div>
-                  <p className="font-medium">{apt.profile?.name || 'Cliente'}</p>
+                  <p className="font-medium">{apt.guest_name || apt.profile?.name || 'Cliente'}</p>
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(apt.appointment_date), 'dd/MM')} - {apt.services.map(s => s.name).join(', ')}
                   </p>
@@ -438,7 +438,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
                       <PaymentIcon className="h-4 w-4 text-green-500" />
                     </div>
                     <div>
-                      <p className="font-medium">{apt.profile?.name || 'Cliente'}</p>
+                      <p className="font-medium">{apt.guest_name || apt.profile?.name || 'Cliente'}</p>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(apt.appointment_date), 'dd/MM')} - {apt.services.map(s => s.name).join(', ')}
                       </p>
@@ -479,7 +479,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
               <PixQRCode
                 amount={Number(pixModal.appointment.total_price)}
                 transactionId={pixModal.appointment.id}
-                clientName={pixModal.appointment.profile?.name || undefined}
+                clientName={pixModal.appointment.guest_name || pixModal.appointment.profile?.name || undefined}
               />
             )}
           </div>
