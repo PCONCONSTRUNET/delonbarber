@@ -182,6 +182,11 @@ export function QuickBookingModal({
         .select('id')
         .single();
 
+      if (appointment) {
+        // Mark as locally created to prevent duplicate toast/notification
+        (window as any).__lastCreatedAppointmentId = appointment.id;
+      }
+
       if (appointmentError) {
         console.error('Error creating appointment:', appointmentError);
         

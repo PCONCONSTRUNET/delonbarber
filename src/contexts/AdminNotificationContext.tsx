@@ -93,6 +93,15 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
           if (!initialLoadComplete) return;
 
           const newAppointment = payload.new as any;
+          
+          // Skip if this appointment was just created by this client window
+          if ((window as any).__lastCreatedAppointmentId === newAppointment.id) {
+            // Update pending count anyway
+            if (newAppointment.status === 'pending' || newAppointment.status === 'confirmed') {
+              setPendingCount(prev => prev + 1);
+            }
+            return;
+          }
 
           // Get client info
           let clientName = 'Novo cliente';
