@@ -18,7 +18,7 @@ const Pacotes = lazy(() => import("./pages/Pacotes"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Admin remains eagerly loaded (unchanged behavior)
-import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminIA, AdminPacotes, AdminAvaliacoes, AdminFidelidade } from "./pages/Admin";
+import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminPacotes, AdminAvaliacoes, AdminFidelidade } from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 
 const queryClient = new QueryClient({
@@ -63,7 +63,7 @@ const App = () => {
               <Route path="/admin/clientes" element={<AdminClientes />} />
               <Route path="/admin/servicos" element={<AdminServicos />} />
               <Route path="/admin/financeiro" element={<AdminFinanceiro />} />
-              <Route path="/admin/ia" element={<AdminIA />} />
+              
               <Route path="/admin/pacotes" element={<AdminPacotes />} />
               <Route path="/admin/avaliacoes" element={<AdminAvaliacoes />} />
               <Route path="/admin/fidelidade" element={<AdminFidelidade />} />

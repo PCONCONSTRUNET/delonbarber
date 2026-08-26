@@ -17,7 +17,7 @@ import { ServiceForm } from '@/components/admin/ServiceForm';
 import { ClientList } from '@/components/admin/ClientList';
 import { FinancialReport } from '@/components/admin/FinancialReport';
 import { ReportExport } from '@/components/admin/ReportExport';
-import { WhatsAppAI } from '@/components/admin/WhatsAppAI';
+
 import { PackageForm } from '@/components/admin/PackageForm';
 import { PackageList } from '@/components/admin/PackageList';
 import { ClientPackagesList } from '@/components/admin/ClientPackagesList';
@@ -443,19 +443,6 @@ export function AdminFinanceiro() {
   );
 }
 
-export function AdminIA() {
-  const { isAdmin, loading: adminLoading } = useIsAdmin();
-
-  if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
-  if (!isAdmin) return <Navigate to="/admin/login" replace />;
-
-  return (
-    <AdminLayout>
-      <h1 className="font-display text-2xl md:text-3xl font-bold mb-4 md:mb-6">IA WhatsApp</h1>
-      <WhatsAppAI />
-    </AdminLayout>
-  );
-}
 
 export function AdminPacotes() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
