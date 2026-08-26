@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, User, Phone, Scissors, AlertCircle, Search, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminClients } from '@/hooks/useAdmin';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +43,7 @@ export function QuickBookingModal({
   const [clientSearch, setClientSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>('pending');
   const [loading, setLoading] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
 
@@ -71,6 +73,7 @@ export function QuickBookingModal({
       setClientSearch('');
       setSelectedClient(null);
       setShowSearchResults(false);
+      setPaymentMethod('pending');
     }
   }, [open]);
 
@@ -172,7 +175,8 @@ export function QuickBookingModal({
           status: 'confirmed',
           total_price: totalPrice,
           total_duration: totalDuration,
-          payment_status: 'pending',
+          payment_status: paymentMethod === 'pending' ? 'pending' : 'paid',
+          payment_method: paymentMethod === 'pending' ? null : paymentMethod,
           guest_name: finalGuestName,
           guest_phone: finalGuestPhone,
           guest_client_id: guestClientId,
@@ -407,21 +411,39 @@ export function QuickBookingModal({
 
           {/* Summary - compact */}
           {selectedServices.length > 0 && (
-            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 space-y-1">
-              <div className="flex justify-between items-center">
-                <span className="text-xs sm:text-sm">Duração:</span>
-                <Badge variant="secondary" className="text-[10px] sm:text-xs h-5">{totalDuration}min</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs sm:text-sm">Total:</span>
-                <span className="font-bold text-primary text-sm sm:text-base">R$ {totalPrice}</span>
-              </div>
-              {slotsNeeded > 1 && (
-                <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
-                  <AlertCircle className="h-3 w-3 flex-shrink-0" />
-                  <span>Bloqueará {slotsNeeded} horários</span>
+            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 space-y-2">
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs sm:text-sm">Duração:</span>
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs h-5">{totalDuration}min</Badge>
                 </div>
-              )}
+                <div className="flex justify-between items-center">
+                  <span className="text-xs sm:text-sm">Total:</span>
+                  <span className="font-bold text-primary text-sm sm:text-base">R$ {totalPrice}</span>
+                </div>
+                {slotsNeeded > 1 && (
+                  <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground mt-1">
+                    <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                    <span>Bloqueará {slotsNeeded} horários</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="pt-2 border-t border-primary/10 space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium">Situação do Pagamento</Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm bg-background border-primary/20">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">⏳ Pendente (Pagar depois)</SelectItem>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="cash">Dinheiro</SelectItem>
+                    <SelectItem value="credit">Cartão de Crédito</SelectItem>
+                    <SelectItem value="debit">Cartão de Débito</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
         </div>

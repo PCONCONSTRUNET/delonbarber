@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Phone, Zap, CalendarIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -40,6 +41,7 @@ export function SqueezeInModal({
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [customTime, setCustomTime] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<string>('pending');
   const [loading, setLoading] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
   const [editableDate, setEditableDate] = useState(selectedDate);
@@ -65,6 +67,7 @@ export function SqueezeInModal({
       setClientName('');
       setClientPhone('');
       setCustomTime('');
+      setPaymentMethod('pending');
       setEditableDate(selectedDate);
     }
   }, [open, selectedDate]);
@@ -121,7 +124,8 @@ export function SqueezeInModal({
           status: 'confirmed' as const,
           total_price: totalPrice,
           total_duration: totalDuration,
-          payment_status: 'pending',
+          payment_status: paymentMethod === 'pending' ? 'pending' : 'paid',
+          payment_method: paymentMethod === 'pending' ? null : paymentMethod,
           guest_name: clientName.trim(),
           guest_phone: phoneClean || null,
           guest_client_id: guestClientId,
@@ -263,11 +267,31 @@ export function SqueezeInModal({
         </div>
       </div>
 
-      {/* Total */}
+      {/* Total and Payment */}
       {selectedServices.length > 0 && (
-        <div className="flex justify-between items-center px-1">
-          <span className="text-xs text-muted-foreground">{totalDuration}min</span>
-          <span className="font-bold text-warning text-lg">R$ {totalPrice}</span>
+        <div className="space-y-2 mt-2 px-1">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">{totalDuration}min</span>
+            <span className="font-bold text-warning text-lg">R$ {totalPrice}</span>
+          </div>
+          
+          <div className="pt-2 border-t border-border/50 space-y-1">
+            <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+              Pagamento
+            </Label>
+            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <SelectTrigger className="h-9 text-xs rounded-xl bg-muted/30 border-border/50">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">⏳ Pendente (Pagar depois)</SelectItem>
+                <SelectItem value="pix">PIX</SelectItem>
+                <SelectItem value="cash">Dinheiro</SelectItem>
+                <SelectItem value="credit">Cartão de Crédito</SelectItem>
+                <SelectItem value="debit">Cartão de Débito</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
     </div>
