@@ -32,22 +32,13 @@ export class ErrorBoundary extends Component<Props, State> {
     
     // Tenta uma recuperação automática silenciosa (recarregar a página 1 vez)
     // Isso resolve 99% dos problemas transitórios de rede no 5G (ChunkLoadError, falhas de fetch, cache corrompido)
+    // IMPORTANTE: Não limpamos o localStorage aqui para não deslogar o usuário automaticamente.
+    // A limpeza só acontece se o usuário clicar manualmente no botão "Recarregar App".
     const hasAutoReloaded = sessionStorage.getItem('__error_boundary_auto_reloaded');
     
     if (!hasAutoReloaded) {
       sessionStorage.setItem('__error_boundary_auto_reloaded', 'true');
       console.log('Tentando recuperação automática silenciosa...');
-      
-      // Limpa possível estado corrompido antes do auto-reload
-      try {
-        const keys = Object.keys(localStorage).filter(
-          (k) => k.startsWith('sb-') || k.includes('supabase')
-        );
-        keys.forEach((k) => localStorage.removeItem(k));
-      } catch {
-        // Ignora
-      }
-      
       window.location.reload();
     }
   }

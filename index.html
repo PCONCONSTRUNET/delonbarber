@@ -13,25 +13,56 @@
     <link rel="manifest" id="manifest-link" href="/client.webmanifest" />
     <script id="pwa-setup">
       (function() {
-        const path = window.location.pathname.toLowerCase();
-        const isAdmin = path.startsWith('/admin');
-        const manifestPath = isAdmin ? '/admin.webmanifest' : '/client.webmanifest';
-        const appTitle = isAdmin ? 'Delon Admin' : 'Delon Barber';
+        // ─── PWA manifest e título ──────────────────────────────────────────
+        var path = window.location.pathname.toLowerCase();
+        var isAdmin = path.indexOf('/admin') === 0;
+        var manifestPath = isAdmin ? '/admin.webmanifest' : '/client.webmanifest';
+        var appTitle = isAdmin ? 'Delon Admin' : 'Delon Barber';
         
         // Update manifest link
-        const link = document.getElementById('manifest-link');
+        var link = document.getElementById('manifest-link');
         if (link) {
           link.href = manifestPath + '?v=' + Date.now();
         }
         
         // Inject apple title
-        const meta = document.createElement('meta');
+        var meta = document.createElement('meta');
         meta.name = 'apple-mobile-web-app-title';
         meta.content = appTitle;
         document.head.appendChild(meta);
 
         // Update document title immediately
         if (isAdmin) document.title = appTitle;
+
+        // ─── iOS Layout Fix (zoom hack) ────────────────────────────────────
+        // Resolve o bug dos 980px do iOS (PWA em cache ou "Request Desktop Website").
+        // Roda AQUI, antes do React existir, para evitar race condition com o
+        // reconciliador do React (que causava o crash "insertBefore" no WebKit).
+        try {
+          var ua = navigator.userAgent;
+          var isIOS = /iPad|iPhone|iPod/.test(ua) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+          if (isIOS && window.innerWidth > 500 && window.screen.width < 500) {
+            var zoomFactor = window.innerWidth / window.screen.width;
+
+            // 1. Aplica o zoom nativo no HTML (preserva o scroll vertical)
+            document.documentElement.style.setProperty('zoom', String(zoomFactor), 'important');
+
+            // 2. Corrige a altura (100dvh fica errada com zoom aplicado)
+            var correctedHeight = window.screen.height / zoomFactor;
+
+            var style = document.createElement('style');
+            style.id = 'ios-zoom-fix';
+            style.textContent = [
+              '.min-h-\\5b 100dvh\\5d , .min-h-screen, .min-h-\\5b 100vh\\5d  { min-height: ' + correctedHeight + 'px !important; }',
+              '.h-screen, .h-\\5b 100dvh\\5d  { height: ' + correctedHeight + 'px !important; }'
+            ].join('\n');
+            document.head.appendChild(style);
+          }
+        } catch (e) {
+          // Silently fail — layout may not be perfect but app will still load
+        }
       })();
     </script>
     <meta name="theme-color" content="#D62828" />
