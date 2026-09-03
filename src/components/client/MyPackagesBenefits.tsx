@@ -36,7 +36,7 @@ function CompactView({ packages }: { packages: MyPackage[] }) {
   const allBenefits = packages.flatMap(p => 
     p.benefits.filter(b => b.remaining > 0).map(b => ({
       ...b,
-      packageName: p.package.name,
+      packageName: p.package?.name || 'Pacote',
     }))
   );
 
@@ -71,7 +71,7 @@ function CompactView({ packages }: { packages: MyPackage[] }) {
                   variant="secondary"
                   className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30"
                 >
-                  {benefit.remaining}x {benefit.service.name}
+                  {benefit.remaining}x {benefit.service?.name || 'Serviço indisponível'}
                 </Badge>
               ))}
               {allBenefits.length > 4 && (
@@ -111,7 +111,7 @@ function FullView({ packages }: { packages: MyPackage[] }) {
                   <Crown className="h-6 w-6 text-yellow-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">{pkg.package.name}</h3>
+                  <h3 className="font-semibold text-lg">{pkg.package?.name || 'Pacote'}</h3>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     <span>
@@ -156,7 +156,7 @@ function FullView({ packages }: { packages: MyPackage[] }) {
                         <div className="flex items-center gap-2">
                           <Scissors className="h-4 w-4 text-muted-foreground" />
                           <span className={isExhausted ? 'text-muted-foreground line-through' : ''}>
-                            {benefit.service.name}
+                            {benefit.service?.name || 'Serviço indisponível'}
                           </span>
                         </div>
                         <div className="flex flex-col items-end gap-0.5">
