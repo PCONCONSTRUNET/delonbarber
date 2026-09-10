@@ -142,8 +142,10 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
       return acc;
     }, {});
     const usageThisWeekByService = usageData.reduce((acc: Record<string, number>, u: any) => {
-      const usedAt = new Date(u.used_at);
-      if (usedAt >= weekStart && usedAt <= weekEnd) {
+      const usedAtStr = u.used_at ? u.used_at.substring(0, 10) : '';
+      const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+      const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
+      if (usedAtStr >= weekStartStr && usedAtStr <= weekEndStr) {
         acc[u.service_id] = (acc[u.service_id] || 0) + 1;
       }
       return acc;
@@ -318,22 +320,22 @@ export function useMyPackages() {
     }
     if (!hasWeeklyLimit) return false;
 
-    const { data: existingAppointments, error } = await supabase
-      .from('appointments')
-      .select('id, appointment_date, appointment_services!inner(service_id)')
-      .eq('user_id', userId)
-      .gte('appointment_date', format(targetWeekStart, 'yyyy-MM-dd'))
-      .lte('appointment_date', format(targetWeekEnd, 'yyyy-MM-dd'))
-      .in('status', ['pending', 'confirmed']);
+    const { data: usageData, error } = await supabase
+      .from('client_package_usage')
+      .select('id')
+      .in('client_package_id', packages.map(p => p.id))
+      .eq('service_id', serviceId)
+      .gte('used_at', targetWeekStart.toISOString())
+      .lte('used_at', targetWeekEnd.toISOString());
 
     if (error) {
-      console.error('Error checking week appointments:', error);
+      console.error('Error checking week usage:', error);
       return false;
     }
 
-    return !!existingAppointments?.some((apt: any) =>
-      apt.appointment_services.some((as: any) => as.service_id === serviceId)
-    );
+    const weeklyLimit = packages.find(p => p.benefits.find(b => b.service_id === serviceId))?.benefits.find(b => b.service_id === serviceId)?.weekly_limit || 0;
+    
+    return (usageData?.length || 0) >= weeklyLimit;
   }, [userId, packages]);
 
   const getScheduledCountForWeek = useCallback(async (serviceId: string, targetDate: Date): Promise<number> => {
@@ -341,23 +343,21 @@ export function useMyPackages() {
     const targetWeekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
     const targetWeekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
 
-    const { data: existingAppointments, error } = await supabase
-      .from('appointments')
-      .select('id, appointment_date, appointment_services!inner(service_id)')
-      .eq('user_id', userId)
-      .gte('appointment_date', format(targetWeekStart, 'yyyy-MM-dd'))
-      .lte('appointment_date', format(targetWeekEnd, 'yyyy-MM-dd'))
-      .in('status', ['pending', 'confirmed']);
+    const { data: usageData, error } = await supabase
+      .from('client_package_usage')
+      .select('id')
+      .in('client_package_id', packages.map(p => p.id))
+      .eq('service_id', serviceId)
+      .gte('used_at', targetWeekStart.toISOString())
+      .lte('used_at', targetWeekEnd.toISOString());
 
     if (error) {
       console.error('Error counting week appointments:', error);
       return 0;
     }
 
-    return existingAppointments?.filter((apt: any) =>
-      apt.appointment_services.some((as: any) => as.service_id === serviceId)
-    ).length || 0;
-  }, [userId]);
+    return usageData?.length || 0;
+  }, [userId, packages]);
 
   const getWeeklyLimitInfo = (serviceId: string): { limit: number; used: number; remaining: number } | null => {
     for (const pkg of packages) {

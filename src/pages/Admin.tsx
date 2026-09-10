@@ -35,7 +35,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, Pencil, Trash2, Bell, Crown, Download, Search, Calendar } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Bell, Crown, Download, Search, Calendar, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -403,7 +403,13 @@ export function AdminServicos() {
               )}
               <h3 className="font-semibold text-sm md:text-base">{service.name}</h3>
               <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">{service.description}</p>
-              <p className="text-primary font-bold mt-2">R$ {Number(service.price).toFixed(0)}</p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-primary font-bold">R$ {Number(service.price).toFixed(0)}</p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-md">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{service.duration_minutes} min</span>
+                </div>
+              </div>
               <div className="flex gap-2 mt-3">
                 <Button size="sm" variant="outline" onClick={() => { setEditingService(service); setShowForm(true); }}><Pencil className="h-3 w-3" /></Button>
                 <Button size="sm" variant="outline" className="text-destructive" onClick={() => deleteService(service.id)}><Trash2 className="h-3 w-3" /></Button>

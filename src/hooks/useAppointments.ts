@@ -233,10 +233,14 @@ export function useAppointments() {
           return acc;
         }, {} as Record<string, number>);
 
-        // Count usage THIS WEEK per service (based on usage records - for completed appointments)
+        // Count usage THIS WEEK per service (based on usage records)
+        // using the appointment week boundaries
         const usageThisWeekByService = (usage || []).reduce((acc, u) => {
-          const usedAt = new Date(u.used_at);
-          if (usedAt >= weekStart && usedAt <= weekEnd) {
+          const usedAtStr = u.used_at ? u.used_at.substring(0, 10) : '';
+          const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+          const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
+          
+          if (usedAtStr >= weekStartStr && usedAtStr <= weekEndStr) {
             acc[u.service_id] = (acc[u.service_id] || 0) + 1;
           }
           return acc;
@@ -244,30 +248,6 @@ export function useAppointments() {
 
         console.log('Usage by service:', usageByService);
         console.log('Usage this week by service:', usageThisWeekByService);
-
-        // ALSO check for SCHEDULED appointments in the same week (pending/confirmed)
-        // This prevents double-booking the same week even if usage hasn't been recorded yet
-        const { data: scheduledAppointments } = await supabase
-          .from('appointments')
-          .select(`
-            id,
-            appointment_date,
-            appointment_services!inner(service_id)
-          `)
-          .eq('user_id', user.id)
-          .gte('appointment_date', format(weekStart, 'yyyy-MM-dd'))
-          .lte('appointment_date', format(weekEnd, 'yyyy-MM-dd'))
-          .in('status', ['pending', 'confirmed']);
-
-        // Count scheduled appointments this week per service
-        const scheduledThisWeekByService: Record<string, number> = {};
-        scheduledAppointments?.forEach((apt: any) => {
-          apt.appointment_services.forEach((as: any) => {
-            scheduledThisWeekByService[as.service_id] = (scheduledThisWeekByService[as.service_id] || 0) + 1;
-          });
-        });
-
-        console.log('Scheduled appointments this week by service:', scheduledThisWeekByService);
 
         // Check which selected services have available benefits
         for (const service of selectedServices) {
@@ -285,15 +265,12 @@ export function useAppointments() {
             console.log('Benefit found:', { used, remaining, quantity: benefit.quantity, weeklyLimit: benefit.weekly_limit });
             
             // Check weekly limit if applicable
-            // IMPORTANT: Consider BOTH completed usage AND scheduled (pending/confirmed) appointments
             if (benefit.weekly_limit !== null && benefit.weekly_limit > 0) {
-              // Only count SCHEDULED appointments for future weeks (not usage records)
-              // This allows VIP to schedule multiple future appointments in different weeks
-              const scheduledThisWeek = scheduledThisWeekByService[service.id] || 0;
-              const remainingThisWeek = benefit.weekly_limit - scheduledThisWeek;
+              const usedThisWeek = usageThisWeekByService[service.id] || 0;
+              const remainingThisWeek = benefit.weekly_limit - usedThisWeek;
               
               console.log('Weekly limit check:', { 
-                scheduledThisWeek, 
+                usedThisWeek, 
                 remainingThisWeek, 
                 weeklyLimit: benefit.weekly_limit 
               });
@@ -465,6 +442,7 @@ export function useAppointments() {
           client_package_id: b.clientPackageId,
           service_id: b.serviceId,
           appointment_id: appointment.id,
+          used_at: new Date(`${format(date, 'yyyy-MM-dd')}T${time}:00`).toISOString()
         }));
 
         console.log('Inserting usage records:', usageRecords);
@@ -522,6 +500,16 @@ export function useAppointments() {
         variant: "destructive"
       });
       return false;
+    }
+
+    // Devolve o uso do pacote, caso esse agendamento tenha usado algum benefício
+    const { error: usageDeleteError } = await supabase
+      .from('client_package_usage')
+      .delete()
+      .eq('appointment_id', appointmentId);
+
+    if (usageDeleteError) {
+      console.warn('Could not delete package usage:', usageDeleteError);
     }
 
     // Safety net: explicitly delete blocked slots for this appointment
