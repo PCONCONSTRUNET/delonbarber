@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Pencil, Trash2, Users, Crown, Settings } from 'lucide-react';
 import { PackageForm } from './PackageForm';
 import { PackageBenefitsEditor } from './PackageBenefitsEditor';
+import { PackageCyclesEditor } from './PackageCyclesEditor';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PackageBenefit {
@@ -27,6 +28,7 @@ interface Package {
   benefits: string[] | null;
   is_active: boolean;
   created_at: string;
+  type?: 'flexible' | 'sequential';
 }
 
 interface PackageListProps {
@@ -39,6 +41,7 @@ interface PackageListProps {
 export function PackageList({ packages, onUpdate, onDelete, onViewSubscribers }: PackageListProps) {
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
   const [editingBenefits, setEditingBenefits] = useState<string | null>(null);
+  const [editingCycles, setEditingCycles] = useState<string | null>(null);
   const [packageBenefits, setPackageBenefits] = useState<Record<string, PackageBenefit[]>>({});
 
   useEffect(() => {
@@ -164,7 +167,12 @@ export function PackageList({ packages, onUpdate, onDelete, onViewSubscribers }:
                 </motion.div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{pkg.name}</h3>
-                  <p className="text-sm text-muted-foreground">{pkg.duration_days} dias</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground">{pkg.duration_days} dias</p>
+                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-background">
+                      {pkg.type === 'sequential' ? 'Ciclo Sequencial' : 'Flexível'}
+                    </Badge>
+                  </div>
                 </div>
               </div>
 
@@ -219,8 +227,8 @@ export function PackageList({ packages, onUpdate, onDelete, onViewSubscribers }:
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setEditingBenefits(pkg.id)}
-                    title="Configurar benefícios"
+                    onClick={() => pkg.type === 'sequential' ? setEditingCycles(pkg.id) : setEditingBenefits(pkg.id)}
+                    title={pkg.type === 'sequential' ? "Configurar ciclo de serviços" : "Configurar benefícios"}
                     className="hover:bg-primary/10 transition-colors"
                   >
                     <Settings className="h-3 w-3" />
@@ -279,6 +287,20 @@ export function PackageList({ packages, onUpdate, onDelete, onViewSubscribers }:
             <PackageBenefitsEditor
               packageId={editingBenefits}
               onClose={() => setEditingBenefits(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingCycles} onOpenChange={() => setEditingCycles(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurar Ciclos Sequenciais</DialogTitle>
+          </DialogHeader>
+          {editingCycles && (
+            <PackageCyclesEditor
+              packageId={editingCycles}
+              onClose={() => setEditingCycles(null)}
             />
           )}
         </DialogContent>

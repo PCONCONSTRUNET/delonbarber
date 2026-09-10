@@ -13,6 +13,7 @@ export interface Package {
   benefits: string[] | null;
   is_active: boolean;
   created_at: string;
+  type: 'flexible' | 'sequential';
 }
 
 export interface PackageBenefit {
@@ -25,6 +26,19 @@ export interface PackageBenefit {
     id: string;
     name: string;
     price: number;
+  };
+}
+
+export interface PackageCycle {
+  id: string;
+  package_id: string;
+  sequence_order: number;
+  service_id: string;
+  service?: {
+    id: string;
+    name: string;
+    price: number;
+    duration_minutes: number;
   };
 }
 
@@ -51,8 +65,10 @@ export interface ClientPackage {
     name: string;
     price: number;
     discount_percent: number;
+    type?: 'flexible' | 'sequential';
   };
   benefits?: PackageBenefit[];
+  cycles?: PackageCycle[];
   usage?: ClientPackageUsage[];
 }
 
@@ -188,6 +204,70 @@ export function usePackageBenefits(packageId: string | null) {
   return { benefits, loading, fetchBenefits, saveBenefits };
 }
 
+export function usePackageCycles(packageId: string | null) {
+  const [cycles, setCycles] = useState<PackageCycle[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  async function fetchCycles() {
+    if (!packageId) return;
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from('package_cycles')
+      .select('*, services(id, name, price, duration_minutes)')
+      .eq('package_id', packageId)
+      .order('sequence_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching cycles:', error);
+    } else {
+      const formattedCycles = (data || []).map((c: any) => ({
+        id: c.id,
+        package_id: c.package_id,
+        sequence_order: c.sequence_order,
+        service_id: c.service_id,
+        service: c.services,
+      }));
+      setCycles(formattedCycles);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    fetchCycles();
+  }, [packageId]);
+
+  async function saveCycles(newCycles: { sequence_order: number; service_id: string }[]) {
+    if (!packageId) return false;
+
+    // Delete existing cycles
+    await supabase.from('package_cycles').delete().eq('package_id', packageId);
+
+    // Insert new cycles
+    if (newCycles.length > 0) {
+      const { error } = await supabase.from('package_cycles').insert(
+        newCycles.map((c) => ({
+          package_id: packageId,
+          sequence_order: c.sequence_order,
+          service_id: c.service_id,
+        }))
+      );
+
+      if (error) {
+        toast({ title: 'Erro', description: 'Não foi possível salvar os ciclos.', variant: 'destructive' });
+        return false;
+      }
+    }
+
+    toast({ title: 'Ciclos salvos com sucesso!' });
+    fetchCycles();
+    return true;
+  }
+
+  return { cycles, loading, fetchCycles, saveCycles };
+}
+
 export function useClientPackages() {
   const [subscriptions, setSubscriptions] = useState<ClientPackage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,7 +281,7 @@ export function useClientPackages() {
       .from('client_packages')
       .select(`
         *,
-        packages(name, price, discount_percent)
+        packages(name, price, discount_percent, type)
       `)
       .order('created_at', { ascending: false });
 
@@ -222,8 +302,8 @@ export function useClientPackages() {
     const packageIds = [...new Set(data.map(sub => sub.package_id))];
     const subscriptionIds = data.map(sub => sub.id);
 
-    // Fetch profiles, benefits and usage in parallel
-    const [profilesResult, benefitsResult, usageResult] = await Promise.all([
+    // Fetch profiles, benefits, cycles, and usage in parallel
+    const [profilesResult, benefitsResult, cyclesResult, usageResult] = await Promise.all([
       supabase
         .from('profiles')
         .select('user_id, name, phone')
@@ -232,6 +312,11 @@ export function useClientPackages() {
         .from('package_benefits')
         .select('*, services(id, name, price)')
         .in('package_id', packageIds),
+      supabase
+        .from('package_cycles')
+        .select('*, services(id, name, price, duration_minutes)')
+        .in('package_id', packageIds)
+        .order('sequence_order', { ascending: true }),
       supabase
         .from('client_package_usage')
         .select('*')
@@ -260,6 +345,21 @@ export function useClientPackages() {
       benefitsByPackage[b.package_id].push(formatted);
     });
 
+    const cyclesByPackage: Record<string, PackageCycle[]> = {};
+    (cyclesResult.data || []).forEach((c: any) => {
+      const formatted = {
+        id: c.id,
+        package_id: c.package_id,
+        sequence_order: c.sequence_order,
+        service_id: c.service_id,
+        service: c.services,
+      };
+      if (!cyclesByPackage[c.package_id]) {
+        cyclesByPackage[c.package_id] = [];
+      }
+      cyclesByPackage[c.package_id].push(formatted);
+    });
+
     const usageBySubscription: Record<string, ClientPackageUsage[]> = {};
     (usageResult.data || []).forEach((u: any) => {
       if (!usageBySubscription[u.client_package_id]) {
@@ -273,8 +373,9 @@ export function useClientPackages() {
       ...sub,
       status: sub.status as 'active' | 'expired' | 'cancelled' | 'pending',
       profile: profilesByUserId[sub.user_id] || { name: null, phone: null },
-      package: sub.packages || { name: 'Pacote', price: 0, discount_percent: 0 },
+      package: sub.packages || { name: 'Pacote', price: 0, discount_percent: 0, type: 'flexible' },
       benefits: benefitsByPackage[sub.package_id] || [],
+      cycles: cyclesByPackage[sub.package_id] || [],
       usage: usageBySubscription[sub.id] || [],
     }));
 

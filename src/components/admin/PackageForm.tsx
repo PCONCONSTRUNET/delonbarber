@@ -16,6 +16,7 @@ interface PackageFormProps {
     discount_percent: number;
     benefits: string[] | null;
     is_active: boolean;
+    type?: 'flexible' | 'sequential';
   } | null;
   onSubmit: (data: any) => Promise<void>;
   onCancel: () => void;
@@ -27,6 +28,7 @@ export function PackageForm({ pkg, onSubmit, onCancel }: PackageFormProps) {
   const [price, setPrice] = useState(pkg?.price?.toString() || '');
   const [durationDays, setDurationDays] = useState(pkg?.duration_days?.toString() || '30');
   const [discountPercent, setDiscountPercent] = useState(pkg?.discount_percent?.toString() || '0');
+  const [type, setType] = useState<'flexible' | 'sequential'>(pkg?.type || 'flexible');
   const [benefits, setBenefits] = useState<string[]>(pkg?.benefits || []);
   const [newBenefit, setNewBenefit] = useState('');
   const [isActive, setIsActive] = useState(pkg?.is_active ?? true);
@@ -54,6 +56,7 @@ export function PackageForm({ pkg, onSubmit, onCancel }: PackageFormProps) {
       discount_percent: Number(discountPercent),
       benefits,
       is_active: isActive,
+      type,
     });
     setLoading(false);
   };
@@ -81,6 +84,26 @@ export function PackageForm({ pkg, onSubmit, onCancel }: PackageFormProps) {
             placeholder="Descreva os benefícios do pacote..."
             rows={2}
           />
+        </div>
+
+        <div>
+          <Label className="mb-2 block">Tipo de Pacote (Como os serviços funcionam)</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <div 
+              className={`p-3 border rounded-xl cursor-pointer transition-all ${type === 'flexible' ? 'border-primary bg-primary/10' : 'border-border opacity-70 hover:opacity-100'}`}
+              onClick={() => setType('flexible')}
+            >
+              <h4 className="font-semibold text-sm mb-1">Flexível</h4>
+              <p className="text-xs text-muted-foreground">Cliente escolhe o serviço na hora de agendar, com base no limite do pacote.</p>
+            </div>
+            <div 
+              className={`p-3 border rounded-xl cursor-pointer transition-all ${type === 'sequential' ? 'border-primary bg-primary/10' : 'border-border opacity-70 hover:opacity-100'}`}
+              onClick={() => setType('sequential')}
+            >
+              <h4 className="font-semibold text-sm mb-1">Ciclo Sequencial</h4>
+              <p className="text-xs text-muted-foreground">O pacote tem uma ordem fixa. Ex: Semana 1 (Cabelo), Semana 2 (Barba).</p>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 sm:gap-4">

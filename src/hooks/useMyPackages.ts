@@ -18,6 +18,18 @@ export interface MyPackageBenefit {
   };
 }
 
+export interface MyPackageCycle {
+  id: string;
+  sequence_order: number;
+  service_id: string;
+  service: {
+    id: string;
+    name: string;
+    price: number;
+    duration_minutes: number;
+  };
+}
+
 export interface MyPackage {
   id: string;
   package_id: string;
@@ -30,8 +42,11 @@ export interface MyPackage {
     price: number;
     discount_percent: number;
     description: string | null;
+    type?: 'flexible' | 'sequential';
   };
   benefits: MyPackageBenefit[];
+  cycles: MyPackageCycle[];
+  activeCycle?: MyPackageCycle[];
 }
 
 // ---- Module-level cache to avoid duplicate parallel fetches ----
@@ -62,7 +77,7 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
       start_date,
       end_date,
       status,
-      packages:package_id ( id, name, price, discount_percent, description )
+      packages:package_id ( id, name, price, discount_percent, description, type )
     `)
     .eq('user_id', userId)
     .eq('status', 'active')
@@ -76,15 +91,20 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
   const packageIds = clientPackages.map((cp: any) => cp.package_id);
   const clientPackageIds = clientPackages.map((cp: any) => cp.id);
 
-  // Fetch all benefits and all usage in parallel — only 2 queries total
-  const [benefitsRes, usageRes] = await Promise.all([
+  // Fetch all benefits, cycles, and all usage in parallel
+  const [benefitsRes, cyclesRes, usageRes] = await Promise.all([
     supabase
       .from('package_benefits')
       .select('id, package_id, service_id, quantity, weekly_limit, services(id, name, price)')
       .in('package_id', packageIds),
     supabase
+      .from('package_cycles')
+      .select('id, package_id, sequence_order, service_id, services(id, name, price, duration_minutes)')
+      .in('package_id', packageIds)
+      .order('sequence_order', { ascending: true }),
+    supabase
       .from('client_package_usage')
-      .select('client_package_id, service_id, used_at')
+      .select('client_package_id, service_id, used_at, appointment_id')
       .in('client_package_id', clientPackageIds),
   ]);
 
@@ -92,6 +112,12 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
   (benefitsRes.data || []).forEach((b: any) => {
     if (!benefitsByPackage[b.package_id]) benefitsByPackage[b.package_id] = [];
     benefitsByPackage[b.package_id].push(b);
+  });
+
+  const cyclesByPackage: Record<string, any[]> = {};
+  (cyclesRes.data || []).forEach((c: any) => {
+    if (!cyclesByPackage[c.package_id]) cyclesByPackage[c.package_id] = [];
+    cyclesByPackage[c.package_id].push(c);
   });
 
   const usageByClientPackage: Record<string, any[]> = {};
@@ -108,6 +134,7 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
   for (const cp of clientPackages as any[]) {
     if (!cp.packages) continue;
     const packageBenefits = benefitsByPackage[cp.package_id] || [];
+    const packageCycles = cyclesByPackage[cp.package_id] || [];
     const usageData = usageByClientPackage[cp.id] || [];
 
     const usageByService = usageData.reduce((acc: Record<string, number>, u: any) => {
@@ -139,6 +166,33 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
       };
     });
 
+    const cycles: MyPackageCycle[] = packageCycles.map((c: any) => ({
+      id: c.id,
+      sequence_order: c.sequence_order,
+      service_id: c.service_id,
+      service: c.services,
+    }));
+
+    let activeCycle: MyPackageCycle[] | undefined;
+    if (cp.packages.type === 'sequential' && cycles.length > 0) {
+      // Group cycles by sequence_order
+      const cyclesMap = new Map<number, MyPackageCycle[]>();
+      cycles.forEach(c => {
+        if (!cyclesMap.has(c.sequence_order)) cyclesMap.set(c.sequence_order, []);
+        cyclesMap.get(c.sequence_order)!.push(c);
+      });
+      const groupedCyclesArray = Array.from(cyclesMap.keys()).sort((a,b)=>a-b).map(k => cyclesMap.get(k)!);
+
+      // Usage count by distinct appointment_id
+      const distinctAppointments = new Set(usageData.map((u: any) => u.appointment_id).filter((id: any) => id != null));
+      const usageCount = distinctAppointments.size;
+      
+      if (groupedCyclesArray.length > 0) {
+        const activeCycleIndex = usageCount % groupedCyclesArray.length;
+        activeCycle = groupedCyclesArray[activeCycleIndex];
+      }
+    }
+
     result.push({
       id: cp.id,
       package_id: cp.package_id,
@@ -147,6 +201,8 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
       status: cp.status as 'active' | 'expired' | 'cancelled',
       package: cp.packages,
       benefits,
+      cycles,
+      activeCycle,
     });
   }
 

@@ -138,8 +138,60 @@ function FullView({ packages }: { packages: MyPackage[] }) {
               </div>
             </div>
 
-            {/* Benefits */}
-            {pkg.benefits.length > 0 ? (
+            {/* Benefits or Cycles */}
+            {pkg.package?.type === 'sequential' ? (
+              <div className="space-y-4">
+                {pkg.activeCycle && pkg.activeCycle.length > 0 && (
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/20">
+                    <p className="text-xs font-medium text-yellow-600 uppercase tracking-wide mb-3 flex items-center gap-2">
+                      <Crown className="h-4 w-4" />
+                      Liberado para a próxima visita
+                    </p>
+                    <div className="space-y-2">
+                      {pkg.activeCycle.map(cycle => (
+                        <div key={cycle.id} className="flex items-center justify-between">
+                          <span className="font-medium">{cycle.service?.name}</span>
+                          <span className="text-sm text-muted-foreground">{cycle.service?.duration_minutes} min</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {pkg.cycles && pkg.cycles.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Sequência do Pacote
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {/* Group cycles by sequence_order for display */}
+                      {Object.entries(
+                        pkg.cycles.reduce((acc, c) => {
+                          if (!acc[c.sequence_order]) acc[c.sequence_order] = [];
+                          acc[c.sequence_order].push(c);
+                          return acc;
+                        }, {} as Record<number, typeof pkg.cycles>)
+                      ).map(([order, cyclesInStep]) => {
+                        const isCurrentStep = pkg.activeCycle && pkg.activeCycle[0]?.sequence_order === Number(order);
+                        return (
+                          <div key={order} className={`flex items-center gap-3 p-3 rounded-xl border ${isCurrentStep ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-border bg-card/50'}`}>
+                            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${isCurrentStep ? 'bg-yellow-500 text-black' : 'bg-muted text-muted-foreground'}`}>
+                              {order}
+                            </div>
+                            <div className="flex-1 text-sm">
+                              {cyclesInStep.map(c => c.service?.name).join(' + ')}
+                            </div>
+                            {isCurrentStep && (
+                              <Badge variant="outline" className="text-[10px] text-yellow-600 border-yellow-500/30">Atual</Badge>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : pkg.benefits.length > 0 ? (
               <div className="space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Seus Benefícios

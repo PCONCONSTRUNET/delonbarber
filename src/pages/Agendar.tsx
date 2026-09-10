@@ -422,8 +422,13 @@ const Agendar = () => {
           <div className="max-w-lg mx-auto flex gap-2 sm:gap-3">
             <Button
               variant="outline"
-              onClick={() => setCurrentStep(prev => prev - 1)}
-              disabled={currentStep === 1}
+              onClick={() => {
+                if (currentStep === 1) {
+                  navigate('/cliente');
+                } else {
+                  setCurrentStep(prev => prev - 1);
+                }
+              }}
               className="flex-1 h-11 sm:h-12 rounded-xl sm:rounded-2xl text-sm"
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
