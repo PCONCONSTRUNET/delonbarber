@@ -126,18 +126,28 @@ export function useAppointments() {
 
     // Fetch all appointment services in a single query
     const appointmentIds = appointmentsData.map(a => a.id);
-    const { data: allServicesData } = await supabase
+    const { data: appointmentsServices } = await supabase
       .from('appointment_services')
       .select('appointment_id, service_id, price_at_booking, services(*)')
       .in('appointment_id', appointmentIds);
 
     // Group services by appointment_id
     const servicesByAppointment: Record<string, any[]> = {};
-    (allServicesData || []).forEach((s: any) => {
+    (appointmentsServices || []).forEach((s: any) => {
       if (!servicesByAppointment[s.appointment_id]) {
         servicesByAppointment[s.appointment_id] = [];
       }
-      servicesByAppointment[s.appointment_id].push(s.services);
+      if (s.services) {
+        servicesByAppointment[s.appointment_id].push(s.services);
+      } else {
+        servicesByAppointment[s.appointment_id].push({
+          id: s.service_id || Math.random().toString(),
+          name: 'Serviço Removido',
+          price: 0,
+          duration_minutes: 0,
+          category: 'outro'
+        });
+      }
     });
 
     const appointmentsWithServices: Appointment[] = appointmentsData.map(apt => ({
