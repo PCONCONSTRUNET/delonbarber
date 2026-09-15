@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Phone, Mail, Camera, Loader2, Save, Calendar, Clock, ArrowLeft, Gift, DollarSign, Star, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useClientNotifications } from "@/hooks/useNotifications";
 import { MyLoyaltyProgress } from "@/components/client/MyLoyaltyProgress";
 import { notifyAdmin } from "@/lib/oneSignalPush";
 import { format } from "date-fns";
@@ -63,8 +62,6 @@ const Perfil = () => {
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [stats, setStats] = useState<ClientStats>({ totalVisits: 0, totalSpent: 0, completedVisits: 0 });
   const [cancelId, setCancelId] = useState<string | null>(null);
-
-  const { subscribeToAppointments } = useClientNotifications();
 
   useEffect(() => {
     let mounted = true;
@@ -131,14 +128,6 @@ const Perfil = () => {
       subscription.unsubscribe();
     };
   }, [navigate]);
-
-  // Subscribe to real-time appointment updates
-  useEffect(() => {
-    if (!userId) return;
-    
-    const unsubscribe = subscribeToAppointments(userId);
-    return unsubscribe;
-  }, [userId, subscribeToAppointments]);
 
   const handleSave = async () => {
     setIsSaving(true);

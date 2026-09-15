@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Crown, User, LogOut, ArrowLeft, Shield, Sparkles } from 'lucide-react';
+import { Calendar, Crown, User, LogOut, ArrowLeft, Shield, Sparkles, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
 import { supabase } from '@/integrations/supabase/client';
@@ -212,6 +212,30 @@ const Cliente = () => {
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   Assine e ganhe descontos exclusivos
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Histórico */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/historico')}
+            className="p-4 sm:p-6 rounded-2xl glass-effect cursor-pointer hover:border-primary/50 transition-all group active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-3 sm:p-4 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+                <History className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-display text-lg sm:text-xl font-semibold mb-0.5 sm:mb-1">
+                  Meu Histórico
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                  Veja seus agendamentos
                 </p>
               </div>
             </div>
