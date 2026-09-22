@@ -65,28 +65,53 @@ export function DateTimeSelection({
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
-        const currentWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-        // Bloqueia do início do pacote até o dia anterior à semana atual (passado)
+        // Verifica se já existe agendamento sequencial CONFIRMADO na semana atual
+        const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+        const currentWeekEnd   = endOfWeek(today,   { weekStartsOn: 1 });
+
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        const { data: thisWeekApts } = currentUser ? await supabase
+          .from('appointments')
+          .select('id, appointment_date, appointment_services!inner(service_id)')
+          .eq('user_id', currentUser.id)
+          .gte('appointment_date', format(currentWeekStart, 'yyyy-MM-dd'))
+          .lte('appointment_date', format(currentWeekEnd,   'yyyy-MM-dd'))
+          .in('status', ['confirmed', 'pending', 'completed']) : { data: [] };
+
+        // Verifica se algum desses agendamentos usa serviços do ciclo ativo
+        const hasAppointmentThisWeek = (thisWeekApts || []).some((apt: any) =>
+          apt.appointment_services?.some((s: any) => activeCycleIds.includes(s.service_id))
+        );
+
+        // Se já agendou esta semana → a janela disponível é a PRÓXIMA semana
+        // Se não agendou → a janela disponível é a SEMANA ATUAL
+        const availableWeekStart = hasAppointmentThisWeek
+          ? new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+          : currentWeekStart;
+        const availableWeekEnd = hasAppointmentThisWeek
+          ? new Date(currentWeekEnd.getTime()   + 7 * 24 * 60 * 60 * 1000)
+          : currentWeekEnd;
+
+        // Bloqueia tudo EXCETO a semana disponível
         const pkgStart = activeSequentialPkg!.start_date
           ? new Date(activeSequentialPkg!.start_date + 'T00:00:00')
           : new Date(today.getFullYear(), today.getMonth() - 3, 1);
 
         const blockedDates: Date[] = [];
 
-        // Datas PASSADAS (antes da semana atual)
+        // Passado: do início do pacote até o dia anterior à semana disponível
         let cursor = new Date(pkgStart);
-        while (cursor < currentWeekStart) {
+        while (cursor < availableWeekStart) {
           blockedDates.push(new Date(cursor));
           cursor.setDate(cursor.getDate() + 1);
         }
 
-        // Datas FUTURAS (após a semana atual — semanas 3, 4... ainda não liberadas)
+        // Futuro: após a semana disponível
         const farFuture = new Date(today);
-        farFuture.setMonth(farFuture.getMonth() + 6); // bloqueia 6 meses à frente
-        let futureCursor = new Date(currentWeekEnd);
-        futureCursor.setDate(futureCursor.getDate() + 1); // começa no dia após a semana atual
+        farFuture.setMonth(farFuture.getMonth() + 6);
+        let futureCursor = new Date(availableWeekEnd);
+        futureCursor.setDate(futureCursor.getDate() + 1);
         while (futureCursor <= farFuture) {
           blockedDates.push(new Date(futureCursor));
           futureCursor.setDate(futureCursor.getDate() + 1);
