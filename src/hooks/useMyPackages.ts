@@ -60,6 +60,7 @@ type CacheEntry = {
 };
 let cacheEntry: CacheEntry | null = null;
 let inflight: Promise<MyPackage[]> | null = null;
+let currentFetchId = 0;
 const CACHE_TTL_MS = 10_000; // 10s - curto o suficiente para atualizar após agendamento
 
 const subscribers = new Set<(pkgs: MyPackage[]) => void>();
@@ -70,6 +71,7 @@ function notifyAll(pkgs: MyPackage[]) {
 /** Invalida o cache e força todos os componentes a buscarem o estado atualizado */
 export function invalidateMyPackagesCache() {
   cacheEntry = null;
+  inflight = null; // GARANTE QUE QUALQUER REQUISIÇÃO EM ANDAMENTO SEJA DESCARTADA
   getPackagesCached(true); // Força um fetch e notifica via notifyAll
 }
 
@@ -234,14 +236,20 @@ async function getPackagesCached(force = false): Promise<MyPackage[]> {
   if (!force && fresh) return cacheEntry!.packages;
   if (inflight) return inflight;
 
+  const fetchId = ++currentFetchId;
   inflight = (async () => {
     try {
       const pkgs = await loadPackages(user.id);
-      cacheEntry = { userId: user.id, packages: pkgs, fetchedAt: Date.now() };
-      notifyAll(pkgs);
+      // Somente atualiza o cache e notifica se esta for a última requisição disparada
+      if (fetchId === currentFetchId) {
+        cacheEntry = { userId: user.id, packages: pkgs, fetchedAt: Date.now() };
+        notifyAll(pkgs);
+      }
       return pkgs;
     } finally {
-      inflight = null;
+      if (fetchId === currentFetchId) {
+        inflight = null;
+      }
     }
   })();
   return inflight;

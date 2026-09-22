@@ -560,6 +560,10 @@ export function useAppointments() {
       }));
 
       console.log('Inserting sequential usage records:', seqUsageRecords);
+      toast({
+        title: "Debug Array",
+        description: `Enviando ${seqUsageRecords.length} registros pro banco.`,
+      });
 
       const { error: seqUsageError } = await supabase
         .from('client_package_usage')
