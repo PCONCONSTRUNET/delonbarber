@@ -67,9 +67,10 @@ function notifyAll(pkgs: MyPackage[]) {
   subscribers.forEach((cb) => cb(pkgs));
 }
 
-/** Invalida o cache imediatamente — chame após criar/cancelar um agendamento */
+/** Invalida o cache e força todos os componentes a buscarem o estado atualizado */
 export function invalidateMyPackagesCache() {
   cacheEntry = null;
+  getPackagesCached(true); // Força um fetch e notifica via notifyAll
 }
 
 async function loadPackages(userId: string): Promise<MyPackage[]> {
