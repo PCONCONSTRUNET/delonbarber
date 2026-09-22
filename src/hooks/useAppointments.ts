@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { notifyAdmin } from '@/lib/oneSignalPush';
+import { invalidateMyPackagesCache } from '@/hooks/useMyPackages';
 
 
 export interface Service {
@@ -586,6 +587,7 @@ export function useAppointments() {
       });
     }
 
+    invalidateMyPackagesCache();
     fetchAppointments();
     return { ...appointment, benefitsUsed: benefitsToUse.length };
   }
@@ -633,6 +635,7 @@ export function useAppointments() {
       description: "Seu agendamento foi cancelado e o horário foi liberado.",
     });
 
+    invalidateMyPackagesCache();
     fetchAppointments();
     return true;
   }

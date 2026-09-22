@@ -60,11 +60,16 @@ type CacheEntry = {
 };
 let cacheEntry: CacheEntry | null = null;
 let inflight: Promise<MyPackage[]> | null = null;
-const CACHE_TTL_MS = 30_000; // 30s is plenty for booking flow
+const CACHE_TTL_MS = 10_000; // 10s - curto o suficiente para atualizar após agendamento
 
 const subscribers = new Set<(pkgs: MyPackage[]) => void>();
 function notifyAll(pkgs: MyPackage[]) {
   subscribers.forEach((cb) => cb(pkgs));
+}
+
+/** Invalida o cache imediatamente — chame após criar/cancelar um agendamento */
+export function invalidateMyPackagesCache() {
+  cacheEntry = null;
 }
 
 async function loadPackages(userId: string): Promise<MyPackage[]> {
