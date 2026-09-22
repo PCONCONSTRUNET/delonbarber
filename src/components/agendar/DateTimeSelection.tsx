@@ -71,26 +71,27 @@ export function DateTimeSelection({
         const currentWeekEnd   = endOfWeek(today,   { weekStartsOn: 1 });
 
         const { data: { user: currentUser } } = await supabase.auth.getUser();
-        const { data: thisWeekApts } = currentUser ? await supabase
+        
+        // Buscar agendamentos VIP a partir do início da semana atual para frente
+        const { data: futureApts } = currentUser ? await supabase
           .from('appointments')
           .select('id, appointment_date, payment_method')
           .eq('user_id', currentUser.id)
           .gte('appointment_date', format(currentWeekStart, 'yyyy-MM-dd'))
-          .lte('appointment_date', format(currentWeekEnd,   'yyyy-MM-dd'))
           .eq('payment_method', 'subscriber')
-          .in('status', ['confirmed', 'pending', 'completed']) : { data: [] };
+          .in('status', ['confirmed', 'pending'])
+          .order('appointment_date', { ascending: false }) : { data: [] };
 
-        // Se existe QUALQUER agendamento VIP/subscriber nessa semana → semana ocupada
-        const hasAppointmentThisWeek = (thisWeekApts || []).length > 0;
+        let availableWeekStart = currentWeekStart;
+        let availableWeekEnd = currentWeekEnd;
 
-        // Se já agendou esta semana → a janela disponível é a PRÓXIMA semana
-        // Se não agendou → a janela disponível é a SEMANA ATUAL
-        const availableWeekStart = hasAppointmentThisWeek
-          ? new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
-          : currentWeekStart;
-        const availableWeekEnd = hasAppointmentThisWeek
-          ? new Date(currentWeekEnd.getTime()   + 7 * 24 * 60 * 60 * 1000)
-          : currentWeekEnd;
+        // Se o cliente tem agendamentos no futuro/nesta semana, a próxima janela
+        // disponível será a semana LOGO APÓS o agendamento mais distante.
+        if (futureApts && futureApts.length > 0) {
+          const latestAptDate = new Date(futureApts[0].appointment_date + 'T00:00:00');
+          availableWeekStart = startOfWeek(new Date(latestAptDate.getTime() + 7 * 24 * 60 * 60 * 1000), { weekStartsOn: 1 });
+          availableWeekEnd = endOfWeek(availableWeekStart, { weekStartsOn: 1 });
+        }
 
         // Bloqueia tudo EXCETO a semana disponível
         const pkgStart = activeSequentialPkg!.start_date
