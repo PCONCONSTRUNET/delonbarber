@@ -268,7 +268,18 @@ export function useAppointments() {
             if (!servicesWithBenefits.includes(s.id)) servicesWithBenefits.push(s.id);
           });
           console.log('Sequential package covers this appointment. Cycle index:', activeCycleIndex, 'Services:', activeCycleIds);
+          toast({
+            title: "Debug Sequencial",
+            description: `Ciclo ativo: ${activeCycleIndex}. Coberto: Sim`,
+          });
           break;
+        } else {
+          console.log('Servicos não batem com o ciclo ativo:', { selectedServices, activeCycleIds });
+          toast({
+            title: "Debug Sequencial Falhou",
+            description: `Serviços selecionados não batem com o ciclo ativo (${activeCycleIndex}).`,
+            variant: "destructive"
+          });
         }
       }
     }
@@ -557,12 +568,16 @@ export function useAppointments() {
       if (seqUsageError) {
         console.error('Error registering sequential usage:', seqUsageError);
         toast({
-          title: "Atenção",
-          description: "O agendamento VIP foi criado, mas houve um erro ao registrar o ciclo. Contate o administrador.",
+          title: "Erro no Banco",
+          description: `Falha ao inserir uso sequencial: ${seqUsageError.message}`,
           variant: "destructive"
         });
       } else {
         console.log('Sequential usage records inserted successfully');
+        toast({
+          title: "Sucesso no Banco",
+          description: `Uso sequencial inserido! Count agora deve subir.`,
+        });
       }
     }
 
