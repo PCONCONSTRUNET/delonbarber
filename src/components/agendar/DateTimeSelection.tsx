@@ -36,16 +36,55 @@ export function DateTimeSelection({
   const { isExclusive: isExclusiveClient, loading: isExclusiveClientLoading } = useIsExclusiveClient();
   const [blockedWeekDates, setBlockedWeekDates] = useState<Date[]>([]);
   const [isVipBooking, setIsVipBooking] = useState(false);
+  const [isSequentialVipBooking, setIsSequentialVipBooking] = useState(false);
 
-  // Check if any selected service has VIP benefit with weekly limit
+  // Check if any selected service has VIP benefit with weekly limit OR is sequential
   useEffect(() => {
     async function checkBlockedWeeks() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || selectedServices.length === 0) {
         setBlockedWeekDates([]);
         setIsVipBooking(false);
+        setIsSequentialVipBooking(false);
         return;
       }
+
+      // ── Plano SEQUENCIAL ──────────────────────────────────────────────
+      const activeSequentialPkg = packages.find(
+        p => p.status === 'active' && p.package.type === 'sequential'
+      );
+      const activeCycleIds = (activeSequentialPkg?.activeCycle || []).map(c => c.service_id);
+      const isSequential =
+        activeCycleIds.length > 0 &&
+        selectedServices.length > 0 &&
+        selectedServices.every(s => activeCycleIds.includes(s.id));
+
+      if (isSequential) {
+        setIsSequentialVipBooking(true);
+        setIsVipBooking(true);
+        // Para plano sequencial, bloqueia todas as semanas ANTERIORES à atual
+        // (o cliente só pode agendar na semana corrente ou futura)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+
+        // Gera datas bloqueadas: do início do pacote até o dia anterior à semana atual
+        const pkgStart = activeSequentialPkg!.start_date
+          ? new Date(activeSequentialPkg!.start_date + 'T00:00:00')
+          : new Date(today.getFullYear(), today.getMonth() - 1, 1);
+
+        const pastDates: Date[] = [];
+        let cursor = new Date(pkgStart);
+        while (cursor < currentWeekStart) {
+          pastDates.push(new Date(cursor));
+          cursor.setDate(cursor.getDate() + 1);
+        }
+        setBlockedWeekDates(pastDates);
+        return;
+      }
+
+      setIsSequentialVipBooking(false);
+      // ── Fim Plano SEQUENCIAL ──────────────────────────────────────────
 
       // Get service IDs that have weekly limits in user's packages
       const servicesWithWeeklyLimit: { serviceId: string; weeklyLimit: number }[] = [];
@@ -75,9 +114,9 @@ export function DateTimeSelection({
       setIsVipBooking(true);
 
       // Get all scheduled appointments for the next 60 days
-      const today = new Date();
+      const today2 = new Date();
       const futureDate = new Date();
-      futureDate.setDate(today.getDate() + 60);
+      futureDate.setDate(today2.getDate() + 60);
 
       const { data: scheduledAppointments, error } = await supabase
         .from('appointments')
@@ -87,7 +126,7 @@ export function DateTimeSelection({
           appointment_services!inner(service_id)
         `)
         .eq('user_id', user.id)
-        .gte('appointment_date', format(today, 'yyyy-MM-dd'))
+        .gte('appointment_date', format(today2, 'yyyy-MM-dd'))
         .lte('appointment_date', format(futureDate, 'yyyy-MM-dd'))
         .in('status', ['pending', 'confirmed']);
 

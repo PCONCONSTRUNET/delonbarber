@@ -172,19 +172,57 @@ function FullView({ packages }: { packages: MyPackage[] }) {
                           return acc;
                         }, {} as Record<number, typeof pkg.cycles>)
                       ).map(([order, cyclesInStep]) => {
-                        const isCurrentStep = pkg.activeCycle && pkg.activeCycle[0]?.sequence_order === Number(order);
+                        const stepNum = Number(order);
+                        const activeStepNum = pkg.activeCycle?.[0]?.sequence_order ?? 1;
+                        const isCurrentStep = pkg.activeCycle && activeStepNum === stepNum;
+                        const isDoneStep = stepNum < activeStepNum;
                         return (
-                          <div key={order} className={`flex items-center gap-3 p-3 rounded-xl border ${isCurrentStep ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-border bg-card/50'}`}>
-                            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${isCurrentStep ? 'bg-yellow-500 text-black' : 'bg-muted text-muted-foreground'}`}>
-                              {order}
+                          <motion.div
+                            key={order}
+                            initial={isDoneStep ? { opacity: 0, x: -8 } : false}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: stepNum * 0.05 }}
+                            className={`flex items-center gap-3 p-3 rounded-xl border ${
+                              isCurrentStep
+                                ? 'border-yellow-500/50 bg-yellow-500/5'
+                                : isDoneStep
+                                ? 'border-green-500/30 bg-green-500/5'
+                                : 'border-border bg-card/50'
+                            }`}
+                          >
+                            {/* Número / check */}
+                            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold flex-shrink-0 ${
+                              isCurrentStep
+                                ? 'bg-yellow-500 text-black'
+                                : isDoneStep
+                                ? 'bg-green-500 text-white'
+                                : 'bg-muted text-muted-foreground'
+                            }`}>
+                              {isDoneStep ? '✓' : order}
                             </div>
-                            <div className="flex-1 text-sm">
+
+                            {/* Nome do serviço */}
+                            <div className={`flex-1 text-sm ${isDoneStep ? 'text-muted-foreground line-through' : ''}`}>
                               {cyclesInStep.map(c => c.service?.name).join(' + ')}
                             </div>
+
+                            {/* Badge de status */}
                             {isCurrentStep && (
-                              <Badge variant="outline" className="text-[10px] text-yellow-600 border-yellow-500/30">Atual</Badge>
+                              <Badge variant="outline" className="text-[10px] text-yellow-600 border-yellow-500/30">
+                                Atual
+                              </Badge>
                             )}
-                          </div>
+                            {isDoneStep && (
+                              <motion.span
+                                initial={{ scale: 0.7, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 20, delay: stepNum * 0.05 + 0.1 }}
+                                className="text-[10px] font-semibold text-green-500 bg-green-500/10 border border-green-500/30 px-2 py-0.5 rounded-full"
+                              >
+                                ✓ Usada
+                              </motion.span>
+                            )}
+                          </motion.div>
                         );
                       })}
                     </div>
