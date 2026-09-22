@@ -185,9 +185,12 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
       });
       const groupedCyclesArray = Array.from(cyclesMap.keys()).sort((a,b)=>a-b).map(k => cyclesMap.get(k)!);
 
-      // Usage count by distinct appointment_id
-      const distinctAppointments = new Set(usageData.map((u: any) => u.appointment_id).filter((id: any) => id != null));
-      const usageCount = distinctAppointments.size;
+      // Usage count: appointments distintos + skips automáticos (appointment_id = null)
+      const distinctAppointments = new Set(
+        usageData.map((u: any) => u.appointment_id).filter((id: any) => id != null)
+      );
+      const skipCount = usageData.filter((u: any) => u.appointment_id == null).length;
+      const usageCount = distinctAppointments.size + skipCount;
       
       if (groupedCyclesArray.length > 0) {
         const activeCycleIndex = usageCount % groupedCyclesArray.length;
