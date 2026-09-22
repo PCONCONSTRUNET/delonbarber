@@ -116,48 +116,65 @@ export function AppointmentSummary({
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('pix');
   const { packages, getRemainingForService } = useMyPackages();
 
-  // Calculate which services can be covered by package benefits
+  // ── Detecta plano SEQUENCIAL ativo e ciclo atual ──────────────────────────
+  const activeSequentialPackage = packages.find(
+    p => p.status === 'active' && p.package.type === 'sequential'
+  );
+  const activeCycleServiceIds = (activeSequentialPackage?.activeCycle || []).map(c => c.service_id);
+  // Os serviços selecionados são todos do ciclo sequencial?
+  const isSequentialCovered =
+    activeCycleServiceIds.length > 0 &&
+    selectedServices.length > 0 &&
+    selectedServices.every(s => activeCycleServiceIds.includes(s.id));
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Calculate which services can be covered by package benefits (planos flexíveis)
   const getServiceCoverage = () => {
     const coverage: Record<string, { covered: boolean; remaining: number }> = {};
-    
     for (const service of selectedServices) {
+      // Se coberto pelo ciclo sequencial, marca como coberto
+      if (activeCycleServiceIds.includes(service.id)) {
+        coverage[service.id] = { covered: true, remaining: 1 };
+        continue;
+      }
       const remaining = getRemainingForService(service.id);
-      coverage[service.id] = {
-        covered: remaining > 0,
-        remaining
-      };
+      coverage[service.id] = { covered: remaining > 0, remaining };
     }
-    
     return coverage;
   };
 
   const serviceCoverage = getServiceCoverage();
-  
-  // Check if ALL selected services can be covered by subscriber benefits
+
+  // Check if ALL selected services can be covered
   const allServicesCovered = selectedServices.every(s => serviceCoverage[s.id]?.covered);
-  
+
   // Check if user has any active package
   const hasActivePackage = packages.some(p => p.status === 'active');
-  
-  // Show subscriber option only if user has package AND all services can be covered
+
+  // Show subscriber option if user has package AND all services can be covered
   const showSubscriberOption = hasActivePackage && allServicesCovered && selectedServices.length > 0;
 
   // Calculate prices
   const originalTotal = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
-  
+
   // If subscriber payment is selected, calculate covered price
   const calculateFinalPrice = () => {
-    if (selectedPayment === 'subscriber') {
-      return 0; // All covered services are free
-    }
+    if (selectedPayment === 'subscriber') return 0;
     return originalTotal;
   };
-  
+
   const finalPrice = calculateFinalPrice();
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
-  
+
   // Calculate how many 30-minute slots will be blocked
   const slotsBlocked = Math.ceil(totalDuration / 30);
+
+  // Auto-selecionar 'subscriber' se plano sequencial cobre os serviços
+  useEffect(() => {
+    if (isSequentialCovered) {
+      setSelectedPayment('subscriber');
+    }
+  }, [isSequentialCovered]);
 
   // Reset payment method if subscriber option becomes unavailable
   useEffect(() => {

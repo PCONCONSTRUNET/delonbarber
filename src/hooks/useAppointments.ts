@@ -184,7 +184,7 @@ export function useAppointments() {
     // Check for active package benefits
     const { data: activePackages, error: pkgError } = await supabase
       .from('client_packages')
-      .select('id, package_id, start_date, end_date')
+      .select('id, package_id, start_date, end_date, packages:package_id(type)')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .gte('end_date', new Date().toISOString().split('T')[0]);
@@ -209,8 +209,74 @@ export function useAppointments() {
 
     console.log('Week boundaries for appointment date:', { appointmentDate, weekStart, weekEnd });
 
+    // ── PLANO SEQUENCIAL ──────────────────────────────────────────────────────
+    // Detecta se o cliente tem plano sequencial ativo e quais serviços do ciclo
+    // atual devem ser cobertos gratuitamente.
+    let isSequentialCovered = false;
+    let sequentialClientPackageId: string | null = null;
+    const sequentialCycleServiceIds: string[] = [];
+
     if (activePackages && activePackages.length > 0) {
-      for (const pkg of activePackages) {
+      for (const pkg of activePackages as any[]) {
+        const pkgType = pkg.packages?.type;
+        if (pkgType !== 'sequential') continue;
+
+        // Busca ciclos do pacote
+        const { data: cycles } = await supabase
+          .from('package_cycles')
+          .select('sequence_order, service_id')
+          .eq('package_id', pkg.package_id)
+          .order('sequence_order', { ascending: true });
+
+        if (!cycles || cycles.length === 0) continue;
+
+        // Busca usos já registrados para calcular o índice do ciclo ativo
+        const { data: usageSeq } = await supabase
+          .from('client_package_usage')
+          .select('appointment_id')
+          .eq('client_package_id', pkg.id);
+
+        // Conta appointments distintos (incluindo skips sem appointment_id como 1 uso cada)
+        const distinctAppointments = new Set(
+          (usageSeq || []).map((u: any) => u.appointment_id).filter((id: any) => id != null)
+        );
+        const skipCount = (usageSeq || []).filter((u: any) => u.appointment_id == null).length;
+        const usageCount = distinctAppointments.size + skipCount;
+
+        // Agrupa ciclos por sequence_order
+        const cyclesMap = new Map<number, string[]>();
+        cycles.forEach((c: any) => {
+          if (!cyclesMap.has(c.sequence_order)) cyclesMap.set(c.sequence_order, []);
+          cyclesMap.get(c.sequence_order)!.push(c.service_id);
+        });
+        const groupedCyclesArray = Array.from(cyclesMap.keys()).sort((a, b) => a - b).map(k => cyclesMap.get(k)!);
+
+        if (groupedCyclesArray.length === 0) continue;
+
+        const activeCycleIndex = usageCount % groupedCyclesArray.length;
+        const activeCycleIds = groupedCyclesArray[activeCycleIndex];
+
+        // Verifica se TODOS os serviços selecionados estão no ciclo ativo
+        const allMatch = selectedServices.every(s => activeCycleIds.includes(s.id));
+        if (allMatch) {
+          isSequentialCovered = true;
+          sequentialClientPackageId = pkg.id;
+          sequentialCycleServiceIds.push(...activeCycleIds);
+          // Marca todos os serviços do ciclo como cobertos
+          selectedServices.forEach(s => {
+            if (!servicesWithBenefits.includes(s.id)) servicesWithBenefits.push(s.id);
+          });
+          console.log('Sequential package covers this appointment. Cycle index:', activeCycleIndex, 'Services:', activeCycleIds);
+          break;
+        }
+      }
+    }
+    // ── FIM PLANO SEQUENCIAL ─────────────────────────────────────────────────
+
+    if (activePackages && activePackages.length > 0) {
+      for (const pkg of activePackages as any[]) {
+        // Pula pacotes sequenciais (já tratados acima)
+        if (pkg.packages?.type === 'sequential') continue;
 
         // Get benefits for this package with weekly_limit
         const { data: benefits, error: benefitsError } = await supabase
@@ -238,14 +304,14 @@ export function useAppointments() {
         console.log('Current usage for package', pkg.id, ':', usage);
 
         // Count total usage per service
-        const usageByService = (usage || []).reduce((acc, u) => {
+        const usageByService = (usage || []).reduce((acc: Record<string, number>, u: any) => {
           acc[u.service_id] = (acc[u.service_id] || 0) + 1;
           return acc;
         }, {} as Record<string, number>);
 
         // Count usage THIS WEEK per service (based on usage records)
         // using the appointment week boundaries
-        const usageThisWeekByService = (usage || []).reduce((acc, u) => {
+        const usageThisWeekByService = (usage || []).reduce((acc: Record<string, number>, u: any) => {
           const usedAtStr = u.used_at ? u.used_at.substring(0, 10) : '';
           const weekStartStr = format(weekStart, 'yyyy-MM-dd');
           const weekEndStr = format(weekEnd, 'yyyy-MM-dd');
@@ -265,7 +331,7 @@ export function useAppointments() {
           if (servicesWithBenefits.includes(service.id)) continue;
           if (weeklyBlockedServices.includes(service.id)) continue;
 
-          const benefit = benefits?.find(b => b.service_id === service.id);
+          const benefit = (benefits as any[])?.find((b: any) => b.service_id === service.id);
           console.log('Checking service', service.name, ':', { benefit, serviceId: service.id });
           
           if (benefit) {
@@ -309,6 +375,7 @@ export function useAppointments() {
     console.log('Final benefits to use:', benefitsToUse);
     console.log('Services with benefits:', servicesWithBenefits);
     console.log('Weekly blocked services:', weeklyBlockedServices);
+    console.log('Is sequential covered:', isSequentialCovered);
 
     // If any services are blocked by weekly limit and user is trying to use as subscriber
     if (weeklyBlockedServices.length > 0 && paymentMethod === 'subscriber') {
@@ -331,7 +398,8 @@ export function useAppointments() {
 
     // IMPORTANT: If user selected subscriber payment but there are services without benefits
     // we should block this - they can't use subscriber payment for services not in package
-    if (paymentMethod === 'subscriber') {
+    // (only for non-sequential; sequential is auto-detected above)
+    if (paymentMethod === 'subscriber' && !isSequentialCovered) {
       const servicesWithoutBenefits = selectedServices.filter(s => !servicesWithBenefits.includes(s.id));
       if (servicesWithoutBenefits.length > 0) {
         const names = servicesWithoutBenefits.map(s => s.name).join(', ');
@@ -344,17 +412,20 @@ export function useAppointments() {
       }
     }
 
-    // Calculate price (services with benefits are free)
+    // Calculate price (services with benefits or sequential cycle are free)
     const totalPrice = selectedServices.reduce((sum, s) => {
       if (servicesWithBenefits.includes(s.id)) {
-        return sum; // Free - covered by package
+        return sum; // Free - covered by package or sequential cycle
       }
       return sum + Number(s.price);
     }, 0);
     const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0);
 
+    // Se plano sequencial cobre, força subscriber como método de pagamento
+    const effectivePaymentMethod = isSequentialCovered ? 'subscriber' : paymentMethod;
+
     // If using subscriber payment, mark as paid automatically
-    const isSubscriberPayment = paymentMethod === 'subscriber';
+    const isSubscriberPayment = effectivePaymentMethod === 'subscriber';
 
     // Create appointment - auto-confirmed
     const { data: appointment, error: aptError } = await supabase
@@ -367,7 +438,7 @@ export function useAppointments() {
         total_price: isSubscriberPayment ? 0 : totalPrice,
         total_duration: totalDuration,
         status: 'confirmed',
-        payment_method: paymentMethod || null,
+        payment_method: effectivePaymentMethod || null,
         payment_status: isSubscriberPayment ? 'paid' : 'pending',
         payment_date: isSubscriberPayment ? new Date().toISOString() : null,
       })
@@ -439,40 +510,58 @@ export function useAppointments() {
       console.error('Error adding services:', servicesError);
     }
 
-    // Register benefit usage for services covered by packages
-    // CRITICAL: This must be done when using subscriber payment method
-    if (benefitsToUse.length > 0 || (isSubscriberPayment && servicesWithBenefits.length > 0)) {
-      // Use benefitsToUse if available, otherwise build from servicesWithBenefits for subscriber payments
-      const recordsToInsert = benefitsToUse.length > 0 ? benefitsToUse : [];
-      
-      console.log('Registering usage records:', recordsToInsert);
-      
-      if (recordsToInsert.length > 0) {
-        const usageRecords = recordsToInsert.map(b => ({
-          client_package_id: b.clientPackageId,
-          service_id: b.serviceId,
-          appointment_id: appointment.id,
-          used_at: new Date(`${format(date, 'yyyy-MM-dd')}T${time}:00`).toISOString()
-        }));
+    // Register benefit usage for services covered by packages (flexible)
+    if (benefitsToUse.length > 0) {
+      const usageRecords = benefitsToUse.map(b => ({
+        client_package_id: b.clientPackageId,
+        service_id: b.serviceId,
+        appointment_id: appointment.id,
+        used_at: new Date(`${format(date, 'yyyy-MM-dd')}T${time}:00`).toISOString()
+      }));
 
-        console.log('Inserting usage records:', usageRecords);
+      console.log('Inserting flexible usage records:', usageRecords);
 
-        const { data: insertedUsage, error: usageError } = await supabase
-          .from('client_package_usage')
-          .insert(usageRecords)
-          .select();
+      const { error: usageError } = await supabase
+        .from('client_package_usage')
+        .insert(usageRecords);
 
-        if (usageError) {
-          console.error('Error registering usage:', usageError);
-          // Still show error to user but don't fail the appointment
-          toast({
-            title: "Atenção",
-            description: "O agendamento foi criado, mas houve um erro ao registrar o uso do benefício.",
-            variant: "destructive"
-          });
-        } else {
-          console.log('Usage records inserted successfully:', insertedUsage);
-        }
+      if (usageError) {
+        console.error('Error registering flexible usage:', usageError);
+        toast({
+          title: "Atenção",
+          description: "O agendamento foi criado, mas houve um erro ao registrar o uso do benefício.",
+          variant: "destructive"
+        });
+      } else {
+        console.log('Flexible usage records inserted successfully');
+      }
+    }
+
+    // Register usage for SEQUENTIAL packages — each service in the active cycle
+    // is inserted separately so the cycle pointer advances correctly.
+    if (isSequentialCovered && sequentialClientPackageId) {
+      const seqUsageRecords = selectedServices.map(s => ({
+        client_package_id: sequentialClientPackageId!,
+        service_id: s.id,
+        appointment_id: appointment.id,
+        used_at: new Date(`${format(date, 'yyyy-MM-dd')}T${time}:00`).toISOString()
+      }));
+
+      console.log('Inserting sequential usage records:', seqUsageRecords);
+
+      const { error: seqUsageError } = await supabase
+        .from('client_package_usage')
+        .insert(seqUsageRecords);
+
+      if (seqUsageError) {
+        console.error('Error registering sequential usage:', seqUsageError);
+        toast({
+          title: "Atenção",
+          description: "O agendamento VIP foi criado, mas houve um erro ao registrar o ciclo. Contate o administrador.",
+          variant: "destructive"
+        });
+      } else {
+        console.log('Sequential usage records inserted successfully');
       }
     }
 
@@ -480,7 +569,12 @@ export function useAppointments() {
     // Notificação para o cliente foi desabilitada para evitar conflitos de SW no iOS PWA.
 
     // Show appropriate toast message
-    if (benefitsToUse.length > 0) {
+    if (isSequentialCovered) {
+      toast({
+        title: "Agendamento VIP criado! 👑",
+        description: "Serviço coberto pelo seu plano sequencial. Grátis!",
+      });
+    } else if (benefitsToUse.length > 0) {
       toast({
         title: "Agendamento criado! 🎉",
         description: `${benefitsToUse.length} serviço(s) utilizando benefício do pacote VIP.`,

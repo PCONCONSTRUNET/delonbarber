@@ -108,11 +108,16 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
   };
 
   const paidAppointments = filteredAppointments
-    .filter(a => a.payment_status === 'paid' && a.status !== 'no_show')
+    .filter(a => a.payment_status === 'paid' && a.status !== 'no_show' && a.payment_method !== 'subscriber')
     .sort(sortByDateDesc);
     
   const pendingAppointments = filteredAppointments
-    .filter(a => a.payment_status === 'pending' && (a.status === 'completed' || a.status === 'confirmed'))
+    .filter(a => a.payment_status === 'pending' && (a.status === 'completed' || a.status === 'confirmed') && a.payment_method !== 'subscriber')
+    .sort(sortByDateDesc);
+
+  // Atendimentos VIP (assinantes) — não entram na receita monetária
+  const subscriberAppointments = filteredAppointments
+    .filter(a => a.payment_method === 'subscriber' && a.status !== 'no_show' && a.status !== 'cancelled')
     .sort(sortByDateDesc);
 
   const totalRevenue = paidAppointments.reduce((sum, a) => sum + Number(a.total_price || 0), 0);
@@ -293,6 +298,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
             <span className="text-sm text-muted-foreground">Faturado</span>
           </div>
           <p className="text-2xl font-bold text-green-500">R$ {totalRevenue.toFixed(0)}</p>
+          <p className="text-xs text-muted-foreground mt-1">Excl. assinantes VIP</p>
         </motion.div>
 
         <motion.div
@@ -325,15 +331,14 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="p-4 rounded-2xl glass-effect"
+          className="p-4 rounded-2xl glass-effect border border-yellow-500/30"
         >
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="h-5 w-5 text-accent" />
-            <span className="text-sm text-muted-foreground">Ticket Médio</span>
+            <Crown className="h-5 w-5 text-yellow-500" />
+            <span className="text-sm text-muted-foreground">VIP Assinantes</span>
           </div>
-          <p className="text-2xl font-bold">
-            R$ {completedCount > 0 ? (totalRevenue / completedCount).toFixed(0) : 0}
-          </p>
+          <p className="text-2xl font-bold text-yellow-500">{subscriberAppointments.length}</p>
+          <p className="text-xs text-muted-foreground mt-1">Atend. sem cobrança</p>
         </motion.div>
       </div>
 
