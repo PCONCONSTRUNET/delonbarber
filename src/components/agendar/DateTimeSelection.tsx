@@ -62,24 +62,37 @@ export function DateTimeSelection({
       if (isSequential) {
         setIsSequentialVipBooking(true);
         setIsVipBooking(true);
-        // Para plano sequencial, bloqueia todas as semanas ANTERIORES à atual
-        // (o cliente só pode agendar na semana corrente ou futura)
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+        const currentWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-        // Gera datas bloqueadas: do início do pacote até o dia anterior à semana atual
+        // Bloqueia do início do pacote até o dia anterior à semana atual (passado)
         const pkgStart = activeSequentialPkg!.start_date
           ? new Date(activeSequentialPkg!.start_date + 'T00:00:00')
-          : new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          : new Date(today.getFullYear(), today.getMonth() - 3, 1);
 
-        const pastDates: Date[] = [];
+        const blockedDates: Date[] = [];
+
+        // Datas PASSADAS (antes da semana atual)
         let cursor = new Date(pkgStart);
         while (cursor < currentWeekStart) {
-          pastDates.push(new Date(cursor));
+          blockedDates.push(new Date(cursor));
           cursor.setDate(cursor.getDate() + 1);
         }
-        setBlockedWeekDates(pastDates);
+
+        // Datas FUTURAS (após a semana atual — semanas 3, 4... ainda não liberadas)
+        const farFuture = new Date(today);
+        farFuture.setMonth(farFuture.getMonth() + 6); // bloqueia 6 meses à frente
+        let futureCursor = new Date(currentWeekEnd);
+        futureCursor.setDate(futureCursor.getDate() + 1); // começa no dia após a semana atual
+        while (futureCursor <= farFuture) {
+          blockedDates.push(new Date(futureCursor));
+          futureCursor.setDate(futureCursor.getDate() + 1);
+        }
+
+        setBlockedWeekDates(blockedDates);
         return;
       }
 
@@ -255,7 +268,9 @@ export function DateTimeSelection({
   }, [blockedWeekDates]);
 
   const modifiersClassNames = {
-    vipBlocked: 'bg-yellow-500/20 text-yellow-600 line-through cursor-not-allowed'
+    vipBlocked: isSequentialVipBooking
+      ? 'opacity-30 line-through cursor-not-allowed text-red-400'
+      : 'bg-yellow-500/20 text-yellow-600 line-through cursor-not-allowed'
   };
 
   const formatTime = (time: string) => {
@@ -268,21 +283,36 @@ export function DateTimeSelection({
   return (
     <div className="space-y-6">
 
-      {/* VIP Weekly Limit Info */}
+      {/* VIP / Sequential info banner */}
       {isVipBooking && blockedWeekDates.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-3"
+          className={`border rounded-2xl p-3 ${
+            isSequentialVipBooking
+              ? 'bg-yellow-500/10 border-yellow-500/30'
+              : 'bg-yellow-500/10 border-yellow-500/30'
+          }`}
         >
           <div className="flex items-start gap-2">
             <Crown className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
             <div className="text-xs">
-              <p className="font-medium text-yellow-600">Limite VIP semanal</p>
-              <p className="text-muted-foreground mt-0.5">
-                Semanas com agendamento VIP marcado estão destacadas em amarelo. 
-                Escolha uma semana diferente.
-              </p>
+              {isSequentialVipBooking ? (
+                <>
+                  <p className="font-medium text-yellow-600">Plano Sequencial VIP</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    Apenas a semana atual está disponível. Após cada visita, a próxima semana será liberada automaticamente.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium text-yellow-600">Limite VIP semanal</p>
+                  <p className="text-muted-foreground mt-0.5">
+                    Semanas com agendamento VIP marcado estão destacadas em amarelo. 
+                    Escolha uma semana diferente.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </motion.div>
