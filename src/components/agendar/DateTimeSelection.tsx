@@ -73,16 +73,15 @@ export function DateTimeSelection({
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         const { data: thisWeekApts } = currentUser ? await supabase
           .from('appointments')
-          .select('id, appointment_date, appointment_services!inner(service_id)')
+          .select('id, appointment_date, payment_method')
           .eq('user_id', currentUser.id)
           .gte('appointment_date', format(currentWeekStart, 'yyyy-MM-dd'))
           .lte('appointment_date', format(currentWeekEnd,   'yyyy-MM-dd'))
+          .eq('payment_method', 'subscriber')
           .in('status', ['confirmed', 'pending', 'completed']) : { data: [] };
 
-        // Verifica se algum desses agendamentos usa serviços do ciclo ativo
-        const hasAppointmentThisWeek = (thisWeekApts || []).some((apt: any) =>
-          apt.appointment_services?.some((s: any) => activeCycleIds.includes(s.service_id))
-        );
+        // Se existe QUALQUER agendamento VIP/subscriber nessa semana → semana ocupada
+        const hasAppointmentThisWeek = (thisWeekApts || []).length > 0;
 
         // Se já agendou esta semana → a janela disponível é a PRÓXIMA semana
         // Se não agendou → a janela disponível é a SEMANA ATUAL
