@@ -107,8 +107,14 @@ const Agendar = () => {
     if (!selectedDate || !selectedTime) return;
 
     setIsSubmitting(true);
-    const result = await createAppointment(selectedServices, selectedDate, selectedTime, notes, paymentMethod);
-    setIsSubmitting(false);
+    let result = null;
+    try {
+      result = await createAppointment(selectedServices, selectedDate, selectedTime, notes, paymentMethod);
+    } catch (err) {
+      console.error('Unexpected error in createAppointment:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
 
     if (!result) {
       // Booking failed (conflict or error) — refresh slots so the UI reflects the real state
