@@ -110,8 +110,13 @@ const Agendar = () => {
     let result = null;
     try {
       result = await createAppointment(selectedServices, selectedDate, selectedTime, notes, paymentMethod);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Unexpected error in createAppointment:', err);
+      toast({
+        title: "Erro Inesperado",
+        description: `Ocorreu um erro ao processar: ${err.message || String(err)}`,
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
