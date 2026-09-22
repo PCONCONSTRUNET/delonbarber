@@ -528,7 +528,7 @@ export function useAppointments() {
         client_package_id: b.clientPackageId,
         service_id: b.serviceId,
         appointment_id: appointment.id,
-        used_at: `${format(date, 'yyyy-MM-dd')}T${time}:00`
+        used_at: `${format(date, 'yyyy-MM-dd')}T${time.split(':').length === 2 ? time + ':00' : time}`
       }));
 
       console.log('Inserting flexible usage records:', usageRecords);
@@ -556,7 +556,7 @@ export function useAppointments() {
         client_package_id: sequentialClientPackageId!,
         service_id: s.id,
         appointment_id: appointment.id,
-        used_at: `${format(date, 'yyyy-MM-dd')}T${time}:00`
+        used_at: `${format(date, 'yyyy-MM-dd')}T${time.split(':').length === 2 ? time + ':00' : time}`
       }));
 
       console.log('Inserting sequential usage records:', seqUsageRecords);
