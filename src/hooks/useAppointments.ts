@@ -576,6 +576,7 @@ export function useAppointments() {
           description: `Falha ao inserir uso sequencial: ${seqUsageError.message}`,
           variant: "destructive"
         });
+        throw new Error(`DB Insert Error: ${seqUsageError.message}`);
       } else {
         console.log('Sequential usage records inserted successfully');
         toast({
