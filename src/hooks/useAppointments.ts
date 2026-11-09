@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { notifyAdmin } from '@/lib/oneSignalPush';
 import { invalidateMyPackagesCache } from '@/hooks/useMyPackages';
+import { normalizeAndSyncBusinessHours } from '@/lib/businessHours';
 
 
 export interface Service {
@@ -68,25 +69,26 @@ export function useBusinessHours() {
   const [businessHours, setBusinessHours] = useState<BusinessHours[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchBusinessHours() {
-      const { data, error } = await supabase
-        .from('business_hours')
-        .select('*')
-        .order('day_of_week', { ascending: true });
+  async function fetchBusinessHours() {
+    const { data, error } = await supabase
+      .from('business_hours')
+      .select('*')
+      .order('day_of_week', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching business hours:', error);
-      } else {
-        setBusinessHours(data || []);
-      }
-      setLoading(false);
+    if (error) {
+      console.error('Error fetching business hours:', error);
+    } else {
+      const normalized = await normalizeAndSyncBusinessHours(data || []);
+      setBusinessHours(normalized);
     }
+    setLoading(false);
+  }
 
+  useEffect(() => {
     fetchBusinessHours();
   }, []);
 
-  return { businessHours, loading };
+  return { businessHours, loading, refreshBusinessHours: fetchBusinessHours };
 }
 
 export function useAppointments() {

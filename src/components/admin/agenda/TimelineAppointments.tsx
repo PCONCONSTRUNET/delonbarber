@@ -2,12 +2,13 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
-import { Check, X, Trash2, Crown, DollarSign, Scissors, CreditCard, Plus } from 'lucide-react';
+import { Check, X, Trash2, Crown, DollarSign, Scissors, CreditCard, Plus, Coffee } from 'lucide-react';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { QuickBookingModal } from './QuickBookingModal';
 import { toast } from 'sonner';
+import { sanitizeLunchBreak } from '@/lib/businessHours';
 
 interface BusinessHour {
   open_time: string;
@@ -142,6 +143,14 @@ export function TimelineAppointments({
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const isViewingToday = selectedDate === todayStr;
 
+  const cleanLunch = sanitizeLunchBreak(businessHours?.lunch_start, businessHours?.lunch_end);
+  const lunchStartMinTotal = cleanLunch.lunch_start
+    ? parseInt(cleanLunch.lunch_start.slice(0, 2)) * 60 + parseInt(cleanLunch.lunch_start.slice(3, 5))
+    : -1;
+  const lunchEndMinTotal = cleanLunch.lunch_end
+    ? parseInt(cleanLunch.lunch_end.slice(0, 2)) * 60 + parseInt(cleanLunch.lunch_end.slice(3, 5))
+    : -1;
+
   return (
     <>
       <div className="relative">
@@ -153,9 +162,15 @@ export function TimelineAppointments({
             const isBlocked = blockedSlots.has(timeSlot);
             const slotHour = parseInt(timeSlot.slice(0, 2));
             const slotMin = parseInt(timeSlot.slice(3, 5));
+            const slotTotalMin = slotHour * 60 + slotMin;
             // Only mark as past if viewing today and the time has passed
             const isPast = isViewingToday && (slotHour < currentHour || (slotHour === currentHour && slotMin < currentMin));
             const isFreeSlot = !hasAppointments && !isBlocked;
+            const isLunchSlot =
+              lunchStartMinTotal >= 0 &&
+              lunchEndMinTotal > lunchStartMinTotal &&
+              slotTotalMin >= lunchStartMinTotal &&
+              slotTotalMin < lunchEndMinTotal;
 
             return (
               <div key={timeSlot} className="relative flex">
@@ -193,12 +208,28 @@ export function TimelineAppointments({
                   {isFreeSlot && (
                     <button
                       onClick={() => handleSlotClick(timeSlot)}
-                      className="w-full h-10 rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 group"
+                      className={cn(
+                        "w-full h-10 rounded-lg border-2 border-dashed transition-all flex items-center justify-center gap-2 group",
+                        isLunchSlot
+                          ? "border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60 hover:bg-amber-500/10"
+                          : "border-muted-foreground/20 hover:border-primary/50 hover:bg-primary/5"
+                      )}
                     >
-                      <Plus className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary/70 transition-colors" />
-                      <span className="text-xs text-muted-foreground/40 group-hover:text-primary/70 transition-colors">
-                        Agendar
-                      </span>
+                      {isLunchSlot ? (
+                        <>
+                          <Coffee className="h-3.5 w-3.5 text-amber-500/70" />
+                          <span className="text-xs text-amber-500/80 font-medium">
+                            Intervalo de almoço
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary/70 transition-colors" />
+                          <span className="text-xs text-muted-foreground/40 group-hover:text-primary/70 transition-colors">
+                            Agendar
+                          </span>
+                        </>
+                      )}
                     </button>
                   )}
                   

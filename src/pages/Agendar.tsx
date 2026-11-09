@@ -51,7 +51,7 @@ const Agendar = () => {
   } | null>(null);
 
   const { services, loading: servicesLoading } = useServices();
-  const { businessHours, loading: hoursLoading } = useBusinessHours();
+  const { businessHours, loading: hoursLoading, refreshBusinessHours } = useBusinessHours();
   const { appointments, loading: appointmentsLoading, createAppointment, cancelAppointment } = useAppointments();
   const { bookedSlots, isRefreshing, refresh: refreshSlots } = useBookedSlots(selectedDate);
   const { isAdmin } = useIsAdmin();
@@ -75,6 +75,7 @@ const Agendar = () => {
       }
       return [...prev, service];
     });
+    setSelectedTime(undefined);
   };
 
   const handleDateSelect = (date: Date | undefined) => {
@@ -82,10 +83,11 @@ const Agendar = () => {
     setSelectedTime(undefined);
   };
 
-  // Whenever user reaches step 2, force-refresh slots so they see live data
+  // Whenever user reaches step 2, force-refresh slots and business hours so they see live data
   useEffect(() => {
     if (currentStep === 2) {
       refreshSlots();
+      refreshBusinessHours();
     }
   }, [currentStep]);
 

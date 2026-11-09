@@ -10,6 +10,7 @@ import { useAdminNotifications } from '@/hooks/useNotifications';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { useAuthReady } from '@/hooks/useAuthReady';
 import { Badge } from '@/components/ui/badge';
+import { normalizeAndSyncBusinessHours } from '@/lib/businessHours';
 
 
 const Cliente = () => {
@@ -30,7 +31,7 @@ const Cliente = () => {
     }
   });
 
-  // Fetch pending appointments count for admin badge
+  // Fetch pending appointments count for admin badge and sync business hours
   useEffect(() => {
     if (!isAdmin) return;
 
@@ -41,6 +42,14 @@ const Cliente = () => {
         .eq('status', 'pending');
       
       setPendingCount(count || 0);
+
+      const { data: hours } = await supabase
+        .from('business_hours')
+        .select('*')
+        .order('day_of_week');
+      if (hours) {
+        await normalizeAndSyncBusinessHours(hours);
+      }
     };
 
     fetchPendingCount();
@@ -261,7 +270,7 @@ const Cliente = () => {
           className="mt-6 p-4 rounded-2xl glass-effect"
         >
           <p className="text-center text-sm text-muted-foreground">
-            📍 Terça a Sexta: 08:00 - 15:00 | Sábado: 07:30 - 18:00
+            📍 Terça a Sexta: 08:00 - 15:00 (Intervalo 12:00 - 13:00) | Sábado: 08:00 - 14:00
           </p>
         </motion.div>
       </main>

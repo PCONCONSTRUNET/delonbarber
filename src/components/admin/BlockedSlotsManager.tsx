@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Lock, Unlock, Clock, CalendarDays, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { normalizeAndSyncBusinessHours, sanitizeLunchBreak } from '@/lib/businessHours';
 
 interface BlockedSlot {
   id: string;
@@ -61,7 +62,10 @@ export function BlockedSlotsManager() {
     const { data } = await supabase
       .from('business_hours')
       .select('*');
-    if (data) setBusinessHours(data);
+    if (data) {
+      const normalized = await normalizeAndSyncBusinessHours(data);
+      setBusinessHours(normalized);
+    }
   };
 
   const fetchBlockedSlots = async () => {
@@ -119,21 +123,26 @@ export function BlockedSlotsManager() {
     const [openHour, openMin] = hours.open_time.split(':').map(Number);
     const [closeHour, closeMin] = hours.close_time.split(':').map(Number);
 
-    // Parse lunch break times if they exist
-    let lunchStartHour = -1, lunchStartMin = -1, lunchEndHour = -1, lunchEndMin = -1;
-    if (hours.lunch_start && hours.lunch_end) {
-      [lunchStartHour, lunchStartMin] = hours.lunch_start.split(':').map(Number);
-      [lunchEndHour, lunchEndMin] = hours.lunch_end.split(':').map(Number);
+    // Parse lunch break times if they exist and are valid
+    const cleanLunch = sanitizeLunchBreak(hours.lunch_start, hours.lunch_end);
+    let lunchStartMinutes = -1;
+    let lunchEndMinutes = -1;
+    if (cleanLunch.lunch_start && cleanLunch.lunch_end) {
+      const [lunchStartHour, lunchStartMin] = cleanLunch.lunch_start.split(':').map(Number);
+      const [lunchEndHour, lunchEndMin] = cleanLunch.lunch_end.split(':').map(Number);
+      lunchStartMinutes = lunchStartHour * 60 + lunchStartMin;
+      lunchEndMinutes = lunchEndHour * 60 + lunchEndMin;
     }
+    const hasLunchBreak = lunchStartMinutes >= 0 && lunchEndMinutes > lunchStartMinutes;
     
     let currentHour = openHour;
     let currentMin = openMin;
 
     while (currentHour < closeHour || (currentHour === closeHour && currentMin < closeMin)) {
+      const currentMinutes = currentHour * 60 + currentMin;
       // Check if current time is during lunch break
-      const isLunchBreak = lunchStartHour >= 0 && (
-        (currentHour > lunchStartHour || (currentHour === lunchStartHour && currentMin >= lunchStartMin)) &&
-        (currentHour < lunchEndHour || (currentHour === lunchEndHour && currentMin < lunchEndMin))
+      const isLunchBreak = hasLunchBreak && (
+        currentMinutes >= lunchStartMinutes && currentMinutes < lunchEndMinutes
       );
 
       if (!isLunchBreak) {

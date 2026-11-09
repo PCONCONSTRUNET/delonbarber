@@ -39,6 +39,7 @@ import { Loader2, Plus, Pencil, Trash2, Bell, Crown, Download, Search, Calendar,
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { normalizeAndSyncBusinessHours } from '@/lib/businessHours';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -74,6 +75,13 @@ export function AdminDashboard() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setAdminUserId(data.user?.id ?? null));
+    supabase
+      .from('business_hours')
+      .select('*')
+      .order('day_of_week', { ascending: true })
+      .then(({ data }) => {
+        if (data) normalizeAndSyncBusinessHours(data);
+      });
   }, []);
 
   // Enable real-time notifications for new appointments
@@ -159,15 +167,19 @@ export function AdminAgenda() {
   const [externalCutOpen, setExternalCutOpen] = useState(false);
 
 
+  async function fetchHours() {
+    const { data } = await supabase
+      .from('business_hours')
+      .select('*')
+      .order('day_of_week', { ascending: true });
+    if (data) {
+      const normalized = await normalizeAndSyncBusinessHours(data);
+      setBusinessHours(normalized);
+    }
+  }
+
   // Fetch business hours
   useEffect(() => {
-    async function fetchHours() {
-      const { data } = await supabase
-        .from('business_hours')
-        .select('*')
-        .order('day_of_week', { ascending: true });
-      if (data) setBusinessHours(data);
-    }
     fetchHours();
   }, []);
 
@@ -271,7 +283,7 @@ export function AdminAgenda() {
 
         <TabsContent value="config" className="mt-0">
           <ScrollArea className="h-[calc(100vh-180px)] md:h-[calc(100vh-140px)]">
-            <BusinessHoursManager />
+            <BusinessHoursManager onSaved={fetchHours} />
           </ScrollArea>
         </TabsContent>
       </Tabs>

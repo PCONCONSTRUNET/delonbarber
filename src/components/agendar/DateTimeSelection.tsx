@@ -9,6 +9,7 @@ import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { useIsExclusiveClient } from '@/hooks/useExclusiveClients';
+import { sanitizeLunchBreak } from '@/lib/businessHours';
 
 
 interface DateTimeSelectionProps {
@@ -205,25 +206,31 @@ export function DateTimeSelection({
     checkBlockedWeeks();
   }, [selectedServices, packages]);
 
+  const selectedDayHours = useMemo(() => {
+    if (!selectedDate) return null;
+    const dayOfWeek = selectedDate.getDay();
+    return businessHours.find(bh => bh.day_of_week === dayOfWeek) || null;
+  }, [selectedDate, businessHours]);
+
   // Generate available time slots based on business hours (excluding lunch break)
   const availableSlots = useMemo(() => {
-    if (!selectedDate) return [];
-
-    const dayOfWeek = selectedDate.getDay();
-    const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
-
-    if (!dayHours || !dayHours.is_open) return [];
+    if (!selectedDate || !selectedDayHours || !selectedDayHours.is_open) return [];
 
     const slots: string[] = [];
-    const [openHour, openMin] = dayHours.open_time.split(':').map(Number);
-    const [closeHour, closeMin] = dayHours.close_time.split(':').map(Number);
+    const [openHour, openMin] = selectedDayHours.open_time.split(':').map(Number);
+    const [closeHour, closeMin] = selectedDayHours.close_time.split(':').map(Number);
 
-    // Parse lunch break times if they exist
-    let lunchStartHour = -1, lunchStartMin = -1, lunchEndHour = -1, lunchEndMin = -1;
-    if (dayHours.lunch_start && dayHours.lunch_end) {
-      [lunchStartHour, lunchStartMin] = dayHours.lunch_start.split(':').map(Number);
-      [lunchEndHour, lunchEndMin] = dayHours.lunch_end.split(':').map(Number);
+    // Parse lunch break times if they exist and are valid
+    const cleanLunch = sanitizeLunchBreak(selectedDayHours.lunch_start, selectedDayHours.lunch_end);
+    let lunchStartMinutes = -1;
+    let lunchEndMinutes = -1;
+    if (cleanLunch.lunch_start && cleanLunch.lunch_end) {
+      const [lunchStartHour, lunchStartMin] = cleanLunch.lunch_start.split(':').map(Number);
+      const [lunchEndHour, lunchEndMin] = cleanLunch.lunch_end.split(':').map(Number);
+      lunchStartMinutes = lunchStartHour * 60 + lunchStartMin;
+      lunchEndMinutes = lunchEndHour * 60 + lunchEndMin;
     }
+    const hasLunchBreak = lunchStartMinutes >= 0 && lunchEndMinutes > lunchStartMinutes;
 
     let currentHour = openHour;
     let currentMin = openMin;
@@ -231,14 +238,12 @@ export function DateTimeSelection({
     // Calculate total duration needed for selected services
     const totalServiceDuration = selectedServices.reduce((sum, s) => sum + s.duration_minutes, 0) || 30;
     const closeTimeMinutes = closeHour * 60 + closeMin;
-    const lunchStartMinutes = lunchStartHour >= 0 ? lunchStartHour * 60 + lunchStartMin : -1;
-    const lunchEndMinutes = lunchEndHour >= 0 ? lunchEndHour * 60 + lunchEndMin : -1;
 
     while (currentHour < closeHour || (currentHour === closeHour && currentMin < closeMin)) {
       const currentMinutes = currentHour * 60 + currentMin;
       
       // Check if current time is during lunch break
-      const isLunchBreak = lunchStartMinutes >= 0 && (
+      const isLunchBreak = hasLunchBreak && (
         currentMinutes >= lunchStartMinutes && currentMinutes < lunchEndMinutes
       );
 
@@ -247,8 +252,8 @@ export function DateTimeSelection({
         // Check appointment finishes before closing
         const fitsBeforeClose = endMinutes <= closeTimeMinutes;
         // Check appointment doesn't overlap into lunch break
-        const overlapsLunch = lunchStartMinutes >= 0 && 
-          currentMinutes < lunchStartMinutes && endMinutes > lunchStartMinutes;
+        const overlapsLunch = hasLunchBreak && 
+          currentMinutes < lunchEndMinutes && endMinutes > lunchStartMinutes;
         
         if (fitsBeforeClose && !overlapsLunch) {
           const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}:00`;
@@ -264,7 +269,7 @@ export function DateTimeSelection({
     }
 
     return slots;
-  }, [selectedDate, businessHours, selectedServices]);
+  }, [selectedDate, selectedDayHours, selectedServices]);
 
   // Check if a date is blocked due to VIP weekly limit
   const isDateBlockedByVip = (date: Date): boolean => {
@@ -395,12 +400,24 @@ export function DateTimeSelection({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-primary/10 rounded-2xl p-4 text-center"
+          className="bg-primary/10 rounded-2xl p-4 text-center space-y-1"
         >
           <p className="text-sm text-muted-foreground">Data selecionada</p>
           <p className="text-lg font-semibold text-foreground capitalize">
             {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </p>
+          {selectedDayHours?.is_open && (
+            <p className="text-xs text-muted-foreground">
+              Atendimento: {formatTime(selectedDayHours.open_time)} às {formatTime(selectedDayHours.close_time)}
+              {(() => {
+                const cleanLunch = sanitizeLunchBreak(selectedDayHours.lunch_start, selectedDayHours.lunch_end);
+                if (cleanLunch.lunch_start && cleanLunch.lunch_end) {
+                  return ` · Intervalo: ${formatTime(cleanLunch.lunch_start)} às ${formatTime(cleanLunch.lunch_end)}`;
+                }
+                return '';
+              })()}
+            </p>
+          )}
         </motion.div>
       )}
 

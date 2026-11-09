@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Save, Loader2, Coffee, ChevronDown } from 'lucide-react';
+import { Clock, Save, Loader2, Coffee, ChevronDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { normalizeAndSyncBusinessHours, sanitizeLunchBreak } from '@/lib/businessHours';
 
 interface BusinessHour {
   id: string;
@@ -17,6 +18,10 @@ interface BusinessHour {
   is_open: boolean;
   lunch_start: string | null;
   lunch_end: string | null;
+}
+
+interface BusinessHoursManagerProps {
+  onSaved?: () => void;
 }
 
 const DAY_NAMES = [
@@ -31,7 +36,7 @@ const DAY_NAMES = [
 
 const DAY_ABBREVIATIONS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
-export function BusinessHoursManager() {
+export function BusinessHoursManager({ onSaved }: BusinessHoursManagerProps = {}) {
   const [hours, setHours] = useState<BusinessHour[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,7 +58,8 @@ export function BusinessHoursManager() {
       console.error('Error fetching business hours:', error);
       toast.error('Erro ao carregar horários');
     } else {
-      setHours(data || []);
+      const normalized = await normalizeAndSyncBusinessHours(data || []);
+      setHours(normalized);
     }
     setLoading(false);
   }
@@ -82,14 +88,15 @@ export function BusinessHoursManager() {
 
     try {
       for (const hour of hours) {
+        const cleanLunch = sanitizeLunchBreak(hour.lunch_start, hour.lunch_end);
         const { error } = await supabase
           .from('business_hours')
           .update({
             open_time: formatTimeForDB(hour.open_time),
             close_time: formatTimeForDB(hour.close_time),
             is_open: hour.is_open,
-            lunch_start: hour.lunch_start ? formatTimeForDB(hour.lunch_start) : null,
-            lunch_end: hour.lunch_end ? formatTimeForDB(hour.lunch_end) : null,
+            lunch_start: cleanLunch.lunch_start,
+            lunch_end: cleanLunch.lunch_end,
           })
           .eq('id', hour.id);
 
@@ -102,6 +109,7 @@ export function BusinessHoursManager() {
         description: 'Alterações aplicadas na agenda.',
       });
       setHasChanges(false);
+      onSaved?.();
     } catch (error) {
       console.error('Error saving business hours:', error);
       toast.error('Erro ao salvar horários');
@@ -201,11 +209,17 @@ export function BusinessHoursManager() {
                       {hour.is_open ? (
                         <p className="text-xs text-muted-foreground">
                           {formatTimeForInput(hour.open_time)} - {formatTimeForInput(hour.close_time)}
-                          {hour.lunch_start && hour.lunch_end && (
-                            <span className="text-primary/70 ml-1">
-                              · {formatTimeForInput(hour.lunch_start)}-{formatTimeForInput(hour.lunch_end)}
-                            </span>
-                          )}
+                          {(() => {
+                            const clean = sanitizeLunchBreak(hour.lunch_start, hour.lunch_end);
+                            if (clean.lunch_start && clean.lunch_end) {
+                              return (
+                                <span className="text-primary/70 ml-1">
+                                  · Intervalo {formatTimeForInput(clean.lunch_start)}-{formatTimeForInput(clean.lunch_end)}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground/60">Fechado</p>
@@ -276,10 +290,25 @@ export function BusinessHoursManager() {
 
                         {/* Lunch break */}
                         <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                            <Coffee className="h-3 w-3" />
-                            Intervalo de Almoço
-                          </Label>
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <Coffee className="h-3 w-3" />
+                              Intervalo de Almoço
+                            </Label>
+                            {(hour.lunch_start || hour.lunch_end) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateHour(hour.day_of_week, 'lunch_start', null);
+                                  updateHour(hour.day_of_week, 'lunch_end', null);
+                                }}
+                                className="text-[11px] text-muted-foreground hover:text-destructive flex items-center gap-1"
+                              >
+                                <X className="h-3 w-3" />
+                                Sem intervalo
+                              </button>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <Input
                               type="time"
