@@ -50,9 +50,13 @@ export interface ClientNote {
   created_at: string;
 }
 
+// Cache da sessão em nível de módulo: ao trocar de página no admin, o hook
+// é remontado, mas já sabe quem é o usuário — sem tela de loading/piscada.
+let cachedAuthUserId: string | null | undefined = undefined; // undefined = ainda não verificado
+
 export function useIsAdmin() {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [authReady, setAuthReady] = useState(false);
+  const [userId, setUserId] = useState<string | null>(cachedAuthUserId ?? null);
+  const [authReady, setAuthReady] = useState(cachedAuthUserId !== undefined);
 
   useEffect(() => {
     let mounted = true;
@@ -60,13 +64,15 @@ export function useIsAdmin() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      cachedAuthUserId = session?.user?.id ?? null;
       if (!mounted) return;
-      setUserId(session?.user?.id ?? null);
+      setUserId(cachedAuthUserId);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      cachedAuthUserId = session?.user?.id ?? null;
       if (!mounted) return;
-      setUserId(session?.user?.id ?? null);
+      setUserId(cachedAuthUserId);
       setAuthReady(true);
     });
 

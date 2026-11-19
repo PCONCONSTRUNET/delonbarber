@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { MotionGlobalConfig } from "framer-motion";
 import { lazy, Suspense } from "react";
 import { AdminNotificationProvider } from "@/contexts/AdminNotificationContext";
 import { ClientNotificationProvider } from "@/contexts/ClientNotificationContext";
@@ -41,6 +42,14 @@ const RouteFallback = () => (
   </div>
 );
 
+// No painel admin as páginas abrem direto, sem animações de entrada (fade/piscada).
+// Executado durante o render (antes das rotas) para valer já na primeira pintura.
+const AdminMotionSwitch = () => {
+  const { pathname } = useLocation();
+  MotionGlobalConfig.skipAnimations = pathname.startsWith('/admin');
+  return null;
+};
+
 const App = () => {
 
   return (
@@ -52,6 +61,7 @@ const App = () => {
             <Sonner />
             <BrowserRouter>
               <DynamicManifest />
+              <AdminMotionSwitch />
               <Routes>
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/" element={<Index />} />

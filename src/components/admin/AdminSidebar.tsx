@@ -36,9 +36,16 @@ const clientLinks = [
   { icon: Crown, label: 'Pacotes VIP', path: '/pacotes' },
 ];
 
+// Mantém o estado (recolhido/expandido) ao trocar de página
+let sidebarCollapsedCache = false;
+
 export function AdminSidebar() {
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsedState] = useState(sidebarCollapsedCache);
+  const setCollapsed = (value: boolean) => {
+    sidebarCollapsedCache = value;
+    setCollapsedState(value);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

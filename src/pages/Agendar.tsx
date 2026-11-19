@@ -23,6 +23,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { useIsAdmin } from '@/hooks/useAdmin';
+import { toast } from '@/hooks/use-toast';
 import scissorsImg from '@/assets/scissors.png';
 
 const steps = [
