@@ -75,13 +75,6 @@ export function AdminDashboard() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setAdminUserId(data.user?.id ?? null));
-    supabase
-      .from('business_hours')
-      .select('*')
-      .order('day_of_week', { ascending: true })
-      .then(({ data }) => {
-        if (data) normalizeAndSyncBusinessHours(data);
-      });
   }, []);
 
   // Enable real-time notifications for new appointments

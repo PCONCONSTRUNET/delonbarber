@@ -83,13 +83,44 @@ export function BusinessHoursManager({ onSaved }: BusinessHoursManagerProps = {}
     return time;
   };
 
+  function validateHours(): string | null {
+    for (const hour of hours) {
+      if (!hour.is_open) continue;
+      const name = DAY_NAMES[hour.day_of_week];
+      const open = (hour.open_time || '').slice(0, 5);
+      const close = (hour.close_time || '').slice(0, 5);
+      if (!open || !close) return `${name}: preencha o horário de abertura e fechamento.`;
+      if (open >= close) return `${name}: o horário de abertura deve ser antes do fechamento.`;
+
+      const ls = (hour.lunch_start || '').slice(0, 5);
+      const le = (hour.lunch_end || '').slice(0, 5);
+      if ((ls && !le) || (!ls && le)) return `${name}: preencha início e fim do intervalo (ou clique em "Sem intervalo").`;
+      if (ls && le) {
+        if (ls >= le) return `${name}: o início do intervalo deve ser antes do fim.`;
+        if (ls < open || le > close) return `${name}: o intervalo precisa estar dentro do horário de trabalho.`;
+      }
+    }
+    return null;
+  }
+
   async function saveChanges() {
+    const validationError = validateHours();
+    if (validationError) {
+      toast.error('Verifique os horários', { description: validationError });
+      return;
+    }
+
     setSaving(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error('Sessão expirada. Faça login novamente como administrador.');
+      }
+
       for (const hour of hours) {
         const cleanLunch = sanitizeLunchBreak(hour.lunch_start, hour.lunch_end);
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('business_hours')
           .update({
             open_time: formatTimeForDB(hour.open_time),
@@ -98,21 +129,31 @@ export function BusinessHoursManager({ onSaved }: BusinessHoursManagerProps = {}
             lunch_start: cleanLunch.lunch_start,
             lunch_end: cleanLunch.lunch_end,
           })
-          .eq('id', hour.id);
+          .eq('id', hour.id)
+          .select('id');
 
         if (error) {
           throw error;
         }
+        // Supabase não retorna erro quando a permissão (RLS) bloqueia o UPDATE:
+        // apenas nenhuma linha é alterada. Detectamos isso aqui.
+        if (!data || data.length === 0) {
+          throw new Error('Sem permissão para salvar. Confirme se está logado com a conta de administrador.');
+        }
       }
 
       toast.success('Horários salvos!', {
-        description: 'Alterações aplicadas na agenda.',
+        description: 'Alterações aplicadas na agenda dos clientes.',
       });
       setHasChanges(false);
+      // Recarrega do banco para mostrar exatamente o que ficou salvo
+      await fetchBusinessHours();
       onSaved?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving business hours:', error);
-      toast.error('Erro ao salvar horários');
+      toast.error('Erro ao salvar horários', {
+        description: error?.message || 'Tente novamente.',
+      });
     }
 
     setSaving(false);

@@ -10,7 +10,7 @@ import { useAdminNotifications } from '@/hooks/useNotifications';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { useAuthReady } from '@/hooks/useAuthReady';
 import { Badge } from '@/components/ui/badge';
-import { normalizeAndSyncBusinessHours } from '@/lib/businessHours';
+import { useBusinessHours } from '@/hooks/useAppointments';
 
 
 const Cliente = () => {
@@ -19,6 +19,39 @@ const Cliente = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const { isAdmin } = useIsAdmin();
   const { packages } = useMyPackages();
+  const { businessHours } = useBusinessHours();
+
+  // Resumo dinâmico dos horários (agrupa dias consecutivos com o mesmo horário)
+  const hoursSummary = (() => {
+    const names = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const fmt = (t: string | null) => (t ? t.slice(0, 5) : '');
+    const label = (h: typeof businessHours[number]) => {
+      const base = `${fmt(h.open_time)} - ${fmt(h.close_time)}`;
+      return h.lunch_start && h.lunch_end
+        ? `${base} (Intervalo ${fmt(h.lunch_start)} - ${fmt(h.lunch_end)})`
+        : base;
+    };
+    const open = [...businessHours]
+      .filter((h) => h.is_open)
+      .sort((a, b) => a.day_of_week - b.day_of_week);
+    const groups: { start: number; end: number; text: string }[] = [];
+    for (const h of open) {
+      const text = label(h);
+      const last = groups[groups.length - 1];
+      if (last && last.text === text && last.end === h.day_of_week - 1) {
+        last.end = h.day_of_week;
+      } else {
+        groups.push({ start: h.day_of_week, end: h.day_of_week, text });
+      }
+    }
+    return groups
+      .map((g) =>
+        g.start === g.end
+          ? `${names[g.start]}: ${g.text}`
+          : `${names[g.start]} a ${names[g.end]}: ${g.text}`
+      )
+      .join(' | ');
+  })();
   
   // Check if user has any active VIP package
   const hasActiveVIP = packages.some(p => p.status === 'active');
@@ -42,14 +75,6 @@ const Cliente = () => {
         .eq('status', 'pending');
       
       setPendingCount(count || 0);
-
-      const { data: hours } = await supabase
-        .from('business_hours')
-        .select('*')
-        .order('day_of_week');
-      if (hours) {
-        await normalizeAndSyncBusinessHours(hours);
-      }
     };
 
     fetchPendingCount();
@@ -270,7 +295,7 @@ const Cliente = () => {
           className="mt-6 p-4 rounded-2xl glass-effect"
         >
           <p className="text-center text-sm text-muted-foreground">
-            📍 Terça a Sexta: 08:00 - 15:00 (Intervalo 12:00 - 13:00) | Sábado: 08:00 - 14:00
+            📍 {hoursSummary || 'Carregando horários...'}
           </p>
         </motion.div>
       </main>

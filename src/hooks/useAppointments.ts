@@ -86,6 +86,18 @@ export function useBusinessHours() {
 
   useEffect(() => {
     fetchBusinessHours();
+
+    // Sempre que o cliente voltar para a aba/app, recarrega os horários
+    // para refletir imediatamente qualquer alteração feita pelo admin.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchBusinessHours();
+    };
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   return { businessHours, loading, refreshBusinessHours: fetchBusinessHours };
