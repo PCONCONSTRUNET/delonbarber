@@ -1,16 +1,24 @@
 import React, { createContext, useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useLocation } from 'react-router-dom';
+import { clientSupabase, getAuthScope } from '@/integrations/supabase/client';
 import { playNotificationSound, playSuccessSound, showBrowserNotification, requestNotificationPermission } from '@/lib/notifications';
 import { toast } from 'sonner';
 
 export const ClientNotificationContext = createContext(null);
 
 export function ClientNotificationProvider({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  const isClientRoute = getAuthScope(pathname) === 'client';
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isClientRoute) {
+      setUserId(null);
+      return;
+    }
+
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    clientSupabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUserId(session.user.id);
         requestNotificationPermission(); // Request browser permission when logged in
@@ -18,20 +26,20 @@ export function ClientNotificationProvider({ children }: { children: React.React
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = clientSupabase.auth.onAuthStateChange((_event, session) => {
       setUserId(session?.user?.id || null);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isClientRoute]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!isClientRoute || !userId) return;
 
     // Subscribe to realtime changes for this client's appointments
-    const channel = supabase
+    const channel = clientSupabase
       .channel(`global-client-appointments-${userId}`)
       .on(
         'postgres_changes',
@@ -94,9 +102,9 @@ export function ClientNotificationProvider({ children }: { children: React.React
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      clientSupabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [isClientRoute, userId]);
 
   return (
     <ClientNotificationContext.Provider value={null}>

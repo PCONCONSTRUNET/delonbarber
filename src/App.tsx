@@ -59,11 +59,11 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AdminNotificationProvider>
-          <ClientNotificationProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AdminNotificationProvider>
+            <ClientNotificationProvider>
               <DynamicManifest />
               <AdminMotionSwitch />
               <Routes>
@@ -100,9 +100,9 @@ const App = () => {
                 <Route path="/barbeiro/agendamento-manual" element={<BarberManualBooking />} />
                 <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
               </Routes>
-            </BrowserRouter>
-          </ClientNotificationProvider>
-        </AdminNotificationProvider>
+            </ClientNotificationProvider>
+          </AdminNotificationProvider>
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );

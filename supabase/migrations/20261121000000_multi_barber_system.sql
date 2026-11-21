@@ -995,6 +995,56 @@ BEGIN
   END IF;
 END $$;
 
+-- 11b. Auto-vinculação no login caso barbers.email já esteja cadastrado com user_id NULL
+CREATE OR REPLACE FUNCTION public.claim_my_barber_account()
+RETURNS SETOF public.barbers
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+  v_email TEXT;
+  v_target_id UUID;
+BEGIN
+  IF v_uid IS NULL THEN
+    RETURN;
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.barbers WHERE user_id = v_uid) THEN
+    RETURN QUERY
+    SELECT * FROM public.barbers WHERE user_id = v_uid LIMIT 1;
+    RETURN;
+  END IF;
+
+  SELECT lower(email) INTO v_email
+  FROM auth.users
+  WHERE id = v_uid
+    AND email_confirmed_at IS NOT NULL;
+
+  IF v_email IS NOT NULL AND v_email <> '' THEN
+    SELECT id INTO v_target_id
+    FROM public.barbers
+    WHERE user_id IS NULL
+      AND is_active = true
+      AND lower(trim(email)) = v_email
+    ORDER BY created_at ASC
+    LIMIT 1;
+
+    IF v_target_id IS NOT NULL THEN
+      UPDATE public.barbers
+      SET user_id = v_uid,
+          email = v_email,
+          updated_at = now()
+      WHERE id = v_target_id;
+    END IF;
+  END IF;
+
+  RETURN QUERY
+  SELECT * FROM public.barbers WHERE user_id = v_uid LIMIT 1;
+END;
+$$;
+
 -- Permissões explícitas de execução nas funções RPC
 GRANT EXECUTE ON FUNCTION public.get_default_barber_id() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_barber_booked_slots(DATE, UUID) TO anon, authenticated;
@@ -1003,3 +1053,4 @@ GRANT EXECUTE ON FUNCTION public.is_barber(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_barber_profile() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.toggle_my_barber_status() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_assign_barber_account(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_my_barber_account() TO authenticated;

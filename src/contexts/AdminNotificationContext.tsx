@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useLocation } from 'react-router-dom';
+import { adminSupabase, getAuthScope } from '@/integrations/supabase/client';
 import { playNotificationSound, showBrowserNotification, requestNotificationPermission } from '@/lib/notifications';
 import { toast } from 'sonner';
 
@@ -19,19 +20,26 @@ export function useGlobalAdminNotifications() {
 }
 
 export function AdminNotificationProvider({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  const isAdminRoute = getAuthScope(pathname) === 'admin';
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // Check if user is admin
+  // Check if user is admin (somente dentro de /admin*)
   useEffect(() => {
+    if (!isAdminRoute) {
+      setIsAdmin(false);
+      return;
+    }
+
     async function checkAdmin(userId?: string | null) {
       if (!userId) {
         setIsAdmin(false);
         return;
       }
 
-      const { data: roles } = await supabase
+      const { data: roles } = await adminSupabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
@@ -46,26 +54,26 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
       }
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    adminSupabase.auth.getSession().then(({ data: { session } }) => {
       void checkAdmin(session?.user?.id ?? null);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = adminSupabase.auth.onAuthStateChange((_event, session) => {
       setTimeout(() => {
         void checkAdmin(session?.user?.id ?? null);
       }, 0);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isAdminRoute]);
 
   // Subscribe to new appointments for admins
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdminRoute || !isAdmin) return;
 
     // Fetch initial pending count
     async function fetchPendingCount() {
-      const { count } = await supabase
+      const { count } = await adminSupabase
         .from('appointments')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
@@ -79,7 +87,7 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
     fetchPendingCount();
 
     // Subscribe to realtime changes
-    const channel = supabase
+    const channel = adminSupabase
       .channel('global-admin-notifications')
       .on(
         'postgres_changes',
@@ -109,7 +117,7 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
           if (newAppointment.guest_name) {
             clientName = newAppointment.guest_name;
           } else if (newAppointment.user_id) {
-            const { data: profile } = await supabase
+            const { data: profile } = await adminSupabase
               .from('profiles')
               .select('name')
               .eq('user_id', newAppointment.user_id)
@@ -172,9 +180,9 @@ export function AdminNotificationProvider({ children }: { children: React.ReactN
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      adminSupabase.removeChannel(channel);
     };
-  }, [isAdmin, initialLoadComplete]);
+  }, [isAdminRoute, isAdmin, initialLoadComplete]);
 
   return (
     <AdminNotificationContext.Provider value={{ pendingCount, isAdmin }}>

@@ -927,6 +927,10 @@ export type Database = {
         Returns: string
       }
       auto_complete_appointments: { Args: never; Returns: number }
+      claim_my_barber_account: {
+        Args: never
+        Returns: Database["public"]["Tables"]["barbers"]["Row"][]
+      }
       get_barber_booked_slots: {
         Args: { p_barber_id: string | null; p_date: string }
         Returns: { slot_time: string }[]

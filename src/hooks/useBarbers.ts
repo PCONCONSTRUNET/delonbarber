@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, getAuthScope, getScopedSupabase, AuthScope } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export interface Barber {
@@ -29,7 +29,11 @@ export function getBarberBasePath(pathname?: string): '/barber' | '/barbeiro' {
   return path === '/barbeiro' || path.startsWith('/barbeiro/') ? '/barbeiro' : '/barber';
 }
 
-let cachedBarberAuthUid: string | null | undefined = undefined;
+const cachedBarberAuthUidByScope: Record<AuthScope, string | null | undefined> = {
+  admin: undefined,
+  barber: undefined,
+  client: undefined,
+};
 
 /**
  * Cria cliente Supabase efêmero e isolado para cadastrar conta Auth do barbeiro
@@ -82,25 +86,31 @@ export function useBarbers(options?: { includeInactive?: boolean }) {
 }
 
 export function useMyBarber() {
-  const [userId, setUserId] = useState<string | null>(cachedBarberAuthUid ?? null);
-  const [authReady, setAuthReady] = useState(cachedBarberAuthUid !== undefined);
+  const scope = getAuthScope();
+  const scopedClient = getScopedSupabase(scope);
+  const initialUid = cachedBarberAuthUidByScope[scope];
+  const [userId, setUserId] = useState<string | null>(initialUid ?? null);
+  const [authReady, setAuthReady] = useState(initialUid !== undefined);
   const queryClient = useQueryClient();
 
   useEffect(() => {
     let mounted = true;
+    const cached = cachedBarberAuthUidByScope[scope];
+    setUserId(cached ?? null);
+    setAuthReady(cached !== undefined);
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      cachedBarberAuthUid = session?.user?.id ?? null;
+    } = scopedClient.auth.onAuthStateChange((_event, session) => {
+      cachedBarberAuthUidByScope[scope] = session?.user?.id ?? null;
       if (!mounted) return;
-      setUserId(cachedBarberAuthUid);
+      setUserId(cachedBarberAuthUidByScope[scope] ?? null);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      cachedBarberAuthUid = session?.user?.id ?? null;
+    scopedClient.auth.getSession().then(({ data: { session } }) => {
+      cachedBarberAuthUidByScope[scope] = session?.user?.id ?? null;
       if (!mounted) return;
-      setUserId(cachedBarberAuthUid);
+      setUserId(cachedBarberAuthUidByScope[scope] ?? null);
       setAuthReady(true);
     });
 
@@ -108,13 +118,13 @@ export function useMyBarber() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [scope, scopedClient]);
 
   const { data: barber = null, isLoading, isFetched, refetch } = useQuery({
-    queryKey: ['barber', 'me', userId],
+    queryKey: ['barber', 'me', scope, userId],
     queryFn: async (): Promise<Barber | null> => {
       if (!userId) return null;
-      const { data, error } = await supabase
+      const { data, error } = await scopedClient
         .from('barbers')
         .select('*')
         .eq('user_id', userId)
@@ -125,11 +135,27 @@ export function useMyBarber() {
         console.error('Error checking barber profile:', error);
         return null;
       }
-      if (!data) return null;
-      return {
-        ...data,
-        commission_percent: Number((data as any).commission_percent ?? 50),
-      };
+
+      if (data) {
+        return {
+          ...data,
+          commission_percent: Number((data as any).commission_percent ?? 50),
+        };
+      }
+
+      // Fallback seguro: no painel do barbeiro, tenta auto-vincular caso o Admin tenha salvo o e-mail em barbers sem user_id
+      if (scope === 'barber') {
+        const { data: claimedRows, error: claimErr } = await scopedClient.rpc('claim_my_barber_account');
+        const claimed = !claimErr && Array.isArray(claimedRows) ? claimedRows[0] : null;
+        if (claimed && claimed.is_active) {
+          return {
+            ...claimed,
+            commission_percent: Number((claimed as any).commission_percent ?? 50),
+          };
+        }
+      }
+
+      return null;
     },
     enabled: authReady && !!userId,
     staleTime: 5 * 60_000,
@@ -139,12 +165,12 @@ export function useMyBarber() {
   const loading = !authReady || (!!userId && isLoading && !isFetched);
 
   async function toggleMyStatus(): Promise<boolean | null> {
-    const { data, error } = await supabase.rpc('toggle_my_barber_status');
+    const { data, error } = await scopedClient.rpc('toggle_my_barber_status');
     if (error) {
       toast.error('Não foi possível alterar o status da sua cadeira');
       return null;
     }
-    queryClient.invalidateQueries({ queryKey: ['barber', 'me', userId] });
+    queryClient.invalidateQueries({ queryKey: ['barber', 'me', scope, userId] });
     queryClient.invalidateQueries({ queryKey: BARBERS_KEY });
     toast.success(data ? 'Sua agenda está aberta!' : 'Sua agenda está fechada!');
     return Boolean(data);

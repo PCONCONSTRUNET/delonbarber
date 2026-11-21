@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, getAuthScope, getScopedSupabase, AuthScope } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface AdminAppointment {
@@ -59,29 +59,38 @@ export interface ClientNote {
   created_at: string;
 }
 
-// Cache da sessão em nível de módulo: ao trocar de página no admin, o hook
-// é remontado, mas já sabe quem é o usuário — sem tela de loading/piscada.
-let cachedAuthUserId: string | null | undefined = undefined; // undefined = ainda não verificado
+// Cache da sessão por escopo em nível de módulo: mantém cada painel isolado e evita piscada ao trocar de aba.
+const cachedAuthUserByScope: Record<AuthScope, string | null | undefined> = {
+  admin: undefined,
+  barber: undefined,
+  client: undefined,
+};
 
 export function useIsAdmin() {
-  const [userId, setUserId] = useState<string | null>(cachedAuthUserId ?? null);
-  const [authReady, setAuthReady] = useState(cachedAuthUserId !== undefined);
+  const scope = getAuthScope();
+  const scopedClient = getScopedSupabase(scope);
+  const initialUid = cachedAuthUserByScope[scope];
+  const [userId, setUserId] = useState<string | null>(initialUid ?? null);
+  const [authReady, setAuthReady] = useState(initialUid !== undefined);
 
   useEffect(() => {
     let mounted = true;
+    const cached = cachedAuthUserByScope[scope];
+    setUserId(cached ?? null);
+    setAuthReady(cached !== undefined);
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      cachedAuthUserId = session?.user?.id ?? null;
+    } = scopedClient.auth.onAuthStateChange((_event, session) => {
+      cachedAuthUserByScope[scope] = session?.user?.id ?? null;
       if (!mounted) return;
-      setUserId(cachedAuthUserId);
+      setUserId(cachedAuthUserByScope[scope] ?? null);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      cachedAuthUserId = session?.user?.id ?? null;
+    scopedClient.auth.getSession().then(({ data: { session } }) => {
+      cachedAuthUserByScope[scope] = session?.user?.id ?? null;
       if (!mounted) return;
-      setUserId(cachedAuthUserId);
+      setUserId(cachedAuthUserByScope[scope] ?? null);
       setAuthReady(true);
     });
 
@@ -89,15 +98,15 @@ export function useIsAdmin() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [scope, scopedClient]);
 
   // Cacheado via React Query: ao trocar de aba no admin não dispara nova checagem,
   // eliminando o loader de tela cheia entre navegações.
   const { data: isAdmin = false, isLoading, isFetched } = useQuery({
-    queryKey: ['admin', 'is-admin', userId],
+    queryKey: ['admin', 'is-admin', scope, userId],
     queryFn: async () => {
       if (!userId) return false;
-      const { data, error } = await supabase.rpc('has_role', {
+      const { data, error } = await scopedClient.rpc('has_role', {
         _user_id: userId,
         _role: 'admin',
       });
@@ -188,9 +197,11 @@ async function fetchAdminAppointmentsQuery(barberId?: string | null): Promise<Ad
 export function useAdminAppointments(barberId?: string | null) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const scope = getAuthScope();
+  const scopedClient = getScopedSupabase(scope);
 
   const { data: appointments = [], isLoading: loading, refetch } = useQuery({
-    queryKey: [...ADMIN_APPOINTMENTS_KEY, barberId ?? 'all'],
+    queryKey: [...ADMIN_APPOINTMENTS_KEY, scope, barberId ?? 'all'],
     queryFn: () => fetchAdminAppointmentsQuery(barberId),
     staleTime: 30_000,
   });
@@ -210,8 +221,8 @@ export function useAdminAppointments(barberId?: string | null) {
       }, 600);
     };
 
-    const channel = supabase
-      .channel(`admin-appointments-${barberId ?? 'all'}`)
+    const channel = scopedClient
+      .channel(`admin-appointments-${scope}-${barberId ?? 'all'}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'appointments' },
@@ -221,9 +232,9 @@ export function useAdminAppointments(barberId?: string | null) {
 
     return () => {
       if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
-      supabase.removeChannel(channel);
+      scopedClient.removeChannel(channel);
     };
-  }, [queryClient, barberId]);
+  }, [queryClient, scopedClient, scope, barberId]);
 
   async function updateAppointmentStatus(id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show') {
     const updateData: any = { status };
@@ -554,9 +565,10 @@ async function fetchAdminClientsQuery(barberId?: string | null): Promise<Client[
 export function useAdminClients(barberId?: string | null) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const scope = getAuthScope();
 
   const { data: clients = [], isLoading: loading, refetch } = useQuery({
-    queryKey: [...ADMIN_CLIENTS_KEY, barberId ?? 'all'],
+    queryKey: [...ADMIN_CLIENTS_KEY, scope, barberId ?? 'all'],
     queryFn: () => fetchAdminClientsQuery(barberId),
     staleTime: 60_000,
   });
