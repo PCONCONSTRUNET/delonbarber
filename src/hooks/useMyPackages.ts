@@ -33,6 +33,13 @@ export interface MyPackageCycle {
 export interface MyPackage {
   id: string;
   package_id: string;
+  barber_id: string | null;
+  barber?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+  } | null;
+  price_at_purchase?: number | null;
   start_date: string;
   end_date: string;
   status: 'active' | 'expired' | 'cancelled';
@@ -76,16 +83,19 @@ export function invalidateMyPackagesCache() {
 }
 
 async function loadPackages(userId: string): Promise<MyPackage[]> {
-  // Single query: client_packages joined with packages
+  // Single query: client_packages joined with packages and barber
   const { data: clientPackages, error } = await supabase
     .from('client_packages')
     .select(`
       id,
       package_id,
+      barber_id,
+      price_at_purchase,
       start_date,
       end_date,
       status,
-      packages:package_id ( id, name, price, discount_percent, description, type )
+      packages:package_id ( id, name, price, discount_percent, description, type ),
+      barbers:barber_id ( id, name, avatar_url )
     `)
     .eq('user_id', userId)
     .eq('status', 'active')
@@ -209,6 +219,9 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
     result.push({
       id: cp.id,
       package_id: cp.package_id,
+      barber_id: cp.barber_id ?? null,
+      barber: cp.barbers ?? null,
+      price_at_purchase: cp.price_at_purchase ?? null,
       start_date: cp.start_date,
       end_date: cp.end_date,
       status: cp.status as 'active' | 'expired' | 'cancelled',
@@ -293,25 +306,33 @@ export function useMyPackages() {
     };
   }, [fetchMyPackages]);
 
-  const hasAvailableBenefit = (serviceId: string): boolean => {
+  const packageMatchesBarber = (pkg: MyPackage, barberId?: string | null): boolean => {
+    if (!barberId || !pkg.barber_id) return true;
+    return pkg.barber_id === barberId;
+  };
+
+  const hasAvailableBenefit = (serviceId: string, barberId?: string | null): boolean => {
     for (const pkg of packages) {
+      if (!packageMatchesBarber(pkg, barberId)) continue;
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
       if (benefit && benefit.remaining > 0) return true;
     }
     return false;
   };
 
-  const getRemainingForService = (serviceId: string): number => {
+  const getRemainingForService = (serviceId: string, barberId?: string | null): number => {
     let total = 0;
     for (const pkg of packages) {
+      if (!packageMatchesBarber(pkg, barberId)) continue;
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
       if (benefit) total += benefit.remaining;
     }
     return Math.max(0, total);
   };
 
-  const isBlockedByWeeklyLimit = (serviceId: string): boolean => {
+  const isBlockedByWeeklyLimit = (serviceId: string, barberId?: string | null): boolean => {
     for (const pkg of packages) {
+      if (!packageMatchesBarber(pkg, barberId)) continue;
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
       if (benefit && benefit.remaining > 0) {
         if (benefit.weekly_limit !== null && benefit.remaining_this_week !== null) {
@@ -376,8 +397,9 @@ export function useMyPackages() {
     return usageData?.length || 0;
   }, [userId, packages]);
 
-  const getWeeklyLimitInfo = (serviceId: string): { limit: number; used: number; remaining: number } | null => {
+  const getWeeklyLimitInfo = (serviceId: string, barberId?: string | null): { limit: number; used: number; remaining: number } | null => {
     for (const pkg of packages) {
+      if (!packageMatchesBarber(pkg, barberId)) continue;
       const benefit = pkg.benefits.find(b => b.service_id === serviceId);
       if (benefit && benefit.weekly_limit !== null) {
         return {

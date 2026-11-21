@@ -54,6 +54,8 @@ export type Database = {
         Row: {
           appointment_date: string
           appointment_time: string
+          barber_id: string | null
+          commission_percent_at_booking: number | null
           created_at: string | null
           guest_client_id: string | null
           guest_name: string | null
@@ -73,6 +75,8 @@ export type Database = {
         Insert: {
           appointment_date: string
           appointment_time: string
+          barber_id?: string | null
+          commission_percent_at_booking?: number | null
           created_at?: string | null
           guest_client_id?: string | null
           guest_name?: string | null
@@ -92,6 +96,8 @@ export type Database = {
         Update: {
           appointment_date?: string
           appointment_time?: string
+          barber_id?: string | null
+          commission_percent_at_booking?: number | null
           created_at?: string | null
           guest_client_id?: string | null
           guest_name?: string | null
@@ -110,6 +116,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "appointments_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointments_guest_client_id_fkey"
             columns: ["guest_client_id"]
             isOneToOne: false
@@ -125,9 +138,61 @@ export type Database = {
           },
         ]
       }
+      barbers: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          commission_percent: number
+          created_at: string
+          display_order: number
+          email: string | null
+          id: string
+          is_active: boolean
+          is_open_today: boolean
+          is_owner: boolean
+          name: string
+          phone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          commission_percent?: number
+          created_at?: string
+          display_order?: number
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          is_open_today?: boolean
+          is_owner?: boolean
+          name: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          commission_percent?: number
+          created_at?: string
+          display_order?: number
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          is_open_today?: boolean
+          is_owner?: boolean
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       blocked_slots: {
         Row: {
           appointment_id: string | null
+          barber_id: string | null
           blocked_date: string
           blocked_time: string
           created_at: string
@@ -138,6 +203,7 @@ export type Database = {
         }
         Insert: {
           appointment_id?: string | null
+          barber_id?: string | null
           blocked_date: string
           blocked_time: string
           created_at?: string
@@ -148,6 +214,7 @@ export type Database = {
         }
         Update: {
           appointment_id?: string | null
+          barber_id?: string | null
           blocked_date?: string
           blocked_time?: string
           created_at?: string
@@ -164,10 +231,18 @@ export type Database = {
             referencedRelation: "appointments"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "blocked_slots_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       business_hours: {
         Row: {
+          barber_id: string | null
           close_time: string
           day_of_week: number
           id: string
@@ -177,6 +252,7 @@ export type Database = {
           open_time: string
         }
         Insert: {
+          barber_id?: string | null
           close_time: string
           day_of_week: number
           id?: string
@@ -186,6 +262,7 @@ export type Database = {
           open_time: string
         }
         Update: {
+          barber_id?: string | null
           close_time?: string
           day_of_week?: number
           id?: string
@@ -194,7 +271,15 @@ export type Database = {
           lunch_start?: string | null
           open_time?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "business_hours_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_notes: {
         Row: {
@@ -268,36 +353,49 @@ export type Database = {
       }
       client_packages: {
         Row: {
+          barber_id: string | null
           created_at: string | null
           end_date: string
           id: string
           package_id: string
+          price_at_purchase: number | null
           start_date: string
           status: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          barber_id?: string | null
           created_at?: string | null
           end_date: string
           id?: string
           package_id: string
+          price_at_purchase?: number | null
           start_date?: string
           status?: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          barber_id?: string | null
           created_at?: string | null
           end_date?: string
           id?: string
           package_id?: string
+          price_at_purchase?: number | null
           start_date?: string
           status?: string
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "client_packages_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "client_packages_package_id_fkey"
             columns: ["package_id"]
@@ -588,6 +686,45 @@ export type Database = {
           },
         ]
       }
+      package_cycles: {
+        Row: {
+          created_at: string
+          id: string
+          package_id: string
+          sequence_order: number
+          service_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          package_id: string
+          sequence_order: number
+          service_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          package_id?: string
+          sequence_order?: number
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_cycles_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_cycles_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packages: {
         Row: {
           benefits: string[] | null
@@ -599,6 +736,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           price: number
+          type: string | null
         }
         Insert: {
           benefits?: string[] | null
@@ -610,6 +748,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           price: number
+          type?: string | null
         }
         Update: {
           benefits?: string[] | null
@@ -621,6 +760,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           price?: number
+          type?: string | null
         }
         Relationships: []
       }
@@ -782,7 +922,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_assign_barber_account: {
+        Args: { p_barber_id: string; p_email: string }
+        Returns: string
+      }
       auto_complete_appointments: { Args: never; Returns: number }
+      get_barber_booked_slots: {
+        Args: { p_barber_id: string | null; p_date: string }
+        Returns: { slot_time: string }[]
+      }
+      get_default_barber_id: { Args: never; Returns: string | null }
+      get_my_barber_id: { Args: never; Returns: string | null }
+      get_my_barber_profile: {
+        Args: never
+        Returns: Database["public"]["Tables"]["barbers"]["Row"][]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -790,6 +944,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_barber: { Args: { _user_id?: string }; Returns: boolean }
+      toggle_my_barber_status: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

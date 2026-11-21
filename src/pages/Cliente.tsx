@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Crown, User, LogOut, ArrowLeft, Shield, Sparkles, History } from 'lucide-react';
+import { Calendar, Crown, User, LogOut, ArrowLeft, Shield, Sparkles, History, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MyPackagesBenefits } from '@/components/client/MyPackagesBenefits';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsAdmin } from '@/hooks/useAdmin';
+import { useMyBarber } from '@/hooks/useBarbers';
 import { useAdminNotifications } from '@/hooks/useNotifications';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { useAuthReady } from '@/hooks/useAuthReady';
@@ -18,6 +19,7 @@ const Cliente = () => {
   const { user, isReady } = useAuthReady();
   const [pendingCount, setPendingCount] = useState(0);
   const { isAdmin } = useIsAdmin();
+  const { isBarber } = useMyBarber();
   const { packages } = useMyPackages();
   const { businessHours } = useBusinessHours();
 
@@ -142,6 +144,17 @@ const Cliente = () => {
                     </motion.span>
                   )}
                 </AnimatePresence>
+              </Button>
+            )}
+            {!isAdmin && isBarber && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/barbeiro')}
+                className="rounded-full text-primary gap-1 px-2"
+              >
+                <Scissors className="h-4 w-4" />
+                <span className="text-xs font-semibold">BARBEIRO</span>
               </Button>
             )}
             <Button

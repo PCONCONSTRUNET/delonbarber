@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Clock, Crown } from 'lucide-react';
 import { Service } from '@/hooks/useAppointments';
+import { Barber } from '@/hooks/useBarbers';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ interface ServiceSelectionProps {
   services: Service[];
   selectedServices: Service[];
   onToggleService: (service: Service) => void;
+  selectedBarber?: Barber | null;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -23,28 +25,32 @@ const categoryLabels: Record<string, string> = {
 
 const categoryOrder = ['corte', 'barba', 'sobrancelha', 'combo', 'adicional'];
 
-export function ServiceSelection({ services, selectedServices, onToggleService }: ServiceSelectionProps) {
+export function ServiceSelection({
+  services,
+  selectedServices,
+  onToggleService,
+  selectedBarber,
+}: ServiceSelectionProps) {
   const { packages, getRemainingForService, getWeeklyLimitInfo } = useMyPackages();
-  
-  // Check if user has any active package
-  const hasActivePackage = packages.some(p => p.status === 'active');
-  
-  // Get all service IDs that are included in the user's active packages benefits
+  const barberId = selectedBarber?.id;
+  const matchingPackages = packages.filter(
+    (p) => p.status === 'active' && (!barberId || !p.barber_id || p.barber_id === barberId)
+  );
+  const otherBarberVipPackage = barberId
+    ? packages.find((p) => p.status === 'active' && p.barber_id && p.barber_id !== barberId)
+    : undefined;
+
+  // Get all service IDs that are included in the user's active packages benefits FOR THIS BARBER
   const userBenefitServiceIds = new Set<string>();
-  packages.forEach(pkg => {
-    if (pkg.status === 'active') {
-      pkg.benefits.forEach(benefit => {
-        userBenefitServiceIds.add(benefit.service_id);
-      });
-    }
+  matchingPackages.forEach(pkg => {
+    pkg.benefits.forEach(benefit => {
+      userBenefitServiceIds.add(benefit.service_id);
+    });
   });
-  
-  // Filter services based on visibility rules:
-  // - Regular services: show to everyone
-  // - Subscribers_only services: show ONLY if user has an active package that includes this service as a benefit
+
+  // Filter services based on visibility rules
   const visibleServices = services.filter(service => {
     if (service.subscribers_only) {
-      // Only show exclusive services if user's package includes it as a benefit
       return userBenefitServiceIds.has(service.id);
     }
     return true;
@@ -53,11 +59,11 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
   const categories = [...new Set(visibleServices.map(s => s.category))]
     .sort((a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b));
 
-  const isSelected = (service: Service) => 
+  const isSelected = (service: Service) =>
     selectedServices.some(s => s.id === service.id);
 
-  // Check for sequential package
-  const activeSequentialPackage = packages.find(p => p.status === 'active' && p.package.type === 'sequential');
+  // Check for sequential package matching this barber
+  const activeSequentialPackage = matchingPackages.find(p => p.package.type === 'sequential');
   const activeCycle = activeSequentialPackage?.activeCycle || [];
   const activeCycleServiceIds = activeCycle.map(c => c.service_id);
 
@@ -88,6 +94,14 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
 
   return (
     <div className="space-y-6">
+      {otherBarberVipPackage && matchingPackages.length === 0 && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-3 text-xs text-muted-foreground">
+          <span className="font-semibold text-yellow-500">Aviso VIP:</span>{' '}
+          Sua assinatura está vinculada ao barbeiro{' '}
+          <strong className="text-foreground">{otherBarberVipPackage.barber?.name || 'outro profissional'}</strong>.
+          Com {selectedBarber?.name}, os serviços serão cobrados normalmente.
+        </div>
+      )}
       {activeSequentialPackage && activeCycle.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -143,8 +157,8 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
                 return true;
               })
               .sort((a, b) => {
-                const aHasBenefit = getRemainingForService(a.id) > 0;
-                const bHasBenefit = getRemainingForService(b.id) > 0;
+                const aHasBenefit = getRemainingForService(a.id, barberId) > 0;
+                const bHasBenefit = getRemainingForService(b.id, barberId) > 0;
                 // VIP benefits first
                 if (aHasBenefit && !bHasBenefit) return -1;
                 if (!aHasBenefit && bHasBenefit) return 1;
@@ -153,10 +167,10 @@ export function ServiceSelection({ services, selectedServices, onToggleService }
                 return 0;
               })
               .map((service, index) => {
-                const remaining = getRemainingForService(service.id);
+                const remaining = getRemainingForService(service.id, barberId);
                 const hasBenefit = remaining > 0;
                 const isExclusive = service.subscribers_only;
-                const weeklyInfo = getWeeklyLimitInfo(service.id);
+                const weeklyInfo = getWeeklyLimitInfo(service.id, barberId);
                 // Show info badge about weekly limit if applicable (but don't block)
                 const hasWeeklyLimit = weeklyInfo && weeklyInfo.limit > 0;
 

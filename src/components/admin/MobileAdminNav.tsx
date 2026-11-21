@@ -8,7 +8,8 @@ import {
   MoreHorizontal,
   Star,
   Gift,
-  ExternalLink
+  ExternalLink,
+  UserCog,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ const mainItems = [
 ];
 
 const moreItems = [
+  { icon: UserCog, label: 'Barbeiros', path: '/admin/barbeiros' },
   { icon: Scissors, label: 'Serviços', path: '/admin/servicos' },
   { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
   { icon: Star, label: 'Avaliações', path: '/admin/avaliacoes' },

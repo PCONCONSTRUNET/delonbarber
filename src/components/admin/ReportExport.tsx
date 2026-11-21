@@ -59,11 +59,12 @@ export function ReportExport({ appointments }: ReportExportProps) {
       const filtered = getFilteredAppointments();
       const { label } = getMonthRange();
 
-      const headers = ['Data', 'Horário', 'Cliente', 'Telefone', 'Serviços', 'Valor', 'Status', 'Pagamento', 'Método'];
+      const headers = ['Data', 'Horário', 'Barbeiro', 'Cliente', 'Telefone', 'Serviços', 'Valor', 'Status', 'Pagamento', 'Método'];
       
       const rows = filtered.map(apt => [
         format(new Date(apt.appointment_date), 'dd/MM/yyyy'),
         apt.appointment_time.slice(0, 5),
+        apt.barber?.name || 'N/A',
         apt.guest_name || apt.profile?.name || 'N/A',
         apt.guest_phone || apt.profile?.phone || 'N/A',
         apt.services.map(s => s.name).join('; '),

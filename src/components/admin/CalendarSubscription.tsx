@@ -14,12 +14,18 @@ import {
 
 const CALENDAR_FEED_TOKEN = 'delon-barber-calendar-2024';
 
-export function CalendarSubscription() {
+interface CalendarSubscriptionProps {
+  barberId?: string | null;
+}
+
+export function CalendarSubscription({ barberId }: CalendarSubscriptionProps = {}) {
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
 
   // Build the calendar feed URL
-  const feedUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-feed?token=${CALENDAR_FEED_TOKEN}`;
+  const feedUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-feed?token=${CALENDAR_FEED_TOKEN}${
+    barberId ? `&barber_id=${barberId}` : ''
+  }`;
 
   const handleCopy = async () => {
     try {

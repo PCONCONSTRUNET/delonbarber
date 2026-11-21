@@ -7,7 +7,7 @@ import { AppointmentHistory } from '@/components/agendar/AppointmentHistory';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthReady } from '@/hooks/useAuthReady';
 import { toast } from 'sonner';
-import { notifyAdmin } from '@/lib/oneSignalPush';
+import { notifyAdmin, notifyBarber } from '@/lib/oneSignalPush';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -29,7 +29,7 @@ export default function Historico() {
       
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
-        .select('*')
+        .select('*, barbers:barber_id(id, name, avatar_url, user_id)')
         .eq('user_id', user.id)
         .order('appointment_date', { ascending: false });
 
@@ -61,8 +61,9 @@ export default function Historico() {
         servicesByAppointment[s.appointment_id].push(s.services);
       });
 
-      const appointmentsWithServices = appointmentsData.map(apt => ({
+      const appointmentsWithServices = appointmentsData.map((apt: any) => ({
         ...apt,
+        barber: apt.barbers || null,
         services: servicesByAppointment[apt.id] || []
       }));
 
@@ -98,6 +99,14 @@ export default function Historico() {
         `Cliente cancelou o agendamento de ${dateStr} às ${cancelled.appointment_time.slice(0, 5)}`,
         '/admin/agenda'
       );
+      if (cancelled.barber?.user_id) {
+        notifyBarber(
+          cancelled.barber.user_id,
+          '❌ Agendamento Cancelado',
+          `Cliente cancelou o agendamento de ${dateStr} às ${cancelled.appointment_time.slice(0, 5)}`,
+          '/barbeiro/agenda'
+        );
+      }
     }
 
     toast.success("Agendamento cancelado e horário liberado!");

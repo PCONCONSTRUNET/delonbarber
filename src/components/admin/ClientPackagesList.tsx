@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -11,6 +11,7 @@ import { Calendar, XCircle, Plus, Search, Scissors, Check, Trash2, CheckCircle }
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ClientPackage } from '@/hooks/usePackages';
+import { useBarbers } from '@/hooks/useBarbers';
 
 interface Package {
   id: string;
@@ -30,7 +31,7 @@ interface ClientPackagesListProps {
   packages: Package[];
   clients: Client[];
   selectedPackageId?: string;
-  onAddSubscription: (userId: string, packageId: string, startDate: string) => Promise<boolean>;
+  onAddSubscription: (userId: string, packageId: string, startDate: string, barberId?: string | null) => Promise<boolean>;
   onConfirmSubscription?: (id: string) => Promise<boolean>;
   onCancelSubscription: (id: string) => Promise<boolean>;
   onDeleteSubscription?: (id: string) => Promise<boolean>;
@@ -48,9 +49,11 @@ export function ClientPackagesList({
   onDeleteSubscription,
   onRegisterUsage,
 }: ClientPackagesListProps) {
+  const { barbers } = useBarbers();
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedClient, setSelectedClient] = useState('');
   const [selectedPackage, setSelectedPackage] = useState(selectedPackageId || '');
+  const [selectedBarberId, setSelectedBarberId] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,6 +61,12 @@ export function ClientPackagesList({
   const [selectedServiceForUsage, setSelectedServiceForUsage] = useState('');
   const [registeringUsage, setRegisteringUsage] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedBarberId && barbers.length > 0) {
+      setSelectedBarberId(barbers[0].id);
+    }
+  }, [barbers, selectedBarberId]);
 
   const filteredSubscriptions = subscriptions.filter((sub) => {
     const matchesSearch = search
@@ -71,7 +80,12 @@ export function ClientPackagesList({
   const handleAddSubscription = async () => {
     if (!selectedClient || !selectedPackage) return;
     setLoading(true);
-    const success = await onAddSubscription(selectedClient, selectedPackage, startDate);
+    const success = await onAddSubscription(
+      selectedClient,
+      selectedPackage,
+      startDate,
+      selectedBarberId || barbers[0]?.id || null
+    );
     if (success) {
       setShowAddForm(false);
       setSelectedClient('');
@@ -173,8 +187,14 @@ export function ClientPackagesList({
                     </div>
                     <p className="text-sm text-muted-foreground">{sub.profile?.phone || 'Sem telefone'}</p>
                     <p className="text-sm text-primary font-medium mt-1">
-                      {sub.package?.name} • R$ {Number(sub.package?.price || 0).toFixed(0)}
+                      {sub.package?.name} • R$ {Number(sub.price_at_purchase ?? sub.package?.price ?? 0).toFixed(0)}
                     </p>
+                    {sub.barber?.name && (
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <Scissors className="h-3 w-3 text-primary" />
+                        Barbeiro: <span className="font-medium text-foreground">{sub.barber.name}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex flex-col sm:items-end gap-2">
@@ -327,6 +347,24 @@ export function ClientPackagesList({
                 </SelectContent>
               </Select>
             </div>
+
+            {barbers.length > 0 && (
+              <div>
+                <Label>Barbeiro</Label>
+                <Select value={selectedBarberId} onValueChange={setSelectedBarberId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o barbeiro" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {barbers.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name} {b.is_owner ? '(Dono)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label>Data de Início</Label>

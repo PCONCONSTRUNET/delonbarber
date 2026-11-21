@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Clock, FileText, Check, Banknote, CreditCard, Crown, Ban, ChevronDown, ChevronUp, QrCode } from 'lucide-react';
+import { Calendar, Clock, FileText, Check, Banknote, CreditCard, Crown, Ban, ChevronDown, ChevronUp, QrCode, Scissors } from 'lucide-react';
 import { Service } from '@/hooks/useAppointments';
+import { Barber } from '@/hooks/useBarbers';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +17,7 @@ import { cn } from '@/lib/utils';
 export type PaymentMethod = 'pix' | 'cash' | 'card' | 'subscriber';
 
 interface AppointmentSummaryProps {
+  selectedBarber?: Barber | null;
   selectedServices: Service[];
   selectedDate: Date | undefined;
   selectedTime: string | undefined;
@@ -105,6 +108,7 @@ function PixPaymentOption({ amount }: { amount: number }) {
 }
 
 export function AppointmentSummary({
+  selectedBarber,
   selectedServices,
   selectedDate,
   selectedTime,
@@ -115,10 +119,14 @@ export function AppointmentSummary({
 }: AppointmentSummaryProps) {
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('pix');
   const { packages, getRemainingForService } = useMyPackages();
+  const barberId = selectedBarber?.id;
+  const matchingPackages = packages.filter(
+    p => p.status === 'active' && (!barberId || !p.barber_id || p.barber_id === barberId)
+  );
 
   // ── Detecta plano SEQUENCIAL ativo e ciclo atual ──────────────────────────
-  const activeSequentialPackage = packages.find(
-    p => p.status === 'active' && p.package.type === 'sequential'
+  const activeSequentialPackage = matchingPackages.find(
+    p => p.package.type === 'sequential'
   );
   const activeCycleServiceIds = (activeSequentialPackage?.activeCycle || []).map(c => c.service_id);
   // Os serviços selecionados são todos do ciclo sequencial?
@@ -137,7 +145,7 @@ export function AppointmentSummary({
         coverage[service.id] = { covered: true, remaining: 1 };
         continue;
       }
-      const remaining = getRemainingForService(service.id);
+      const remaining = getRemainingForService(service.id, barberId);
       coverage[service.id] = { covered: remaining > 0, remaining };
     }
     return coverage;
@@ -148,8 +156,8 @@ export function AppointmentSummary({
   // Check if ALL selected services can be covered
   const allServicesCovered = selectedServices.every(s => serviceCoverage[s.id]?.covered);
 
-  // Check if user has any active package
-  const hasActivePackage = packages.some(p => p.status === 'active');
+  // Check if user has any active package FOR THIS BARBER
+  const hasActivePackage = matchingPackages.length > 0;
 
   // Show subscriber option if user has package AND all services can be covered
   const showSubscriberOption = hasActivePackage && allServicesCovered && selectedServices.length > 0;
@@ -226,6 +234,25 @@ export function AppointmentSummary({
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4"
     >
+      {/* Selected Barber */}
+      {selectedBarber && (
+        <div className="bg-card/80 rounded-2xl p-4 flex items-center gap-3">
+          <Avatar className="h-11 w-11 border border-primary/40 shrink-0">
+            <AvatarImage src={selectedBarber.avatar_url || undefined} className="object-cover" />
+            <AvatarFallback className="bg-primary/20 text-primary font-bold text-xs">
+              {selectedBarber.name.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <Scissors className="w-3 h-3 text-primary" />
+              Profissional
+            </p>
+            <p className="font-semibold text-sm text-foreground truncate">{selectedBarber.name}</p>
+          </div>
+        </div>
+      )}
+
       {/* Services */}
       <div className="bg-card/80 rounded-2xl p-4">
         <h3 className="text-sm font-semibold text-muted-foreground mb-3">

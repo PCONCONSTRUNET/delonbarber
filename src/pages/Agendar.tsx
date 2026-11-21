@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ServiceSelection } from '@/components/agendar/ServiceSelection';
+import { BarberSelection } from '@/components/agendar/BarberSelection';
 import { DateTimeSelection } from '@/components/agendar/DateTimeSelection';
 import { AppointmentSummary } from '@/components/agendar/AppointmentSummary';
 import { AppointmentHistory } from '@/components/agendar/AppointmentHistory';
@@ -20,6 +21,8 @@ import {
   useBookedSlots,
   Service 
 } from '@/hooks/useAppointments';
+import { useBarbers, useMyBarber, Barber } from '@/hooks/useBarbers';
+import { useMyPackages } from '@/hooks/useMyPackages';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { useIsAdmin } from '@/hooks/useAdmin';
@@ -27,15 +30,17 @@ import { toast } from '@/hooks/use-toast';
 import scissorsImg from '@/assets/scissors.png';
 
 const steps = [
-  { id: 1, title: 'Serviços' },
-  { id: 2, title: 'Data e Hora' },
-  { id: 3, title: 'Confirmar' },
+  { id: 1, title: 'Barbeiro' },
+  { id: 2, title: 'Serviços' },
+  { id: 3, title: 'Data e Hora' },
+  { id: 4, title: 'Confirmar' },
 ];
 
 const Agendar = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | undefined>();
@@ -51,11 +56,21 @@ const Agendar = () => {
     services: string[];
   } | null>(null);
 
+  const { barbers, loading: barbersLoading } = useBarbers();
+  const { packages: myPackages } = useMyPackages();
   const { services, loading: servicesLoading } = useServices();
-  const { businessHours, loading: hoursLoading, refreshBusinessHours } = useBusinessHours();
+  const { businessHours, loading: hoursLoading, refreshBusinessHours } = useBusinessHours(selectedBarber?.id);
   const { appointments, loading: appointmentsLoading, createAppointment, cancelAppointment } = useAppointments();
-  const { bookedSlots, isRefreshing, refresh: refreshSlots } = useBookedSlots(selectedDate);
+  const { bookedSlots, isRefreshing, refresh: refreshSlots } = useBookedSlots(selectedDate, selectedBarber?.id);
   const { isAdmin } = useIsAdmin();
+  const { isBarber } = useMyBarber();
+
+  // Se existir apenas 1 barbeiro ativo, pré-seleciona automaticamente
+  useEffect(() => {
+    if (!barbersLoading && barbers.length === 1 && !selectedBarber) {
+      setSelectedBarber(barbers[0]);
+    }
+  }, [barbersLoading, barbers, selectedBarber]);
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -67,6 +82,14 @@ const Agendar = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const handleSelectBarber = (barber: Barber) => {
+    if (selectedBarber?.id !== barber.id) {
+      setSelectedBarber(barber);
+      setSelectedServices([]);
+      setSelectedTime(undefined);
+    }
+  };
 
   const toggleService = (service: Service) => {
     setSelectedServices(prev => {
@@ -84,19 +107,20 @@ const Agendar = () => {
     setSelectedTime(undefined);
   };
 
-  // Whenever user reaches step 2, force-refresh slots and business hours so they see live data
+  // Whenever user reaches step 3 (Data e Hora), force-refresh slots and business hours so they see live data
   useEffect(() => {
-    if (currentStep === 2) {
+    if (currentStep === 3) {
       refreshSlots();
       refreshBusinessHours();
     }
-  }, [currentStep]);
+  }, [currentStep, selectedBarber?.id]);
 
   const canProceed = () => {
     switch (currentStep) {
-      case 1: return selectedServices.length > 0;
-      case 2: return selectedDate && selectedTime;
-      case 3: return true;
+      case 1: return !!selectedBarber;
+      case 2: return selectedServices.length > 0;
+      case 3: return !!(selectedDate && selectedTime);
+      case 4: return true;
       default: return false;
     }
   };
@@ -107,12 +131,19 @@ const Agendar = () => {
       return;
     }
 
-    if (!selectedDate || !selectedTime) return;
+    if (!selectedDate || !selectedTime || !selectedBarber) return;
 
     setIsSubmitting(true);
     let result = null;
     try {
-      result = await createAppointment(selectedServices, selectedDate, selectedTime, notes, paymentMethod);
+      result = await createAppointment(
+        selectedServices,
+        selectedDate,
+        selectedTime,
+        notes,
+        paymentMethod,
+        selectedBarber.id
+      );
     } catch (err: any) {
       console.error('Unexpected error in createAppointment:', err);
       toast({
@@ -128,7 +159,7 @@ const Agendar = () => {
       // Booking failed (conflict or error) — refresh slots so the UI reflects the real state
       refreshSlots();
       setSelectedTime(undefined); // clear selected time so user must pick again
-      setCurrentStep(2);           // send back to step 2
+      setCurrentStep(3);           // send back to Date/Time step
       return;
     }
 
@@ -202,6 +233,16 @@ const Agendar = () => {
                     className="rounded-full text-primary"
                   >
                     <Shield className="h-5 w-5" />
+                  </Button>
+                )}
+                {!isAdmin && isBarber && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('/barbeiro')}
+                    className="rounded-full text-primary text-xs px-2"
+                  >
+                    Barbeiro
                   </Button>
                 )}
                 <Button
@@ -279,24 +320,38 @@ const Agendar = () => {
               </div>
             </motion.div>
 
-            {/* Selected services summary - fixo no topo quando tem seleção */}
-            {selectedServices.length > 0 && (
+            {/* Selected barber & services summary - fixo no topo quando tem seleção */}
+            {(selectedBarber || selectedServices.length > 0) && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-primary/10 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 mb-3 sm:mb-4 flex items-center justify-between"
+                className="bg-primary/10 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 mb-3 sm:mb-4 flex items-center justify-between gap-2"
               >
-                <div className="flex items-center gap-2 text-xs sm:text-sm">
-                  <span className="font-semibold text-foreground">
-                    {selectedServices.length}x
-                  </span>
-                  <span className="text-muted-foreground">
-                    {totalDuration}min
-                  </span>
+                <div className="flex items-center gap-2 text-xs sm:text-sm min-w-0">
+                  {selectedBarber && (
+                    <span className="font-semibold text-foreground truncate">
+                      💈 {selectedBarber.name}
+                    </span>
+                  )}
+                  {selectedBarber && selectedServices.length > 0 && (
+                    <span className="text-muted-foreground">•</span>
+                  )}
+                  {selectedServices.length > 0 && (
+                    <>
+                      <span className="font-semibold text-foreground">
+                        {selectedServices.length}x
+                      </span>
+                      <span className="text-muted-foreground">
+                        {totalDuration}min
+                      </span>
+                    </>
+                  )}
                 </div>
-                <span className="text-base sm:text-lg font-bold text-primary">
-                  R$ {totalPrice.toFixed(0)}
-                </span>
+                {selectedServices.length > 0 && (
+                  <span className="text-base sm:text-lg font-bold text-primary shrink-0">
+                    R$ {totalPrice.toFixed(0)}
+                  </span>
+                )}
               </motion.div>
             )}
 
@@ -305,6 +360,34 @@ const Agendar = () => {
               {currentStep === 1 && (
                 <motion.div
                   key="step1"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                >
+                  {barbersLoading ? (
+                    <div className="flex justify-center py-12">
+                      <motion.img
+                        src={scissorsImg}
+                        alt="Carregando"
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                        className="w-12 h-12"
+                      />
+                    </div>
+                  ) : (
+                    <BarberSelection
+                      barbers={barbers}
+                      selectedBarber={selectedBarber}
+                      onSelectBarber={handleSelectBarber}
+                      activePackages={myPackages}
+                    />
+                  )}
+                </motion.div>
+              )}
+
+              {currentStep === 2 && (
+                <motion.div
+                  key="step2"
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
@@ -324,14 +407,15 @@ const Agendar = () => {
                       services={services}
                       selectedServices={selectedServices}
                       onToggleService={toggleService}
+                      selectedBarber={selectedBarber}
                     />
                   )}
                 </motion.div>
               )}
 
-              {currentStep === 2 && (
+              {currentStep === 3 && (
                 <motion.div
-                  key="step2"
+                  key="step3"
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
@@ -356,19 +440,21 @@ const Agendar = () => {
                       onSelectTime={setSelectedTime}
                       selectedServices={selectedServices}
                       isRefreshing={isRefreshing}
+                      selectedBarberId={selectedBarber?.id}
                     />
                   )}
                 </motion.div>
               )}
 
-              {currentStep === 3 && (
+              {currentStep === 4 && (
                 <motion.div
-                  key="step3"
+                  key="step4"
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
                 >
                   <AppointmentSummary
+                    selectedBarber={selectedBarber}
                     selectedServices={selectedServices}
                     selectedDate={selectedDate}
                     selectedTime={selectedTime}
@@ -449,7 +535,7 @@ const Agendar = () => {
               Voltar
             </Button>
 
-            {currentStep < 3 && (
+            {currentStep < 4 && (
               <Button
                 onClick={() => setCurrentStep(prev => prev + 1)}
                 disabled={!canProceed()}

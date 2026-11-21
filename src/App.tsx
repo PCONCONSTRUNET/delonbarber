@@ -20,9 +20,11 @@ const Pacotes = lazy(() => import("./pages/Pacotes"));
 const Historico = lazy(() => import("./pages/Historico"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-// Admin remains eagerly loaded (unchanged behavior)
-import { AdminDashboard, AdminAgenda, AdminClientes, AdminServicos, AdminFinanceiro, AdminManualBooking, AdminPacotes, AdminAvaliacoes, AdminFidelidade } from "./pages/Admin";
+// Admin and Barber Panel remain eagerly loaded (unchanged behavior)
+import { AdminDashboard, AdminAgenda, AdminClientes, AdminBarbeiros, AdminServicos, AdminFinanceiro, AdminManualBooking, AdminPacotes, AdminAvaliacoes, AdminFidelidade } from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
+import { BarberDashboard, BarberAgenda, BarberClientes, BarberFinanceiro, BarberManualBooking } from "./pages/BarberPanel";
+import BarberLogin from "./pages/BarberLogin";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,11 +44,12 @@ const RouteFallback = () => (
   </div>
 );
 
-// No painel admin as páginas abrem direto, sem animações de entrada (fade/piscada).
+// Nos painéis Admin e Barbeiro as páginas abrem direto, sem animações de entrada (fade/piscada).
 // Executado durante o render (antes das rotas) para valer já na primeira pintura.
 const AdminMotionSwitch = () => {
   const { pathname } = useLocation();
-  MotionGlobalConfig.skipAnimations = pathname.startsWith('/admin');
+  MotionGlobalConfig.skipAnimations =
+    pathname.startsWith('/admin') || pathname.startsWith('/barbeiro');
   return null;
 };
 
@@ -75,12 +78,19 @@ const App = () => {
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/agenda" element={<AdminAgenda />} />
                 <Route path="/admin/clientes" element={<AdminClientes />} />
+                <Route path="/admin/barbeiros" element={<AdminBarbeiros />} />
                 <Route path="/admin/servicos" element={<AdminServicos />} />
                 <Route path="/admin/financeiro" element={<AdminFinanceiro />} />
                 <Route path="/admin/agendamento-manual" element={<AdminManualBooking />} />
                 <Route path="/admin/pacotes" element={<AdminPacotes />} />
                 <Route path="/admin/avaliacoes" element={<AdminAvaliacoes />} />
                 <Route path="/admin/fidelidade" element={<AdminFidelidade />} />
+                <Route path="/barbeiro/login" element={<BarberLogin />} />
+                <Route path="/barbeiro" element={<BarberDashboard />} />
+                <Route path="/barbeiro/agenda" element={<BarberAgenda />} />
+                <Route path="/barbeiro/clientes" element={<BarberClientes />} />
+                <Route path="/barbeiro/financeiro" element={<BarberFinanceiro />} />
+                <Route path="/barbeiro/agendamento-manual" element={<BarberManualBooking />} />
                 <Route path="*" element={<Suspense fallback={<RouteFallback />}><NotFound /></Suspense>} />
               </Routes>
             </BrowserRouter>

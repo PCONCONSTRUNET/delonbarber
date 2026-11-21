@@ -53,6 +53,13 @@ export interface ClientPackage {
   id: string;
   user_id: string;
   package_id: string;
+  barber_id?: string | null;
+  barber?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+  } | null;
+  price_at_purchase?: number | null;
   start_date: string;
   end_date: string;
   status: 'active' | 'expired' | 'cancelled' | 'pending';
@@ -88,7 +95,13 @@ export function useAdminPackages() {
       console.error('Error fetching packages:', error);
       toast({ title: 'Erro', description: 'Não foi possível carregar pacotes.', variant: 'destructive' });
     } else {
-      setPackages(data || []);
+      const normalized: Package[] = (data || []).map((p) => ({
+        ...p,
+        is_active: p.is_active ?? true,
+        created_at: p.created_at ?? '',
+        type: (p.type === 'sequential' ? 'sequential' : 'flexible') as 'flexible' | 'sequential',
+      }));
+      setPackages(normalized);
     }
     setLoading(false);
   }
@@ -276,12 +289,13 @@ export function useClientPackages() {
   async function fetchSubscriptions() {
     setLoading(true);
 
-    // Fetch client_packages with packages join only (no FK to profiles)
+    // Fetch client_packages with packages and barber join
     const { data, error } = await supabase
       .from('client_packages')
       .select(`
         *,
-        packages(name, price, discount_percent, type)
+        packages(name, price, discount_percent, type),
+        barbers:barber_id(id, name, avatar_url)
       `)
       .order('created_at', { ascending: false });
 
@@ -372,6 +386,7 @@ export function useClientPackages() {
     const subscriptionsWithDetails: ClientPackage[] = data.map((sub: any) => ({
       ...sub,
       status: sub.status as 'active' | 'expired' | 'cancelled' | 'pending',
+      barber: sub.barbers || null,
       profile: profilesByUserId[sub.user_id] || { name: null, phone: null },
       package: sub.packages || { name: 'Pacote', price: 0, discount_percent: 0, type: 'flexible' },
       benefits: benefitsByPackage[sub.package_id] || [],
@@ -387,10 +402,10 @@ export function useClientPackages() {
     fetchSubscriptions();
   }, []);
 
-  async function addSubscription(userId: string, packageId: string, startDate: string) {
+  async function addSubscription(userId: string, packageId: string, startDate: string, barberId?: string | null) {
     const { data: pkg } = await supabase
       .from('packages')
-      .select('duration_days')
+      .select('duration_days, price')
       .eq('id', packageId)
       .single();
 
@@ -404,6 +419,8 @@ export function useClientPackages() {
     const { error } = await supabase.from('client_packages').insert({
       user_id: userId,
       package_id: packageId,
+      barber_id: barberId || null,
+      price_at_purchase: pkg.price,
       start_date: startDate,
       end_date: endDate,
       status: 'active',

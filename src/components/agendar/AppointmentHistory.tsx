@@ -119,6 +119,13 @@ export function AppointmentHistory({ appointments, onCancel }: AppointmentHistor
               </div>
             </div>
 
+            {/* Barber */}
+            {appointment.barber?.name && (
+              <p className="text-xs text-primary font-medium mb-2">
+                💈 Barbeiro: {appointment.barber.name}
+              </p>
+            )}
+
             {/* Services */}
             <div className="flex flex-wrap gap-1 mb-3">
               {appointment.services.map(service => (

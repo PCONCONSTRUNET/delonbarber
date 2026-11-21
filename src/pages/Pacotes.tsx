@@ -19,6 +19,9 @@ import { PixQRCode } from '@/components/payments/PixQRCode';
 import { PixIcon } from '@/components/icons/PixIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useBarbers } from '@/hooks/useBarbers';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 import { User } from '@supabase/supabase-js';
 import { format, addDays } from 'date-fns';
 
@@ -117,10 +120,12 @@ interface PackageWithBenefits {
 const Pacotes = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { barbers } = useBarbers();
   const [user, setUser] = useState<User | null>(null);
   const [packages, setPackages] = useState<PackageWithBenefits[]>([]);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [selectedBarberId, setSelectedBarberId] = useState<string>('');
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     package: PackageWithBenefits | null;
@@ -129,7 +134,8 @@ const Pacotes = () => {
     open: boolean;
     package: PackageWithBenefits | null;
     subscriptionId: string | null;
-  }>({ open: false, package: null, subscriptionId: null });
+    barberName?: string | null;
+  }>({ open: false, package: null, subscriptionId: null, barberName: null });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -185,13 +191,24 @@ const Pacotes = () => {
       navigate('/login');
       return;
     }
-    // Show confirmation dialog
+    // Se houver apenas 1 barbeiro ativo, pré-seleciona; se houver mais de 1, pede para o cliente escolher
+    setSelectedBarberId(barbers.length === 1 ? barbers[0].id : '');
     setConfirmDialog({ open: true, package: pkg });
   };
 
   const handleConfirmSubscribe = async () => {
     const pkg = confirmDialog.package;
     if (!pkg || !user) return;
+    const chosenBarberId = selectedBarberId || (barbers.length === 1 ? barbers[0].id : '');
+    if (barbers.length > 0 && !chosenBarberId) {
+      toast({
+        title: "Selecione o barbeiro",
+        description: "Escolha com qual barbeiro você deseja assinar este pacote.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const chosenBarber = barbers.find((b) => b.id === chosenBarberId) || null;
 
     setConfirmDialog({ open: false, package: null });
     setSubscribing(pkg.id);
@@ -203,6 +220,8 @@ const Pacotes = () => {
       const { error } = await supabase.from('client_packages').insert({
         user_id: user.id,
         package_id: pkg.id,
+        barber_id: chosenBarberId || null,
+        price_at_purchase: pkg.price,
         start_date: startDate,
         end_date: endDate,
         status: 'active', // Auto-activate subscription
@@ -226,6 +245,7 @@ const Pacotes = () => {
           open: true,
           package: pkg,
           subscriptionId: null,
+          barberName: chosenBarber?.name || null,
         });
       }
     } finally {
@@ -500,6 +520,7 @@ const Pacotes = () => {
               className="text-muted-foreground mt-2 text-sm sm:text-base"
             >
               Pacote {paymentModal.package?.name}
+              {paymentModal.barberName && ` · com ${paymentModal.barberName}`}
             </motion.p>
             <motion.p
               initial={{ opacity: 0 }}
@@ -556,18 +577,64 @@ const Pacotes = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Assinatura</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Você está prestes a assinar o pacote:</p>
-              <p className="font-semibold text-foreground text-lg">
-                {confirmDialog.package?.name} - R$ {confirmDialog.package?.price}
-              </p>
-              <p>Válido por {confirmDialog.package?.duration_days} dias.</p>
-              <p className="text-xs mt-2">Deseja confirmar esta assinatura?</p>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <div>
+                  <p>Você está prestes a assinar o pacote:</p>
+                  <p className="font-semibold text-foreground text-lg mt-1">
+                    {confirmDialog.package?.name} - R$ {confirmDialog.package?.price}
+                  </p>
+                  <p className="text-xs">Válido por {confirmDialog.package?.duration_days} dias.</p>
+                </div>
+
+                {barbers.length > 0 && (
+                  <div className="pt-2 space-y-2 text-left">
+                    <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                      Escolha o barbeiro da sua assinatura *
+                    </p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {barbers.map((barber) => {
+                        const isSelected = selectedBarberId === barber.id;
+                        return (
+                          <button
+                            key={barber.id}
+                            type="button"
+                            onClick={() => setSelectedBarberId(barber.id)}
+                            className={cn(
+                              'w-full flex items-center gap-3 p-2.5 rounded-xl border-2 text-left transition-all',
+                              isSelected
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border bg-card hover:border-primary/40'
+                            )}
+                          >
+                            <Avatar className="h-9 w-9 border border-primary/40 shrink-0">
+                              <AvatarImage src={barber.avatar_url || undefined} className="object-cover" />
+                              <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
+                                {barber.name.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-foreground truncate">{barber.name}</p>
+                              <p className="text-[11px] text-muted-foreground truncate">
+                                {barber.bio || (barber.is_owner ? 'Barbeiro Dono' : 'Barbeiro')}
+                              </p>
+                            </div>
+                            {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSubscribe}>
+            <AlertDialogAction
+              onClick={handleConfirmSubscribe}
+              disabled={barbers.length > 0 && !selectedBarberId}
+            >
               Confirmar Assinatura
             </AlertDialogAction>
           </AlertDialogFooter>

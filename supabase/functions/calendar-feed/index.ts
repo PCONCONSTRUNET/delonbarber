@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
     // Get URL params
     const url = new URL(req.url);
     const token = url.searchParams.get('token');
+    const barberId = url.searchParams.get('barber_id');
     const days = parseInt(url.searchParams.get('days') || '60');
 
     // Simple token validation (admin token)
@@ -45,10 +46,11 @@ Deno.serve(async (req) => {
     const pastDate = new Date();
     pastDate.setDate(today.getDate() - 7); // Include last 7 days too
 
-    const { data: appointments, error } = await supabase
+    let query = supabase
       .from('appointments')
       .select(`
         id,
+        barber_id,
         appointment_date,
         appointment_time,
         total_duration,
@@ -56,6 +58,7 @@ Deno.serve(async (req) => {
         status,
         notes,
         guest_name,
+        barbers(name),
         profiles!appointments_user_id_fkey(name),
         appointment_services(
           services(name)
@@ -67,6 +70,12 @@ Deno.serve(async (req) => {
       .order('appointment_date', { ascending: true })
       .order('appointment_time', { ascending: true });
 
+    if (barberId) {
+      query = query.eq('barber_id', barberId);
+    }
+
+    const { data: appointments, error } = await query;
+
     if (error) {
       console.error('Error fetching appointments:', error);
       return new Response('Error fetching appointments', { status: 500 });
@@ -75,6 +84,7 @@ Deno.serve(async (req) => {
     // Generate ICS content
     const events = (appointments || []).map((apt: any) => {
       const clientName = apt.guest_name || apt.profiles?.name || 'Cliente';
+      const barberName = apt.barbers?.name;
       const services = apt.appointment_services?.map((as: any) => as.services?.name).filter(Boolean) || [];
       const duration = apt.total_duration || 30;
 
@@ -88,6 +98,7 @@ Deno.serve(async (req) => {
       const statusEmoji = apt.status === 'confirmed' ? '✅' : '⏳';
       const title = `${statusEmoji} ${clientName}`;
       const description = [
+        barberName ? `Barbeiro: ${barberName}` : '',
         `Serviços: ${services.join(', ')}`,
         `Valor: R$ ${Number(apt.total_price || 0).toFixed(0)}`,
         `Duração: ${duration} min`,

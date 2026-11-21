@@ -29,6 +29,18 @@ const AdminLogin = () => {
 
       if (isAdmin) {
         navigate("/admin", { replace: true });
+        return;
+      }
+
+      const { data: barberRow } = await supabase
+        .from("barbers")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (mounted && barberRow) {
+        navigate("/barbeiro", { replace: true });
       }
     };
     checkSession();
@@ -64,8 +76,25 @@ const AdminLogin = () => {
       });
 
       if (roleError || !isAdmin) {
+        // Verifica se é conta de barbeiro para direcionar ao login exclusivo do barbeiro
+        const { data: barberRow } = await supabase
+          .from("barbers")
+          .select("id")
+          .eq("user_id", data.user.id)
+          .eq("is_active", true)
+          .maybeSingle();
+
         await supabase.auth.signOut();
-        toast.error("Acesso restrito. Esta conta não é administrador.");
+        if (barberRow) {
+          toast.error("Esta conta é de barbeiro. Acesse a Área do Barbeiro.", {
+            action: {
+              label: "Ir para Área do Barbeiro",
+              onClick: () => navigate("/barbeiro/login"),
+            },
+          });
+        } else {
+          toast.error("Acesso restrito. Esta conta não é administrador.");
+        }
         setIsLoading(false);
         return;
       }

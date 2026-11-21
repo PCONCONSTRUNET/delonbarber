@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 interface SendPushArgs {
-  role: 'admin' | 'cliente';
+  role: 'admin' | 'cliente' | 'barber';
   title: string;
   message: string;
   user_id?: string;

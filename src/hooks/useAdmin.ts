@@ -5,12 +5,21 @@ import { useToast } from '@/hooks/use-toast';
 
 export interface AdminAppointment {
   id: string;
+  barber_id: string | null;
+  barber?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    commission_percent?: number;
+    user_id?: string | null;
+  } | null;
   appointment_date: string;
   appointment_time: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   notes: string | null;
   total_price: number;
   total_duration: number;
+  commission_percent_at_booking?: number | null;
   payment_status: string;
   payment_date: string | null;
   payment_method: string | null;
@@ -109,10 +118,10 @@ export function useIsAdmin() {
   return { isAdmin, loading };
 }
 
-// Query key compartilhada entre componentes admin
+// Query key compartilhada entre componentes admin/barbeiro
 const ADMIN_APPOINTMENTS_KEY = ['admin', 'appointments'] as const;
 
-async function fetchAdminAppointmentsQuery(): Promise<AdminAppointment[]> {
+async function fetchAdminAppointmentsQuery(barberId?: string | null): Promise<AdminAppointment[]> {
   // Performance: limit query to a relevant window (last 90 days + future 180 days).
   const today = new Date();
   const past = new Date(today);
@@ -122,16 +131,23 @@ async function fetchAdminAppointmentsQuery(): Promise<AdminAppointment[]> {
   const fmt = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  const { data: appointmentsData, error } = await supabase
+  let query = supabase
     .from('appointments')
     .select(`
       *,
-      profiles!appointments_user_id_fkey(name, phone)
+      profiles!appointments_user_id_fkey(name, phone),
+      barbers:barber_id(id, name, avatar_url, commission_percent, user_id)
     `)
     .gte('appointment_date', fmt(past))
     .lte('appointment_date', fmt(future))
     .order('appointment_date', { ascending: true })
     .order('appointment_time', { ascending: true });
+
+  if (barberId) {
+    query = query.eq('barber_id', barberId);
+  }
+
+  const { data: appointmentsData, error } = await query;
 
   if (error) {
     console.error('Error fetching appointments:', error);
@@ -162,18 +178,20 @@ async function fetchAdminAppointmentsQuery(): Promise<AdminAppointment[]> {
 
   return appointmentsData.map((apt: any) => ({
     ...apt,
+    barber_id: apt.barber_id ?? null,
+    barber: apt.barbers ? { ...apt.barbers, commission_percent: Number(apt.barbers.commission_percent ?? 50) } : null,
     profile: apt.profiles || { name: null, phone: null },
     services: servicesByAppointment.get(apt.id) || [],
   })) as AdminAppointment[];
 }
 
-export function useAdminAppointments() {
+export function useAdminAppointments(barberId?: string | null) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: appointments = [], isLoading: loading, refetch } = useQuery({
-    queryKey: ADMIN_APPOINTMENTS_KEY,
-    queryFn: fetchAdminAppointmentsQuery,
+    queryKey: [...ADMIN_APPOINTMENTS_KEY, barberId ?? 'all'],
+    queryFn: () => fetchAdminAppointmentsQuery(barberId),
     staleTime: 30_000,
   });
 
@@ -193,7 +211,7 @@ export function useAdminAppointments() {
     };
 
     const channel = supabase
-      .channel('admin-appointments')
+      .channel(`admin-appointments-${barberId ?? 'all'}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'appointments' },
@@ -205,7 +223,7 @@ export function useAdminAppointments() {
       if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, barberId]);
 
   async function updateAppointmentStatus(id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show') {
     const updateData: any = { status };
@@ -346,45 +364,82 @@ export function useAdminAppointments() {
 
 const ADMIN_CLIENTS_KEY = ['admin', 'clients'] as const;
 
-async function fetchAdminClientsQuery(): Promise<Client[]> {
+async function fetchAdminClientsQuery(barberId?: string | null): Promise<Client[]> {
+    // Se scoped para um barbeiro específico, primeiro descobrimos os clientes dele
+    let scopedAppointmentsQuery = supabase
+      .from('appointments')
+      .select('user_id, total_price, appointment_date, status')
+      .neq('status', 'cancelled');
+    let scopedGuestAppointmentsQuery = supabase
+      .from('appointments')
+      .select('guest_client_id, total_price, appointment_date, status')
+      .not('guest_client_id', 'is', null)
+      .neq('status', 'cancelled');
+    let scopedPackagesQuery = supabase
+      .from('client_packages')
+      .select('user_id')
+      .eq('status', 'active');
 
-
-    // Fetch profiles, guest_clients, appointments, and active packages in parallel
-    const [profilesResult, guestClientsResult, appointmentsResult, guestAppointmentsResult, activePackagesResult] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('guest_clients')
-        .select('*')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('appointments')
-        .select('user_id, total_price, appointment_date, status')
-        .neq('status', 'cancelled'),
-      supabase
-        .from('appointments')
-        .select('guest_client_id, total_price, appointment_date, status')
-        .not('guest_client_id', 'is', null)
-        .neq('status', 'cancelled'),
-      supabase
-        .from('client_packages')
-        .select('user_id')
-        .eq('status', 'active')
-    ]);
-
-    if (profilesResult.error) {
-      console.error('Error fetching clients:', profilesResult.error);
-      throw profilesResult.error;
+    if (barberId) {
+      scopedAppointmentsQuery = scopedAppointmentsQuery.eq('barber_id', barberId);
+      scopedGuestAppointmentsQuery = scopedGuestAppointmentsQuery.eq('barber_id', barberId);
+      scopedPackagesQuery = scopedPackagesQuery.eq('barber_id', barberId);
     }
 
+    const [appointmentsResult, guestAppointmentsResult, activePackagesResult] = await Promise.all([
+      scopedAppointmentsQuery,
+      scopedGuestAppointmentsQuery,
+      scopedPackagesQuery,
+    ]);
 
-    const profiles = profilesResult.data || [];
-    const guestClients = guestClientsResult.data || [];
     const appointments = appointmentsResult.data || [];
     const guestAppointments = guestAppointmentsResult.data || [];
     const activePackageUserIds = new Set((activePackagesResult.data || []).map(p => p.user_id));
+
+    let profiles: any[] = [];
+    let guestClients: any[] = [];
+
+    if (barberId) {
+      const barberUserIds = Array.from(new Set([
+        ...appointments.map((a: any) => a.user_id),
+        ...(activePackagesResult.data || []).map((p: any) => p.user_id),
+      ].filter(Boolean)));
+      const barberGuestIds = Array.from(new Set(
+        guestAppointments.map((a: any) => a.guest_client_id).filter(Boolean)
+      ));
+
+      const [profilesRes, guestRes] = await Promise.all([
+        barberUserIds.length > 0
+          ? supabase.from('profiles').select('*').in('user_id', barberUserIds).order('created_at', { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
+        barberGuestIds.length > 0
+          ? supabase.from('guest_clients').select('*').in('id', barberGuestIds).order('created_at', { ascending: false })
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (profilesRes.error) {
+        console.error('Error fetching barber clients:', profilesRes.error);
+        throw profilesRes.error;
+      }
+      profiles = profilesRes.data || [];
+      guestClients = guestRes.data || [];
+    } else {
+      const [profilesResult, guestClientsResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('guest_clients')
+          .select('*')
+          .order('created_at', { ascending: false }),
+      ]);
+      if (profilesResult.error) {
+        console.error('Error fetching clients:', profilesResult.error);
+        throw profilesResult.error;
+      }
+      profiles = profilesResult.data || [];
+      guestClients = guestClientsResult.data || [];
+    }
 
     // Pre-compute stats by user_id using a Map for O(1) lookups
     const statsByUser = new Map<string, {
@@ -496,13 +551,13 @@ async function fetchAdminClientsQuery(): Promise<Client[]> {
     return allClients;
   }
 
-export function useAdminClients() {
+export function useAdminClients(barberId?: string | null) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: clients = [], isLoading: loading, refetch } = useQuery({
-    queryKey: ADMIN_CLIENTS_KEY,
-    queryFn: fetchAdminClientsQuery,
+    queryKey: [...ADMIN_CLIENTS_KEY, barberId ?? 'all'],
+    queryFn: () => fetchAdminClientsQuery(barberId),
     staleTime: 60_000,
   });
 

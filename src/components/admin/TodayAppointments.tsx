@@ -166,6 +166,11 @@ Qualquer dúvida, estamos à disposição! 💈`;
                         VIP
                       </Badge>
                     )}
+                    {apt.barber?.name && (
+                      <Badge variant="outline" className="text-[9px] md:text-xs px-1.5 py-0 border-primary/30 text-primary">
+                        💈 {apt.barber.name}
+                      </Badge>
+                    )}
                   </div>
                   
                   <div className="flex items-center gap-1 md:gap-2 text-[11px] md:text-sm text-muted-foreground mb-0.5 md:mb-1">

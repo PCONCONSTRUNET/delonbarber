@@ -112,11 +112,16 @@ function FullView({ packages }: { packages: MyPackage[] }) {
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg">{pkg.package?.name || 'Pacote'}</h3>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                     <Calendar className="h-3 w-3" />
                     <span>
                       Válido até {format(endDate, "dd 'de' MMMM", { locale: ptBR })}
                     </span>
+                    {pkg.barber?.name && (
+                      <Badge variant="outline" className="text-[11px] px-2 py-0 border-yellow-500/40 text-yellow-500">
+                        💈 {pkg.barber.name}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>

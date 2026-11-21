@@ -24,22 +24,26 @@ import { ClientPackagesList } from '@/components/admin/ClientPackagesList';
 import { BlockedSlotsManager } from '@/components/admin/BlockedSlotsManager';
 import { CalendarSubscription } from '@/components/admin/CalendarSubscription';
 import { BusinessHoursManager } from '@/components/admin/BusinessHoursManager';
+import { BarbersManager } from '@/components/admin/BarbersManager';
+import { BarberFinancialReport } from '@/components/admin/BarberFinancialReport';
 import { RatingsManager } from '@/components/admin/RatingsManager';
 import { LoyaltyManager } from '@/components/admin/LoyaltyManager';
 import { PushToggle } from '@/components/push/PushToggle';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useIsAdmin, useAdminAppointments, useAdminClients, useAdminServices, useBusinessStatus } from '@/hooks/useAdmin';
+import { useBarbers } from '@/hooks/useBarbers';
+import { useBusinessHours } from '@/hooks/useAppointments';
 import { useAdminPackages, useClientPackages } from '@/hooks/usePackages';
 import { useAdminNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Plus, Pencil, Trash2, Bell, Crown, Download, Search, Calendar, Clock } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Bell, Crown, Download, Search, Calendar, Clock, Scissors } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { normalizeAndSyncBusinessHours } from '@/lib/businessHours';
+import { cn } from '@/lib/utils';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -151,37 +155,28 @@ export function AdminDashboard() {
 
 export function AdminAgenda() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { barbers } = useBarbers();
   const { appointments, loading, updateAppointmentStatus, updatePaymentStatus, deleteAppointment, fetchAppointments } = useAdminAppointments();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('agendamentos');
+  const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [businessHours, setBusinessHours] = useState<any[]>([]);
   const [squeezeInOpen, setSqueezeInOpen] = useState(false);
   const [externalCutOpen, setExternalCutOpen] = useState(false);
 
-
-  async function fetchHours() {
-    const { data } = await supabase
-      .from('business_hours')
-      .select('*')
-      .order('day_of_week', { ascending: true });
-    if (data) {
-      const normalized = await normalizeAndSyncBusinessHours(data);
-      setBusinessHours(normalized);
-    }
-  }
-
-  // Fetch business hours
-  useEffect(() => {
-    fetchHours();
-  }, []);
+  const { businessHours, refreshBusinessHours } = useBusinessHours(selectedBarberId);
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!isAdmin) return <Navigate to="/admin/login" replace />;
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
-  const dayAppointments = appointments.filter(a => a.appointment_date === dateStr);
-  
+  const dayAppointments = appointments.filter(
+    (a) => a.appointment_date === dateStr && (!selectedBarberId || a.barber_id === selectedBarberId)
+  );
+  const filteredCalendarAppointments = selectedBarberId
+    ? appointments.filter((a) => a.barber_id === selectedBarberId)
+    : appointments;
+
   // Get business hours for the selected day (0=Sunday, 1=Monday, etc.)
   const dayOfWeek = selectedDate.getDay();
   const todayHours = businessHours.find(h => h.day_of_week === dayOfWeek);
@@ -189,7 +184,7 @@ export function AdminAgenda() {
   return (
     <AdminLayout>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center justify-between gap-2 mb-3">
           <TabsList className="grid grid-cols-3 h-9">
             <TabsTrigger value="agendamentos" className="text-xs px-2">Agenda</TabsTrigger>
             <TabsTrigger value="horarios" className="text-xs px-2">Bloquear</TabsTrigger>
@@ -208,7 +203,7 @@ export function AdminAgenda() {
                 <div className="pt-2 pb-6">
                   <h3 className="font-semibold text-center mb-4">Selecionar Data</h3>
                   <CompactCalendar
-                    appointments={appointments}
+                    appointments={filteredCalendarAppointments}
                     selectedDate={selectedDate}
                     onSelectDate={(date) => {
                       setSelectedDate(date);
@@ -219,9 +214,43 @@ export function AdminAgenda() {
               </SheetContent>
             </Sheet>
             
-            <CalendarSubscription />
+            <CalendarSubscription barberId={selectedBarberId} />
           </div>
         </div>
+
+        {/* Filtro rápido por cadeira / barbeiro */}
+        {activeTab === 'agendamentos' && barbers.length > 1 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            <button
+              type="button"
+              onClick={() => setSelectedBarberId(null)}
+              className={cn(
+                'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
+                selectedBarberId === null
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted'
+              )}
+            >
+              Todas as cadeiras
+            </button>
+            {barbers.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => setSelectedBarberId(b.id)}
+                className={cn(
+                  'px-3 py-1 rounded-full text-xs font-medium border transition-colors flex items-center gap-1',
+                  selectedBarberId === b.id
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted'
+                )}
+              >
+                <Scissors className="h-3 w-3" />
+                {b.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         <TabsContent value="agendamentos" className="mt-0">
           {/* Clean iPhone-style agenda */}
@@ -238,19 +267,21 @@ export function AdminAgenda() {
             <SqueezeInModal
               open={squeezeInOpen}
               onOpenChange={setSqueezeInOpen}
-              selectedDate={format(selectedDate, 'yyyy-MM-dd')}
+              selectedDate={dateStr}
               onSuccess={fetchAppointments}
+              defaultBarberId={selectedBarberId}
             />
 
             <RegisterExternalCutModal
               open={externalCutOpen}
               onOpenChange={setExternalCutOpen}
-              selectedDate={format(selectedDate, 'yyyy-MM-dd')}
+              selectedDate={dateStr}
               onSuccess={fetchAppointments}
+              defaultBarberId={selectedBarberId}
             />
 
             {/* Timeline appointments */}
-            <ScrollArea className="h-[calc(100vh-280px)] md:h-[calc(100vh-240px)]">
+            <ScrollArea className="h-[calc(100vh-310px)] md:h-[calc(100vh-270px)]">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="animate-spin h-6 w-6 text-primary" />
@@ -262,8 +293,10 @@ export function AdminAgenda() {
                   onUpdatePayment={updatePaymentStatus}
                   onDelete={deleteAppointment}
                   businessHours={todayHours}
-                  selectedDate={format(selectedDate, 'yyyy-MM-dd')}
+                  selectedDate={dateStr}
                   onRefresh={fetchAppointments}
+                  defaultBarberId={selectedBarberId}
+                  showBarberBadge={!selectedBarberId && barbers.length > 1}
                 />
               )}
             </ScrollArea>
@@ -271,12 +304,12 @@ export function AdminAgenda() {
         </TabsContent>
 
         <TabsContent value="horarios" className="mt-0">
-          <BlockedSlotsManager />
+          <BlockedSlotsManager defaultBarberId={selectedBarberId} />
         </TabsContent>
 
         <TabsContent value="config" className="mt-0">
           <ScrollArea className="h-[calc(100vh-180px)] md:h-[calc(100vh-140px)]">
-            <BusinessHoursManager onSaved={fetchHours} />
+            <BusinessHoursManager onSaved={refreshBusinessHours} defaultBarberId={selectedBarberId} />
           </ScrollArea>
         </TabsContent>
       </Tabs>
@@ -436,9 +469,29 @@ export function AdminServicos() {
   );
 }
 
+export function AdminBarbeiros() {
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
+
+  if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
+  if (!isAdmin) return <Navigate to="/admin/login" replace />;
+
+  return (
+    <AdminLayout>
+      <div className="mb-4 md:mb-6">
+        <h1 className="font-display text-2xl md:text-3xl font-bold">Barbeiros</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          Cadastre profissionais, defina porcentagens de comissão e configure o acesso exclusivo de cada barbeiro
+        </p>
+      </div>
+      <BarbersManager />
+    </AdminLayout>
+  );
+}
+
 export function AdminFinanceiro() {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const { appointments, loading } = useAdminAppointments();
+  const [finTab, setFinTab] = useState('geral');
 
   if (adminLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>;
   if (!isAdmin) return <Navigate to="/admin/login" replace />;
@@ -449,7 +502,25 @@ export function AdminFinanceiro() {
         <h1 className="font-display text-2xl md:text-3xl font-bold">Financeiro</h1>
         <ReportExport appointments={appointments} />
       </div>
-      {loading ? <Loader2 className="animate-spin" /> : <FinancialReport appointments={appointments} />}
+
+      {loading ? (
+        <Loader2 className="animate-spin" />
+      ) : (
+        <Tabs value={finTab} onValueChange={setFinTab} className="w-full space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="geral">Geral da Barbearia</TabsTrigger>
+            <TabsTrigger value="barbeiros">Barbeiros & Comissões</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="geral" className="mt-0">
+            <FinancialReport appointments={appointments} />
+          </TabsContent>
+
+          <TabsContent value="barbeiros" className="mt-0">
+            <BarberFinancialReport appointments={appointments} />
+          </TabsContent>
+        </Tabs>
+      )}
     </AdminLayout>
   );
 }

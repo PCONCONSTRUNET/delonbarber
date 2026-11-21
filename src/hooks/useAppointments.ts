@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
-import { notifyAdmin } from '@/lib/oneSignalPush';
+import { notifyAdmin, notifyBarber } from '@/lib/oneSignalPush';
 import { invalidateMyPackagesCache } from '@/hooks/useMyPackages';
-import { normalizeAndSyncBusinessHours } from '@/lib/businessHours';
+import { BusinessHourRow, normalizeAndSyncBusinessHours, resolveBusinessHoursForBarber } from '@/lib/businessHours';
 
 
 export interface Service {
@@ -19,6 +19,8 @@ export interface Service {
 }
 
 export interface BusinessHours {
+  id?: string;
+  barber_id?: string | null;
   day_of_week: number;
   open_time: string;
   close_time: string;
@@ -29,6 +31,13 @@ export interface BusinessHours {
 
 export interface Appointment {
   id: string;
+  barber_id?: string | null;
+  barber?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    user_id?: string | null;
+  } | null;
   appointment_date: string;
   appointment_time: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
@@ -65,8 +74,8 @@ export function useServices() {
   return { services, loading };
 }
 
-export function useBusinessHours() {
-  const [businessHours, setBusinessHours] = useState<BusinessHours[]>([]);
+export function useBusinessHours(barberId?: string | null) {
+  const [rawBusinessHours, setRawBusinessHours] = useState<BusinessHourRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function fetchBusinessHours() {
@@ -79,7 +88,7 @@ export function useBusinessHours() {
       console.error('Error fetching business hours:', error);
     } else {
       const normalized = await normalizeAndSyncBusinessHours(data || []);
-      setBusinessHours(normalized);
+      setRawBusinessHours(normalized);
     }
     setLoading(false);
   }
@@ -88,7 +97,7 @@ export function useBusinessHours() {
     fetchBusinessHours();
 
     // Sempre que o cliente voltar para a aba/app, recarrega os horários
-    // para refletir imediatamente qualquer alteração feita pelo admin.
+    // para refletir imediatamente qualquer alteração feita pelo admin/barbeiro.
     const onVisible = () => {
       if (document.visibilityState === 'visible') fetchBusinessHours();
     };
@@ -99,6 +108,13 @@ export function useBusinessHours() {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
+
+  const businessHours: BusinessHours[] = useMemo(() => {
+    return resolveBusinessHoursForBarber(rawBusinessHours, barberId).map((r) => ({
+      ...r,
+      is_open: Boolean(r.is_open),
+    }));
+  }, [rawBusinessHours, barberId]);
 
   return { businessHours, loading, refreshBusinessHours: fetchBusinessHours };
 }
@@ -116,7 +132,7 @@ export function useAppointments() {
     
     let query = supabase
       .from('appointments')
-      .select('*')
+      .select('*, barbers:barber_id(id, name, avatar_url, user_id)')
       .order('appointment_date', { ascending: false })
       .limit(50); // Most recent 50 is enough for client history view
     
@@ -165,8 +181,9 @@ export function useAppointments() {
       }
     });
 
-    const appointmentsWithServices: Appointment[] = appointmentsData.map(apt => ({
+    const appointmentsWithServices: Appointment[] = appointmentsData.map((apt: any) => ({
       ...apt,
+      barber: apt.barbers || null,
       services: servicesByAppointment[apt.id] || []
     }));
 
@@ -183,7 +200,8 @@ export function useAppointments() {
     date: Date,
     time: string,
     notes: string,
-    paymentMethod?: string
+    paymentMethod?: string,
+    barberId?: string | null
   ) {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -196,16 +214,37 @@ export function useAppointments() {
       return null;
     }
 
-    // Check for active package benefits
-    const { data: activePackages, error: pkgError } = await supabase
+    // Check for active package benefits (filtrando pelo barbeiro selecionado quando aplicável)
+    const appointmentDate = date;
+    const appointmentDateStr = format(appointmentDate, 'yyyy-MM-dd');
+
+    const { data: rawActivePackages, error: pkgError } = await supabase
       .from('client_packages')
-      .select('id, package_id, start_date, end_date, packages:package_id(type)')
+      .select('id, package_id, barber_id, start_date, end_date, packages:package_id(type)')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .gte('end_date', new Date().toISOString().split('T')[0]);
 
     if (pkgError) {
       console.error('Error fetching active packages:', pkgError);
+    }
+
+    const activePackages = (rawActivePackages || []).filter((pkg: any) => {
+      if (barberId && pkg.barber_id && pkg.barber_id !== barberId) return false;
+      // Para pagamentos com assinatura, a data do agendamento precisa estar dentro da validade do pacote
+      if (paymentMethod === 'subscriber' && pkg.end_date && appointmentDateStr > pkg.end_date) {
+        return false;
+      }
+      return true;
+    });
+
+    if (paymentMethod === 'subscriber' && (rawActivePackages || []).length > 0 && activePackages.length === 0) {
+      toast({
+        title: "Assinatura fora da validade para esta data",
+        description: "Escolha uma data dentro da vigência do seu plano ou outro método de pagamento.",
+        variant: "destructive"
+      });
+      return null;
     }
 
     console.log('Active packages for user:', activePackages);
@@ -217,10 +256,8 @@ export function useAppointments() {
 
     // Calculate week boundaries for the SELECTED DATE (not current date)
     // This allows VIP clients to schedule multiple future appointments in different weeks
-    const appointmentDate = date;
     const weekStart = startOfWeek(appointmentDate, { weekStartsOn: 1 }); // Monday of appointment week
     const weekEnd = endOfWeek(appointmentDate, { weekStartsOn: 1 }); // Sunday of appointment week
-    const appointmentDateStr = format(appointmentDate, 'yyyy-MM-dd');
 
     console.log('Week boundaries for appointment date:', { appointmentDate, weekStart, weekEnd });
 
@@ -282,18 +319,9 @@ export function useAppointments() {
             if (!servicesWithBenefits.includes(s.id)) servicesWithBenefits.push(s.id);
           });
           console.log('Sequential package covers this appointment. Cycle index:', activeCycleIndex, 'Services:', activeCycleIds);
-          toast({
-            title: "Debug Sequencial",
-            description: `Ciclo ativo: ${activeCycleIndex}. Coberto: Sim`,
-          });
           break;
         } else {
           console.log('Servicos não batem com o ciclo ativo:', { selectedServices, activeCycleIds });
-          toast({
-            title: "Debug Sequencial Falhou",
-            description: `Serviços selecionados não batem com o ciclo ativo (${activeCycleIndex}).`,
-            variant: "destructive"
-          });
         }
       }
     }
@@ -458,6 +486,7 @@ export function useAppointments() {
       .from('appointments')
       .insert({
         user_id: user.id,
+        barber_id: barberId || null,
         appointment_date: format(date, 'yyyy-MM-dd'),
         appointment_time: time,
         notes: notes || null,
@@ -509,6 +538,12 @@ export function useAppointments() {
         toast({
           title: "⚠️ Intervalo de almoço",
           description: "Este horário coincide com o intervalo de almoço. Por favor, escolha outro horário.",
+          variant: "destructive"
+        });
+      } else if (msg.includes('BARBER_UNAVAILABLE')) {
+        toast({
+          title: "⚠️ Barbeiro indisponível",
+          description: "O profissional selecionado não está disponível no momento.",
           variant: "destructive"
         });
       } else {
@@ -574,10 +609,6 @@ export function useAppointments() {
       }));
 
       console.log('Inserting sequential usage records:', seqUsageRecords);
-      toast({
-        title: "Debug Array",
-        description: `Enviando ${seqUsageRecords.length} registros pro banco.`,
-      });
 
       const { error: seqUsageError } = await supabase
         .from('client_package_usage')
@@ -593,10 +624,6 @@ export function useAppointments() {
         throw new Error(`DB Insert Error: ${seqUsageError.message}`);
       } else {
         console.log('Sequential usage records inserted successfully');
-        toast({
-          title: "Sucesso no Banco",
-          description: `Uso sequencial inserido! Count agora deve subir.`,
-        });
       }
     }
 
@@ -669,6 +696,24 @@ export function useAppointments() {
       description: "Seu agendamento foi cancelado e o horário foi liberado.",
     });
 
+    const cancelledApt = appointments.find((a) => a.id === appointmentId);
+    if (cancelledApt) {
+      const dateStr = format(new Date(cancelledApt.appointment_date + 'T00:00:00'), 'dd/MM');
+      notifyAdmin(
+        '❌ Agendamento Cancelado',
+        `Cliente cancelou o horário de ${dateStr} às ${cancelledApt.appointment_time.slice(0, 5)}`,
+        '/admin/agenda'
+      );
+      if (cancelledApt.barber?.user_id) {
+        notifyBarber(
+          cancelledApt.barber.user_id,
+          '❌ Agendamento Cancelado',
+          `Cliente cancelou o horário de ${dateStr} às ${cancelledApt.appointment_time.slice(0, 5)}`,
+          '/barbeiro/agenda'
+        );
+      }
+    }
+
     invalidateMyPackagesCache();
     fetchAppointments();
     return true;
@@ -702,67 +747,81 @@ function calculateBlockedSlots(startTime: string, durationMinutes: number): stri
   return slots;
 }
 
-export function useBookedSlots(date: Date | undefined) {
+export function useBookedSlots(date: Date | undefined, barberId?: string | null) {
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   async function fetchBookedSlots(targetDate?: Date) {
     const d = targetDate ?? date;
-    if (!d) return;
+    if (!d) {
+      setBookedSlots([]);
+      return;
+    }
 
     setIsRefreshing(true);
     const dateStr = format(d, 'yyyy-MM-dd');
 
-    // Fetch booked appointments WITH total_duration to calculate blocked slots
-    const { data: appointments, error: aptError } = await supabase
+    // Tenta RPC segura que lê agendamentos + bloqueios APENAS da cadeira (barberId) sem expor PII
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_barber_booked_slots', {
+      p_date: dateStr,
+      p_barber_id: barberId || null,
+    });
+
+    if (!rpcError && Array.isArray(rpcData)) {
+      const normalizedSlots = [
+        ...new Set(
+          rpcData.map((r: any) => {
+            const raw = String(r.slot_time || '');
+            return raw.length === 5 ? `${raw}:00` : raw.slice(0, 8);
+          })
+        ),
+      ].filter(Boolean);
+      setBookedSlots(normalizedSlots);
+      setIsRefreshing(false);
+      return;
+    }
+
+    // Fallback caso RPC ainda não exista no banco
+    let aptQuery = supabase
       .from('appointments')
       .select('appointment_time, total_duration')
       .eq('appointment_date', dateStr)
       .in('status', ['pending', 'confirmed']);
+    if (barberId) aptQuery = aptQuery.eq('barber_id', barberId);
 
-    if (aptError) {
-      console.error('Error fetching booked slots:', aptError);
-    }
+    const { data: appointments, error: aptError } = await aptQuery;
+    if (aptError) console.error('Error fetching booked slots:', aptError);
 
-    // Fetch blocked slots (manual blocks)
-    const { data: blockedSlots, error: blockedError } = await supabase
+    let blockedQuery = supabase
       .from('blocked_slots')
       .select('blocked_time')
       .eq('blocked_date', dateStr);
+    if (barberId) blockedQuery = blockedQuery.eq('barber_id', barberId);
 
-    if (blockedError) {
-      console.error('Error fetching blocked slots:', blockedError);
-    }
+    const { data: blockedSlots, error: blockedError } = await blockedQuery;
+    if (blockedError) console.error('Error fetching blocked slots:', blockedError);
 
-    // Calculate all blocked times based on appointment duration
     const allBookedTimes: string[] = [];
-    
     for (const apt of appointments || []) {
       const duration = apt.total_duration || 30;
-      const blockedForAppointment = calculateBlockedSlots(apt.appointment_time, duration);
-      allBookedTimes.push(...blockedForAppointment);
+      allBookedTimes.push(...calculateBlockedSlots(apt.appointment_time, duration));
     }
-    
-    // Add manually blocked slots
-    const blockedTimes = blockedSlots?.map(b => b.blocked_time) || [];
-    
-    // Merge and deduplicate
-    const allBlockedSlots = [...new Set([...allBookedTimes, ...blockedTimes])];
-    setBookedSlots(allBlockedSlots);
+    const blockedTimes = (blockedSlots || []).map((b: any) => b.blocked_time);
+    setBookedSlots([...new Set([...allBookedTimes, ...blockedTimes])]);
     setIsRefreshing(false);
   }
 
-  // Reload whenever the date changes
+  // Reload whenever date or barber changes
   useEffect(() => {
     fetchBookedSlots();
-  }, [date]);
+  }, [date, barberId]);
 
   // Poll every 20 seconds so two clients don't see stale data simultaneously
   useEffect(() => {
     if (!date) return;
     const interval = setInterval(() => fetchBookedSlots(), 20_000);
     return () => clearInterval(interval);
-  }, [date]);
+  }, [date, barberId]);
 
   return { bookedSlots, isRefreshing, refresh: () => fetchBookedSlots() };
 }

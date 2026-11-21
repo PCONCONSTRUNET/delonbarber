@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, User, Scissors, Search, X, Calendar as CalendarIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminClients } from '@/hooks/useAdmin';
+import { useBarbers } from '@/hooks/useBarbers';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -22,8 +23,17 @@ interface Service {
   duration_minutes: number;
 }
 
-export function ManualBooking() {
-  const { clients } = useAdminClients();
+interface ManualBookingProps {
+  fixedBarberId?: string | null;
+  defaultBarberId?: string | null;
+}
+
+export function ManualBooking({ fixedBarberId, defaultBarberId }: ManualBookingProps = {}) {
+  const { clients } = useAdminClients(fixedBarberId ?? null);
+  const { barbers } = useBarbers();
+  const [selectedBarberId, setSelectedBarberId] = useState<string>(
+    fixedBarberId || defaultBarberId || ''
+  );
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [clientName, setClientName] = useState('');
@@ -56,6 +66,14 @@ export function ManualBooking() {
   useEffect(() => {
     fetchServices();
   }, []);
+
+  useEffect(() => {
+    if (fixedBarberId) {
+      setSelectedBarberId(fixedBarberId);
+    } else if (!selectedBarberId && barbers.length > 0) {
+      setSelectedBarberId(defaultBarberId || barbers[0].id);
+    }
+  }, [fixedBarberId, defaultBarberId, barbers, selectedBarberId]);
 
   async function fetchServices() {
     setLoadingServices(true);
@@ -166,6 +184,7 @@ export function ManualBooking() {
         .from('appointments')
         .insert({
           user_id: finalUserId,
+          barber_id: fixedBarberId || selectedBarberId || barbers[0]?.id || null,
           appointment_date: selectedDate,
           appointment_time: timeFormatted,
           status: 'confirmed',
@@ -234,6 +253,28 @@ export function ManualBooking() {
     <div className="w-full max-w-4xl space-y-6 pb-20">
       <div className="bg-card border rounded-2xl p-4 sm:p-6 space-y-6 shadow-sm">
         
+        {/* Barber selection (only when not locked to a barber) */}
+        {!fixedBarberId && barbers.length > 1 && (
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold flex items-center gap-2">
+              <Scissors className="h-4 w-4 text-primary" />
+              Barbeiro / Cadeira *
+            </Label>
+            <Select value={selectedBarberId} onValueChange={setSelectedBarberId}>
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="Selecione o barbeiro" />
+              </SelectTrigger>
+              <SelectContent>
+                {barbers.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name} {b.is_owner ? '(Dono)' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Date and Time Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/30 p-4 rounded-xl border border-border/50">
           <div className="space-y-2">

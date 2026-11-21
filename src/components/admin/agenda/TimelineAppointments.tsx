@@ -26,6 +26,9 @@ interface TimelineAppointmentsProps {
   businessHours?: BusinessHour | null;
   selectedDate: string;
   onRefresh?: () => void;
+  fixedBarberId?: string | null;
+  defaultBarberId?: string | null;
+  showBarberBadge?: boolean;
 }
 
 const statusConfig = {
@@ -56,6 +59,9 @@ export function TimelineAppointments({
   businessHours,
   selectedDate,
   onRefresh,
+  fixedBarberId,
+  defaultBarberId,
+  showBarberBadge = false,
 }: TimelineAppointmentsProps) {
   const [paymentModal, setPaymentModal] = useState<{
     open: boolean;
@@ -200,6 +206,7 @@ export function TimelineAppointments({
                         }
                         onDelete={onDelete}
                         onWhatsApp={() => handleWhatsApp(apt)}
+                        showBarberBadge={showBarberBadge}
                       />
                     ))}
                   </AnimatePresence>
@@ -263,6 +270,8 @@ export function TimelineAppointments({
         selectedDate={selectedDate}
         selectedTime={quickBookingModal.time}
         onSuccess={handleBookingSuccess}
+        fixedBarberId={fixedBarberId}
+        defaultBarberId={defaultBarberId}
       />
     </>
   );
@@ -274,6 +283,7 @@ interface SwipeableCardProps {
   onOpenPayment: () => void;
   onDelete?: (id: string) => void;
   onWhatsApp: () => void;
+  showBarberBadge?: boolean;
 }
 
 function SwipeableAppointmentCard({
@@ -282,6 +292,7 @@ function SwipeableAppointmentCard({
   onOpenPayment,
   onDelete,
   onWhatsApp,
+  showBarberBadge = false,
 }: SwipeableCardProps) {
   const [isRevealed, setIsRevealed] = useState(false);
   const x = useMotionValue(0);
@@ -458,6 +469,11 @@ function SwipeableAppointmentCard({
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
               {duration}min
             </span>
+            {showBarberBadge && apt.barber?.name && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium truncate max-w-[110px]">
+                💈 {apt.barber.name}
+              </span>
+            )}
           </div>
 
           {/* Client name */}

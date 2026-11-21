@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import OneSignal from 'react-onesignal';
 import { supabase } from '@/integrations/supabase/client';
 
-type Role = 'admin' | 'cliente';
+type Role = 'admin' | 'cliente' | 'barber';
 
 interface UsePushOptions {
   role: Role;

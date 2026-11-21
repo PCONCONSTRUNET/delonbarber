@@ -381,6 +381,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
                         <p className="font-medium">{apt.guest_name || apt.profile?.name || 'Cliente'}</p>
                         <p className="text-xs text-muted-foreground">
                           {format(parseISO(apt.appointment_date + 'T12:00:00'), 'dd/MM')} • {apt.appointment_time.slice(0, 5)}
+                          {apt.barber?.name && ` • ${apt.barber.name}`}
                         </p>
                       </div>
                       <span className="font-semibold">R$ {Number(apt.total_price).toFixed(0)}</span>
@@ -448,6 +449,7 @@ export function FinancialReport({ appointments }: FinancialReportProps) {
                       <p className="font-medium">{apt.guest_name || apt.profile?.name || 'Cliente'}</p>
                       <p className="text-xs text-muted-foreground">
                         {format(parseISO(apt.appointment_date + 'T12:00:00'), 'dd/MM')} - {apt.services.map(s => s.name).join(', ')}
+                        {apt.barber?.name && ` • 💈 ${apt.barber.name}`}
                       </p>
                     </div>
                   </div>

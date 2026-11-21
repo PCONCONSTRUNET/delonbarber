@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Phone, Zap, CalendarIcon } from 'lucide-react';
+import { User, Phone, Zap, CalendarIcon, Scissors } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useBarbers } from '@/hooks/useBarbers';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format, parse } from 'date-fns';
@@ -27,6 +28,8 @@ interface SqueezeInModalProps {
   onOpenChange: (open: boolean) => void;
   selectedDate: string;
   onSuccess: () => void;
+  fixedBarberId?: string | null;
+  defaultBarberId?: string | null;
 }
 
 export function SqueezeInModal({
@@ -34,8 +37,14 @@ export function SqueezeInModal({
   onOpenChange,
   selectedDate,
   onSuccess,
+  fixedBarberId,
+  defaultBarberId,
 }: SqueezeInModalProps) {
   const isMobile = useIsMobile();
+  const { barbers } = useBarbers();
+  const [selectedBarberId, setSelectedBarberId] = useState<string>(
+    fixedBarberId || defaultBarberId || ''
+  );
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [clientName, setClientName] = useState('');
@@ -69,8 +78,9 @@ export function SqueezeInModal({
       setCustomTime('');
       setPaymentMethod('pending');
       setEditableDate(selectedDate);
+      setSelectedBarberId(fixedBarberId || defaultBarberId || barbers[0]?.id || '');
     }
-  }, [open, selectedDate]);
+  }, [open, selectedDate, fixedBarberId, defaultBarberId, barbers]);
 
   async function fetchServices() {
     setLoadingServices(true);
@@ -119,6 +129,7 @@ export function SqueezeInModal({
         .from('appointments')
         .insert({
           user_id: user.id,
+          barber_id: fixedBarberId || selectedBarberId || barbers[0]?.id || null,
           appointment_date: editableDate,
           appointment_time: timeFormatted,
           status: 'confirmed' as const,
@@ -178,6 +189,26 @@ export function SqueezeInModal({
 
   const formContent = (
     <div className="space-y-3 overflow-y-auto flex-1 px-1">
+      {!fixedBarberId && barbers.length > 1 && (
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1">
+            <Scissors className="h-3 w-3" /> Barbeiro
+          </Label>
+          <Select value={selectedBarberId} onValueChange={setSelectedBarberId}>
+            <SelectTrigger className="h-9 text-xs rounded-xl bg-muted/30 border-border/50">
+              <SelectValue placeholder="Selecione o barbeiro" />
+            </SelectTrigger>
+            <SelectContent>
+              {barbers.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Date + Time */}
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">

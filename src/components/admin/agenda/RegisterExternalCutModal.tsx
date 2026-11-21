@@ -4,13 +4,15 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ClipboardCheck, User, Phone, CalendarIcon } from 'lucide-react';
+import { ClipboardCheck, User, Phone, CalendarIcon, Scissors } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PaymentMethod } from '@/components/payments/PaymentMethodSelector';
 import { supabase } from '@/integrations/supabase/client';
+import { useBarbers } from '@/hooks/useBarbers';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -27,6 +29,8 @@ interface RegisterExternalCutModalProps {
   onOpenChange: (open: boolean) => void;
   selectedDate: string;
   onSuccess: () => void;
+  fixedBarberId?: string | null;
+  defaultBarberId?: string | null;
 }
 
 export function RegisterExternalCutModal({
@@ -34,8 +38,14 @@ export function RegisterExternalCutModal({
   onOpenChange,
   selectedDate,
   onSuccess,
+  fixedBarberId,
+  defaultBarberId,
 }: RegisterExternalCutModalProps) {
   const isMobile = useIsMobile();
+  const { barbers } = useBarbers();
+  const [selectedBarberId, setSelectedBarberId] = useState<string>(
+    fixedBarberId || defaultBarberId || ''
+  );
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [clientName, setClientName] = useState('');
@@ -63,8 +73,9 @@ export function RegisterExternalCutModal({
       setPaymentMethod('cash');
       setCustomPrice('');
       setEditableDate(selectedDate);
+      setSelectedBarberId(fixedBarberId || defaultBarberId || barbers[0]?.id || '');
     }
-  }, [open, selectedDate]);
+  }, [open, selectedDate, fixedBarberId, defaultBarberId, barbers]);
 
   async function fetchServices() {
     setLoadingServices(true);
@@ -114,6 +125,7 @@ export function RegisterExternalCutModal({
         .from('appointments')
         .insert({
           user_id: user.id,
+          barber_id: fixedBarberId || selectedBarberId || barbers[0]?.id || null,
           appointment_date: editableDate,
           appointment_time: timeFormatted,
           status: 'completed' as const,
@@ -176,6 +188,26 @@ export function RegisterExternalCutModal({
 
   const formContent = (
     <div className="space-y-3 overflow-y-auto flex-1 px-1">
+      {!fixedBarberId && barbers.length > 1 && (
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1">
+            <Scissors className="h-3 w-3" /> Barbeiro
+          </Label>
+          <Select value={selectedBarberId} onValueChange={setSelectedBarberId}>
+            <SelectTrigger className="h-9 text-xs rounded-xl bg-muted/30 border-border/50">
+              <SelectValue placeholder="Selecione o barbeiro" />
+            </SelectTrigger>
+            <SelectContent>
+              {barbers.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Date + Time + Client in compact rows */}
       <div className="grid grid-cols-3 gap-2">
         <div className="space-y-1">

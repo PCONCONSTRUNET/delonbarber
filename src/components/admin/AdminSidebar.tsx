@@ -10,7 +10,8 @@ import {
   CalendarPlus,
   ExternalLink,
   Star,
-  Gift
+  Gift,
+  UserCog,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: Calendar, label: 'Agenda', path: '/admin/agenda' },
   { icon: Users, label: 'Clientes', path: '/admin/clientes' },
+  { icon: UserCog, label: 'Barbeiros', path: '/admin/barbeiros' },
   { icon: Scissors, label: 'Serviços', path: '/admin/servicos' },
   { icon: Crown, label: 'Pacotes', path: '/admin/pacotes' },
   { icon: Gift, label: 'Fidelidade', path: '/admin/fidelidade' },

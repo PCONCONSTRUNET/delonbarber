@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, User, Phone, Scissors, AlertCircle, Search, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminClients } from '@/hooks/useAdmin';
+import { useBarbers } from '@/hooks/useBarbers';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,8 @@ interface QuickBookingModalProps {
   selectedDate: string;
   selectedTime: string;
   onSuccess: () => void;
+  fixedBarberId?: string | null;
+  defaultBarberId?: string | null;
 }
 
 export function QuickBookingModal({
@@ -34,8 +37,14 @@ export function QuickBookingModal({
   selectedDate,
   selectedTime,
   onSuccess,
+  fixedBarberId,
+  defaultBarberId,
 }: QuickBookingModalProps) {
-  const { clients } = useAdminClients();
+  const { clients } = useAdminClients(fixedBarberId ?? null);
+  const { barbers } = useBarbers();
+  const [selectedBarberId, setSelectedBarberId] = useState<string>(
+    fixedBarberId || defaultBarberId || ''
+  );
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [clientName, setClientName] = useState('');
@@ -74,8 +83,9 @@ export function QuickBookingModal({
       setSelectedClient(null);
       setShowSearchResults(false);
       setPaymentMethod('pending');
+      setSelectedBarberId(fixedBarberId || defaultBarberId || barbers[0]?.id || '');
     }
-  }, [open]);
+  }, [open, fixedBarberId, defaultBarberId, barbers]);
 
   async function fetchServices() {
     setLoadingServices(true);
@@ -170,6 +180,7 @@ export function QuickBookingModal({
         .from('appointments')
         .insert({
           user_id: finalUserId,
+          barber_id: fixedBarberId || selectedBarberId || barbers[0]?.id || null,
           appointment_date: selectedDate,
           appointment_time: selectedTime,
           status: 'confirmed',
@@ -265,6 +276,27 @@ export function QuickBookingModal({
               )}
             </div>
           </div>
+
+          {!fixedBarberId && barbers.length > 1 && (
+            <div className="space-y-1">
+              <Label className="text-xs sm:text-sm flex items-center gap-1">
+                <Scissors className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                Barbeiro
+              </Label>
+              <Select value={selectedBarberId} onValueChange={setSelectedBarberId}>
+                <SelectTrigger className="h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Selecione o barbeiro" />
+                </SelectTrigger>
+                <SelectContent>
+                  {barbers.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Registered Client Search */}
           <div className="space-y-1 relative">

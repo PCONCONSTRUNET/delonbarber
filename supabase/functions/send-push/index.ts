@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 interface PushRequest {
-  role: "admin" | "cliente";
+  role: "admin" | "cliente" | "barber";
   user_id?: string;
   title: string;
   message: string;

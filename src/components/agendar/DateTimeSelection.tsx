@@ -21,6 +21,7 @@ interface DateTimeSelectionProps {
   onSelectTime: (time: string) => void;
   selectedServices?: Service[];
   isRefreshing?: boolean;
+  selectedBarberId?: string | null;
 }
 
 export function DateTimeSelection({
@@ -31,7 +32,8 @@ export function DateTimeSelection({
   onSelectDate,
   onSelectTime,
   selectedServices = [],
-  isRefreshing = false
+  isRefreshing = false,
+  selectedBarberId,
 }: DateTimeSelectionProps) {
   const { packages } = useMyPackages();
   const { isExclusive: isExclusiveClient, loading: isExclusiveClientLoading } = useIsExclusiveClient();
@@ -50,9 +52,13 @@ export function DateTimeSelection({
         return;
       }
 
+      const matchingPackages = packages.filter(
+        p => p.status === 'active' && (!selectedBarberId || !p.barber_id || p.barber_id === selectedBarberId)
+      );
+
       // ── Plano SEQUENCIAL ──────────────────────────────────────────────
-      const activeSequentialPkg = packages.find(
-        p => p.status === 'active' && p.package.type === 'sequential'
+      const activeSequentialPkg = matchingPackages.find(
+        p => p.package.type === 'sequential'
       );
       const activeCycleIds = (activeSequentialPkg?.activeCycle || []).map(c => c.service_id);
       const isSequential =
@@ -67,55 +73,73 @@ export function DateTimeSelection({
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Verifica se já existe agendamento sequencial CONFIRMADO na semana atual
         const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
-        const currentWeekEnd   = endOfWeek(today,   { weekStartsOn: 1 });
+        const currentWeekStartStr = format(currentWeekStart, 'yyyy-MM-dd');
 
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        
-        // Buscar agendamentos VIP a partir do início da semana atual para frente
-        const { data: futureApts } = currentUser ? await supabase
+        // Buscar agendamentos VIP (incluindo 'completed' para não travar semanas futuras após o corte de hoje!)
+        // e também usos manuais em client_package_usage deste pacote sequencial.
+        let futureAptsQuery = supabase
           .from('appointments')
           .select('id, appointment_date, payment_method')
-          .eq('user_id', currentUser.id)
-          .gte('appointment_date', format(currentWeekStart, 'yyyy-MM-dd'))
+          .eq('user_id', user.id)
+          .gte('appointment_date', currentWeekStartStr)
           .eq('payment_method', 'subscriber')
-          .in('status', ['confirmed', 'pending'])
-          .order('appointment_date', { ascending: false }) : { data: [] };
+          .in('status', ['confirmed', 'pending', 'completed']);
 
-        let availableWeekStart = currentWeekStart;
-        let availableWeekEnd = currentWeekEnd;
-
-        // Se o cliente tem agendamentos no futuro/nesta semana, a próxima janela
-        // disponível será a semana LOGO APÓS o agendamento mais distante.
-        if (futureApts && futureApts.length > 0) {
-          const latestAptDate = new Date(futureApts[0].appointment_date + 'T00:00:00');
-          availableWeekStart = startOfWeek(new Date(latestAptDate.getTime() + 7 * 24 * 60 * 60 * 1000), { weekStartsOn: 1 });
-          availableWeekEnd = endOfWeek(availableWeekStart, { weekStartsOn: 1 });
+        if (selectedBarberId) {
+          futureAptsQuery = futureAptsQuery.eq('barber_id', selectedBarberId);
         }
 
-        // Bloqueia tudo EXCETO a semana disponível
-        const pkgStart = activeSequentialPkg!.start_date
-          ? new Date(activeSequentialPkg!.start_date + 'T00:00:00')
-          : new Date(today.getFullYear(), today.getMonth() - 3, 1);
+        const [aptsRes, manualUsageRes] = await Promise.all([
+          futureAptsQuery,
+          supabase
+            .from('client_package_usage')
+            .select('used_at, appointment_id')
+            .eq('client_package_id', activeSequentialPkg!.id)
+            .is('appointment_id', null)
+            .gte('used_at', `${currentWeekStartStr}T00:00:00`),
+        ]);
+
+        const occupiedWeekStarts = new Map<string, Date>();
+
+        const markWeekOccupied = (dateStr: string) => {
+          if (!dateStr) return;
+          const d = new Date(dateStr.substring(0, 10) + 'T00:00:00');
+          if (isNaN(d.getTime())) return;
+          const wStart = startOfWeek(d, { weekStartsOn: 1 });
+          const wKey = format(wStart, 'yyyy-MM-dd');
+          if (!occupiedWeekStarts.has(wKey)) {
+            occupiedWeekStarts.set(wKey, wStart);
+          }
+        };
+
+        (aptsRes.data || []).forEach((apt: any) => markWeekOccupied(apt.appointment_date));
+        (manualUsageRes.data || []).forEach((u: any) => markWeekOccupied(u.used_at));
 
         const blockedDates: Date[] = [];
 
-        // Passado: do início do pacote até o dia anterior à semana disponível
-        let cursor = new Date(pkgStart);
-        while (cursor < availableWeekStart) {
-          blockedDates.push(new Date(cursor));
-          cursor.setDate(cursor.getDate() + 1);
-        }
+        // Bloqueia apenas as semanas que já possuem agendamento/uso (máx 1 por semana),
+        // liberando todas as próximas semanas livres até o vencimento do pacote.
+        occupiedWeekStarts.forEach((wStart) => {
+          const wEnd = endOfWeek(wStart, { weekStartsOn: 1 });
+          const cur = new Date(wStart);
+          while (cur <= wEnd) {
+            blockedDates.push(new Date(cur));
+            cur.setDate(cur.getDate() + 1);
+          }
+        });
 
-        // Futuro: após a semana disponível
-        const farFuture = new Date(today);
-        farFuture.setMonth(farFuture.getMonth() + 6);
-        let futureCursor = new Date(availableWeekEnd);
-        futureCursor.setDate(futureCursor.getDate() + 1);
-        while (futureCursor <= farFuture) {
-          blockedDates.push(new Date(futureCursor));
+        // Bloqueia datas posteriores ao vencimento da assinatura (end_date)
+        if (activeSequentialPkg?.end_date) {
+          const pkgEnd = new Date(activeSequentialPkg.end_date + 'T00:00:00');
+          const farFuture = new Date(today);
+          farFuture.setMonth(farFuture.getMonth() + 6);
+          const futureCursor = new Date(pkgEnd);
           futureCursor.setDate(futureCursor.getDate() + 1);
+          while (futureCursor <= farFuture) {
+            blockedDates.push(new Date(futureCursor));
+            futureCursor.setDate(futureCursor.getDate() + 1);
+          }
         }
 
         setBlockedWeekDates(blockedDates);
@@ -125,10 +149,10 @@ export function DateTimeSelection({
       setIsSequentialVipBooking(false);
       // ── Fim Plano SEQUENCIAL ──────────────────────────────────────────
 
-      // Get service IDs that have weekly limits in user's packages
+      // Get service IDs that have weekly limits in user's packages FOR THIS BARBER
       const servicesWithWeeklyLimit: { serviceId: string; weeklyLimit: number }[] = [];
       
-      for (const pkg of packages) {
+      for (const pkg of matchingPackages) {
         if (pkg.status === 'active') {
           for (const benefit of pkg.benefits) {
             if (benefit.weekly_limit !== null && benefit.weekly_limit > 0 && benefit.remaining > 0) {
@@ -152,12 +176,14 @@ export function DateTimeSelection({
 
       setIsVipBooking(true);
 
-      // Get all scheduled appointments for the next 60 days
+      // Buscar do início da semana atual até +90 dias para contar corretamente usos/agendamentos (inclusive 'completed')
       const today2 = new Date();
+      const currentWeekStart2 = startOfWeek(today2, { weekStartsOn: 1 });
+      const currentWeekStartStr2 = format(currentWeekStart2, 'yyyy-MM-dd');
       const futureDate = new Date();
-      futureDate.setDate(today2.getDate() + 60);
+      futureDate.setDate(today2.getDate() + 90);
 
-      const { data: scheduledAppointments, error } = await supabase
+      let scheduledQuery = supabase
         .from('appointments')
         .select(`
           id,
@@ -165,46 +191,81 @@ export function DateTimeSelection({
           appointment_services!inner(service_id)
         `)
         .eq('user_id', user.id)
-        .gte('appointment_date', format(today2, 'yyyy-MM-dd'))
+        .gte('appointment_date', currentWeekStartStr2)
         .lte('appointment_date', format(futureDate, 'yyyy-MM-dd'))
-        .in('status', ['pending', 'confirmed']);
+        .in('status', ['pending', 'confirmed', 'completed']);
 
-      if (error) {
-        console.error('Error fetching scheduled appointments:', error);
+      if (selectedBarberId) {
+        scheduledQuery = scheduledQuery.eq('barber_id', selectedBarberId);
+      }
+
+      const pkgIds = matchingPackages.map((p) => p.id);
+      const [scheduledRes, manualFlexUsageRes] = await Promise.all([
+        scheduledQuery,
+        pkgIds.length > 0
+          ? supabase
+              .from('client_package_usage')
+              .select('service_id, used_at, appointment_id')
+              .in('client_package_id', pkgIds)
+              .is('appointment_id', null)
+              .gte('used_at', `${currentWeekStartStr2}T00:00:00`)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (scheduledRes.error) {
+        console.error('Error fetching scheduled appointments:', scheduledRes.error);
         return;
       }
 
-      // Find all dates that are in weeks already having VIP appointments for selected services
-      const blockedDates: Date[] = [];
+      // Contabiliza uso por (semana, serviceId) para respeitar weekly_limit real (ex: 1x ou 2x/semana)
+      const weekServiceCounts = new Map<string, number>();
 
-      for (const apt of scheduledAppointments || []) {
+      for (const apt of scheduledRes.data || []) {
         const aptDate = new Date(apt.appointment_date + 'T00:00:00');
-        const aptServiceIds = apt.appointment_services.map((as: any) => as.service_id);
+        const weekKey = format(startOfWeek(aptDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        const aptServiceIds = (apt.appointment_services || []).map((as: any) => as.service_id);
 
-        // Check if any selected service with weekly limit is in this appointment
-        const hasBlockingService = servicesWithWeeklyLimit.some(s => 
-          aptServiceIds.includes(s.serviceId)
-        );
-
-        if (hasBlockingService) {
-          // Block the entire week of this appointment
-          const weekStart = startOfWeek(aptDate, { weekStartsOn: 1 });
-          const weekEnd = endOfWeek(aptDate, { weekStartsOn: 1 });
-          
-          // Add all dates in this week to blocked dates
-          let currentDate = new Date(weekStart);
-          while (currentDate <= weekEnd) {
-            blockedDates.push(new Date(currentDate));
-            currentDate.setDate(currentDate.getDate() + 1);
+        for (const s of servicesWithWeeklyLimit) {
+          if (aptServiceIds.includes(s.serviceId)) {
+            const k = `${weekKey}:${s.serviceId}`;
+            weekServiceCounts.set(k, (weekServiceCounts.get(k) || 0) + 1);
           }
         }
       }
+
+      for (const u of (manualFlexUsageRes as any).data || []) {
+        if (!u.used_at) continue;
+        const uDate = new Date(u.used_at.substring(0, 10) + 'T00:00:00');
+        const weekKey = format(startOfWeek(uDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        const k = `${weekKey}:${u.service_id}`;
+        weekServiceCounts.set(k, (weekServiceCounts.get(k) || 0) + 1);
+      }
+
+      const blockedWeeksSet = new Set<string>();
+      weekServiceCounts.forEach((count, key) => {
+        const [weekKey, serviceId] = key.split(':');
+        const req = servicesWithWeeklyLimit.find((s) => s.serviceId === serviceId);
+        if (req && count >= req.weeklyLimit) {
+          blockedWeeksSet.add(weekKey);
+        }
+      });
+
+      const blockedDates: Date[] = [];
+      blockedWeeksSet.forEach((weekKey) => {
+        const weekStart = new Date(weekKey + 'T00:00:00');
+        const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+        const currentDate = new Date(weekStart);
+        while (currentDate <= weekEnd) {
+          blockedDates.push(new Date(currentDate));
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      });
 
       setBlockedWeekDates(blockedDates);
     }
 
     checkBlockedWeeks();
-  }, [selectedServices, packages]);
+  }, [selectedServices, packages, selectedBarberId]);
 
   const selectedDayHours = useMemo(() => {
     if (!selectedDate) return null;
@@ -331,7 +392,7 @@ export function DateTimeSelection({
                 <>
                   <p className="font-medium text-yellow-600">Plano Sequencial VIP</p>
                   <p className="text-muted-foreground mt-0.5">
-                    Apenas a semana atual está disponível. Após cada visita, a próxima semana será liberada automaticamente.
+                    Limite de 1 atendimento por semana dentro da validade da assinatura. Semanas já utilizadas/agendadas ficam destacadas em amarelo.
                   </p>
                 </>
               ) : (
