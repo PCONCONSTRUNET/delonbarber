@@ -126,7 +126,10 @@ function BarberDashboardContent({
           </CardContent>
         </Card>
 
-        <DashboardStats appointments={appointments} />
+        <DashboardStats
+          appointments={appointments}
+          commissionPercent={barber.is_owner ? undefined : barber.commission_percent}
+        />
 
         <DashboardCharts appointments={appointments} />
 
@@ -146,6 +149,7 @@ function BarberDashboardContent({
                 onUpdateStatus={(id, status) => updateAppointmentStatus(id, status as any)}
                 onUpdatePayment={updatePaymentStatus}
                 onDelete={deleteAppointment}
+                commissionPercent={barber.is_owner ? undefined : barber.commission_percent}
               />
             )}
           </div>
@@ -276,6 +280,7 @@ function BarberAgendaContent({ barber }: { barber: Barber }) {
                   selectedDate={dateStr}
                   onRefresh={fetchAppointments}
                   fixedBarberId={barber.id}
+                  commissionPercent={barber.is_owner ? undefined : barber.commission_percent}
                 />
               )}
             </ScrollArea>

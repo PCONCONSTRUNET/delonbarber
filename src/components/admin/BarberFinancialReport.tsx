@@ -21,6 +21,8 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   format,
   startOfDay,
@@ -90,6 +92,7 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
   // Quick commission edit state (admin only)
   const [editingCommission, setEditingCommission] = useState('');
   const [savingCommission, setSavingCommission] = useState(false);
+  const [includePending, setIncludePending] = useState(false);
 
   // Auto-select first commissioned barber (or first barber) on admin load
   useEffect(() => {
@@ -224,7 +227,7 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
     (a) => a.payment_status === 'paid' && a.status !== 'no_show' && a.status !== 'cancelled' && a.payment_method !== 'subscriber'
   );
   const pendingCuts = barberAppointments.filter(
-    (a) => a.payment_status === 'pending' && (a.status === 'completed' || a.status === 'confirmed') && a.payment_method !== 'subscriber'
+    (a) => a.payment_status !== 'paid' && a.status !== 'cancelled' && a.status !== 'no_show' && a.payment_method !== 'subscriber'
   );
   const vipCuts = barberAppointments.filter(
     (a) => a.payment_method === 'subscriber' && a.status !== 'cancelled' && a.status !== 'no_show'
@@ -243,8 +246,15 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
         0
       )
     : 0;
-  const shopShare = totalGross - totalCommission;
   const pendingAmount = pendingCuts.reduce((sum, a) => sum + Number(a.total_price || 0), 0);
+  const pendingCommission = activeBarber
+    ? pendingCuts.reduce(
+        (sum, a) => sum + (Number(a.total_price || 0) * getAptCommissionRate(a, activeBarber)) / 100,
+        0
+      )
+    : 0;
+  const displayedCommission = includePending ? totalCommission + pendingCommission : totalCommission;
+  const shopShare = totalGross - totalCommission;
   const completedCount = barberAppointments.filter((a) => a.status === 'completed').length;
 
   const paymentBreakdown = paidCuts.reduce((acc, apt) => {
@@ -365,7 +375,17 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
           </Popover>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30">
+            <Switch
+              id="include-pending-commission"
+              checked={includePending}
+              onCheckedChange={setIncludePending}
+            />
+            <Label htmlFor="include-pending-commission" className="text-xs cursor-pointer text-amber-500 font-medium">
+              Já somar pendentes na comissão
+            </Label>
+          </div>
           <span className="text-sm font-medium capitalize text-muted-foreground">
             {getPeriodLabel()}
           </span>
@@ -494,12 +514,16 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
               <div className="flex items-center gap-2 mb-1.5">
                 <Wallet className="h-4 w-4 text-amber-500" />
                 <span className="text-xs text-muted-foreground">
-                  {fixedBarber ? 'Sua Comissão' : 'Comissão a Pagar'}
+                  {fixedBarber ? `Sua Comissão (${commissionRate}%)` : `Comissão (${commissionRate}%)`}
                 </span>
               </div>
-              <p className="text-2xl font-bold text-amber-500">R$ {totalCommission.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-amber-500">R$ {displayedCommission.toFixed(2)}</p>
               <p className="text-[11px] text-muted-foreground mt-1">
-                Taxa atual: {commissionRate}% (histórico preservado)
+                {includePending
+                  ? `Pagos: R$ ${totalCommission.toFixed(2)} + Prev.: R$ ${pendingCommission.toFixed(2)}`
+                  : pendingCommission > 0
+                  ? `Pagos · Prev. pendentes: +R$ ${pendingCommission.toFixed(2)}`
+                  : 'Sobre faturamento pago'}
               </p>
             </div>
 
@@ -511,18 +535,18 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
                 </div>
                 <p className="text-2xl font-bold text-primary">R$ {shopShare.toFixed(2)}</p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Após comissão de cada corte
+                  {pendingCommission > 0 ? `Pendente: R$ ${pendingAmount.toFixed(2)}` : 'Após comissão de cada corte'}
                 </p>
               </div>
             ) : (
               <div className="p-4 rounded-2xl glass-effect">
                 <div className="flex items-center gap-2 mb-1.5">
                   <DollarSign className="h-4 w-4 text-yellow-500" />
-                  <span className="text-xs text-muted-foreground">Pendente</span>
+                  <span className="text-xs text-muted-foreground">Pendente (Agendados)</span>
                 </div>
                 <p className="text-2xl font-bold text-yellow-500">R$ {pendingAmount.toFixed(2)}</p>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  {pendingCuts.length} aguardando pag.
+                <p className="text-[11px] text-amber-500 mt-1">
+                  {pendingCuts.length} corte(s) · Sua com.: R$ {pendingCommission.toFixed(2)}
                 </p>
               </div>
             )}
@@ -584,10 +608,12 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
               <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                 {barberAppointments.map((apt) => {
                   const isVip = apt.payment_method === 'subscriber';
-                  const isPaid = apt.payment_status === 'paid' && !isVip && apt.status !== 'cancelled' && apt.status !== 'no_show';
+                  const isActiveNonVip = !isVip && apt.status !== 'cancelled' && apt.status !== 'no_show';
+                  const isPaid = apt.payment_status === 'paid' && isActiveNonVip;
+                  const isForecast = apt.payment_status !== 'paid' && isActiveNonVip;
                   const price = Number(apt.total_price || 0);
                   const cutRate = getAptCommissionRate(apt, activeBarber);
-                  const cutCommission = isPaid ? (price * cutRate) / 100 : 0;
+                  const cutCommission = isActiveNonVip ? (price * cutRate) / 100 : 0;
                   const clientName = apt.guest_name || apt.profile?.name || 'Cliente';
 
                   return (
@@ -632,10 +658,15 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">
-                            Comissão{isPaid ? ` (${cutRate}%)` : ''}
+                            {isPaid ? `Comissão (${cutRate}%)` : isForecast ? `Com. Prevista (${cutRate}%)` : 'Comissão'}
                           </p>
-                          <p className={cn('font-bold text-sm', isPaid ? 'text-amber-500' : 'text-muted-foreground')}>
-                            {isPaid ? `R$ ${cutCommission.toFixed(2)}` : '-'}
+                          <p
+                            className={cn(
+                              'font-bold text-sm',
+                              isPaid ? 'text-amber-500' : isForecast ? 'text-amber-500/70' : 'text-muted-foreground'
+                            )}
+                          >
+                            {isPaid || isForecast ? `R$ ${cutCommission.toFixed(2)}` : '-'}
                           </p>
                         </div>
                       </div>

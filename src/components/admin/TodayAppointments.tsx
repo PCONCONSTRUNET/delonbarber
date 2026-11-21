@@ -16,6 +16,7 @@ interface TodayAppointmentsProps {
   onUpdateStatus: (id: string, status: string) => void;
   onUpdatePayment: (id: string, status: string, method?: string) => void;
   onDelete?: (id: string) => void;
+  commissionPercent?: number;
 }
 
 const statusColors: Record<string, string> = {
@@ -61,7 +62,7 @@ const PaymentIcon = ({ method, size = 14 }: { method: string; size?: number }) =
   }
 };
 
-export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePayment, onDelete }: TodayAppointmentsProps) {
+export function TodayAppointments({ appointments, onUpdateStatus, onUpdatePayment, onDelete, commissionPercent }: TodayAppointmentsProps) {
   const [paymentModal, setPaymentModal] = useState<{
     open: boolean;
     appointment: AdminAppointment | null;
@@ -212,6 +213,22 @@ Qualquer dúvida, estamos à disposição! 💈`;
                         Aguard.
                       </Badge>
                     )}
+
+                    {commissionPercent != null &&
+                      !isSubscriber &&
+                      apt.status !== 'cancelled' &&
+                      apt.status !== 'no_show' && (() => {
+                        const rate =
+                          apt.commission_percent_at_booking != null
+                            ? Number(apt.commission_percent_at_booking)
+                            : commissionPercent;
+                        const cutComm = (Number(apt.total_price || 0) * rate) / 100;
+                        return (
+                          <Badge className="bg-amber-500/15 text-amber-500 text-[9px] md:text-xs border border-amber-500/30 px-1.5 py-0">
+                            Com.: R$ {cutComm.toFixed(2)} ({rate}%)
+                          </Badge>
+                        );
+                      })()}
                   </div>
                 </div>
 

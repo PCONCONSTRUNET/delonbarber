@@ -1,20 +1,47 @@
-import { Calendar, DollarSign, Users, Clock } from 'lucide-react';
+import { Calendar, DollarSign, Users, Clock, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AdminAppointment } from '@/hooks/useAdmin';
 
 interface DashboardStatsProps {
   appointments: AdminAppointment[];
+  /** Quando informado no painel de barbeiro comissionado, exibe o card de comissão logo no Dashboard */
+  commissionPercent?: number;
 }
 
-export function DashboardStats({ appointments }: DashboardStatsProps) {
+export function DashboardStats({ appointments, commissionPercent }: DashboardStatsProps) {
   const today = new Date().toISOString().split('T')[0];
-  
+
   const todayAppointments = appointments.filter(a => a.appointment_date === today);
   const pendingPayments = appointments.filter(a => a.payment_status === 'pending' && a.status === 'completed');
-  const totalRevenue = appointments
-    .filter(a => a.payment_status === 'paid' && a.status !== 'no_show')
-    .reduce((sum, a) => sum + Number(a.total_price || 0), 0);
-  
+  const paidAppointments = appointments.filter(
+    a => a.payment_status === 'paid' && a.status !== 'no_show' && a.status !== 'cancelled' && a.payment_method !== 'subscriber'
+  );
+  const totalRevenue = paidAppointments.reduce((sum, a) => sum + Number(a.total_price || 0), 0);
+
+  const paidCommission =
+    commissionPercent != null
+      ? paidAppointments.reduce((sum, a) => {
+          const rate = a.commission_percent_at_booking != null ? Number(a.commission_percent_at_booking) : commissionPercent;
+          return sum + (Number(a.total_price || 0) * rate) / 100;
+        }, 0)
+      : 0;
+
+  const forecastCommission =
+    commissionPercent != null
+      ? appointments
+          .filter(
+            a =>
+              a.payment_status !== 'paid' &&
+              a.status !== 'no_show' &&
+              a.status !== 'cancelled' &&
+              a.payment_method !== 'subscriber'
+          )
+          .reduce((sum, a) => {
+            const rate = a.commission_percent_at_booking != null ? Number(a.commission_percent_at_booking) : commissionPercent;
+            return sum + (Number(a.total_price || 0) * rate) / 100;
+          }, 0)
+      : 0;
+
   const uniqueClients = new Set(appointments.map(a => a.user_id)).size;
 
   const stats = [
@@ -22,24 +49,38 @@ export function DashboardStats({ appointments }: DashboardStatsProps) {
       icon: Calendar,
       label: 'Agendamentos Hoje',
       value: todayAppointments.length,
+      sub: undefined as string | undefined,
       color: 'text-primary'
     },
     {
       icon: Clock,
       label: 'Pagamentos Pendentes',
       value: pendingPayments.length,
+      sub: undefined as string | undefined,
       color: 'text-yellow-500'
     },
-    {
-      icon: DollarSign,
-      label: 'Faturamento Total',
-      value: `R$ ${totalRevenue.toFixed(0)}`,
-      color: 'text-green-500'
-    },
+    commissionPercent != null
+      ? {
+          icon: Wallet,
+          label: `Sua Comissão (${commissionPercent}%)`,
+          value: `R$ ${paidCommission.toFixed(2)}`,
+          sub: forecastCommission > 0
+            ? `Prev. agendados: +R$ ${forecastCommission.toFixed(2)}`
+            : `Bruto: R$ ${totalRevenue.toFixed(0)}`,
+          color: 'text-amber-500'
+        }
+      : {
+          icon: DollarSign,
+          label: 'Faturamento Total',
+          value: `R$ ${totalRevenue.toFixed(0)}`,
+          sub: undefined as string | undefined,
+          color: 'text-green-500'
+        },
     {
       icon: Users,
       label: 'Total de Clientes',
       value: uniqueClients,
+      sub: undefined as string | undefined,
       color: 'text-accent'
     },
   ];
@@ -61,6 +102,9 @@ export function DashboardStats({ appointments }: DashboardStatsProps) {
           </div>
           <p className="text-2xl font-bold text-foreground">{stat.value}</p>
           <p className="text-xs text-muted-foreground">{stat.label}</p>
+          {stat.sub && (
+            <p className="text-[11px] text-amber-500/90 mt-0.5">{stat.sub}</p>
+          )}
         </motion.div>
       ))}
     </div>

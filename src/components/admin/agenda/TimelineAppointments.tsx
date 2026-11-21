@@ -29,6 +29,7 @@ interface TimelineAppointmentsProps {
   fixedBarberId?: string | null;
   defaultBarberId?: string | null;
   showBarberBadge?: boolean;
+  commissionPercent?: number;
 }
 
 const statusConfig = {
@@ -62,6 +63,7 @@ export function TimelineAppointments({
   fixedBarberId,
   defaultBarberId,
   showBarberBadge = false,
+  commissionPercent,
 }: TimelineAppointmentsProps) {
   const [paymentModal, setPaymentModal] = useState<{
     open: boolean;
@@ -207,6 +209,7 @@ export function TimelineAppointments({
                         onDelete={onDelete}
                         onWhatsApp={() => handleWhatsApp(apt)}
                         showBarberBadge={showBarberBadge}
+                        commissionPercent={commissionPercent}
                       />
                     ))}
                   </AnimatePresence>
@@ -284,6 +287,7 @@ interface SwipeableCardProps {
   onDelete?: (id: string) => void;
   onWhatsApp: () => void;
   showBarberBadge?: boolean;
+  commissionPercent?: number;
 }
 
 function SwipeableAppointmentCard({
@@ -293,6 +297,7 @@ function SwipeableAppointmentCard({
   onDelete,
   onWhatsApp,
   showBarberBadge = false,
+  commissionPercent,
 }: SwipeableCardProps) {
   const [isRevealed, setIsRevealed] = useState(false);
   const x = useMotionValue(0);
@@ -502,15 +507,32 @@ function SwipeableAppointmentCard({
           {/* Services */}
           <p className="text-xs text-muted-foreground truncate">{services}</p>
 
-          {/* Price */}
-          <p
-            className={cn(
-              'text-sm font-semibold mt-1',
-              isSubscriber ? 'text-accent' : 'text-primary'
-            )}
-          >
-            {isSubscriber ? 'GRÁTIS' : `R$ ${Number(apt.total_price).toFixed(0)}`}
-          </p>
+          {/* Price & Commission */}
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <p
+              className={cn(
+                'text-sm font-semibold',
+                isSubscriber ? 'text-accent' : 'text-primary'
+              )}
+            >
+              {isSubscriber ? 'GRÁTIS' : `R$ ${Number(apt.total_price).toFixed(0)}`}
+            </p>
+            {commissionPercent != null &&
+              !isSubscriber &&
+              apt.status !== 'cancelled' &&
+              apt.status !== 'no_show' && (() => {
+                const rate =
+                  apt.commission_percent_at_booking != null
+                    ? Number(apt.commission_percent_at_booking)
+                    : commissionPercent;
+                const cutComm = (Number(apt.total_price || 0) * rate) / 100;
+                return (
+                  <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500">
+                    Sua com.: R$ {cutComm.toFixed(2)} ({rate}%)
+                  </span>
+                );
+              })()}
+          </div>
         </div>
       </motion.div>
     </motion.div>
