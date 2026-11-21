@@ -151,6 +151,7 @@ export type Database = {
           is_open_today: boolean
           is_owner: boolean
           name: string
+          notify_push: boolean
           phone: string | null
           updated_at: string
           user_id: string | null
@@ -167,6 +168,7 @@ export type Database = {
           is_open_today?: boolean
           is_owner?: boolean
           name: string
+          notify_push?: boolean
           phone?: string | null
           updated_at?: string
           user_id?: string | null
@@ -183,6 +185,7 @@ export type Database = {
           is_open_today?: boolean
           is_owner?: boolean
           name?: string
+          notify_push?: boolean
           phone?: string | null
           updated_at?: string
           user_id?: string | null
@@ -949,6 +952,10 @@ export type Database = {
         Returns: boolean
       }
       is_barber: { Args: { _user_id?: string }; Returns: boolean }
+      toggle_my_barber_notify_push: {
+        Args: { p_enabled?: boolean | null }
+        Returns: boolean
+      }
       toggle_my_barber_status: { Args: never; Returns: boolean }
     }
     Enums: {

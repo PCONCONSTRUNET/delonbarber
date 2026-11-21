@@ -29,10 +29,68 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Bell, Download, Search, Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { barberSupabase } from '@/integrations/supabase/client';
+import { playNotificationSound, showBrowserNotification } from '@/lib/notifications';
+import { toast } from 'sonner';
 
 function BarberLayout({ barber, children }: { barber: Barber; children: React.ReactNode }) {
+  // Alertas ao vivo com som + toast + browser notification apenas para agendamentos deste barbeiro
+  useEffect(() => {
+    if (!barber?.id || barber.notify_push === false) return;
+
+    const channel = barberSupabase
+      .channel(`barber-live-appointments-${barber.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'appointments',
+          filter: `barber_id=eq.${barber.id}`,
+        },
+        async (payload) => {
+          const newApt = payload.new as any;
+          if (!newApt) return;
+
+          let clientName = newApt.guest_name || '';
+          if (!clientName && newApt.user_id) {
+            const { data: prof } = await barberSupabase
+              .from('profiles')
+              .select('name')
+              .eq('user_id', newApt.user_id)
+              .maybeSingle();
+            clientName = prof?.name || 'Novo cliente';
+          }
+          if (!clientName) clientName = 'Novo cliente';
+
+          const time = String(newApt.appointment_time || '').slice(0, 5);
+          const date = String(newApt.appointment_date || '');
+
+          playNotificationSound();
+          toast.success('🗓️ Novo agendamento para você!', {
+            description: `${clientName} marcou ${date} às ${time}`,
+            duration: 10000,
+          });
+          showBrowserNotification(
+            '🗓️ Novo Agendamento para Você!',
+            `${clientName} agendou para ${date} às ${time}`,
+            () => {
+              window.focus();
+              window.location.href = '/barber/agenda';
+            }
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      barberSupabase.removeChannel(channel);
+    };
+  }, [barber?.id, barber?.notify_push]);
+
   return (
     <div className="flex min-h-screen w-full bg-background">
       <div className="hidden md:block">
@@ -54,7 +112,7 @@ function BarberLoginRedirect() {
 }
 
 export function BarberDashboard() {
-  const { barber, loading: barberLoading, toggleMyStatus } = useMyBarber();
+  const { barber, loading: barberLoading, toggleMyStatus, toggleMyNotifyPush } = useMyBarber();
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   if (barberLoading) {
@@ -66,7 +124,15 @@ export function BarberDashboard() {
   }
   if (!barber) return <BarberLoginRedirect />;
 
-  return <BarberDashboardContent barber={barber} selectedDate={selectedDate} onSelectDate={setSelectedDate} onToggleStatus={toggleMyStatus} />;
+  return (
+    <BarberDashboardContent
+      barber={barber}
+      selectedDate={selectedDate}
+      onSelectDate={setSelectedDate}
+      onToggleStatus={toggleMyStatus}
+      onToggleNotifyPush={toggleMyNotifyPush}
+    />
+  );
 }
 
 function BarberDashboardContent({
@@ -74,11 +140,13 @@ function BarberDashboardContent({
   selectedDate,
   onSelectDate,
   onToggleStatus,
+  onToggleNotifyPush,
 }: {
   barber: Barber;
   selectedDate: Date;
   onSelectDate: (d: Date) => void;
   onToggleStatus: () => Promise<boolean | null>;
+  onToggleNotifyPush: (enabled?: boolean) => Promise<boolean | null>;
 }) {
   const {
     appointments,
@@ -112,15 +180,25 @@ function BarberDashboardContent({
 
         {/* Push Notification Setup */}
         <Card className="border-primary/30 bg-primary/5">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2 space-y-0">
             <CardTitle className="text-base flex items-center gap-2">
               <Bell className="w-5 h-5 text-primary" />
-              Notificações da sua Agenda
+              Notificações de Novos Agendamentos
             </CardTitle>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="my-barber-notify-push" className="text-xs text-muted-foreground cursor-pointer">
+                {barber.notify_push !== false ? 'Ativado' : 'Pausado'}
+              </Label>
+              <Switch
+                id="my-barber-notify-push"
+                checked={barber.notify_push !== false}
+                onCheckedChange={(checked) => onToggleNotifyPush(checked)}
+              />
+            </div>
           </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground mb-3">
-              Receba alertas quando clientes marcarem ou cancelarem horários com você.
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Ative abaixo neste aparelho para receber alerta Push na hora sempre que um cliente agendar um corte com você.
             </p>
             <PushToggle role="barber" userId={barber.user_id} />
           </CardContent>

@@ -194,8 +194,9 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
 
   useEffect(() => {
     if (!playerId || !initialized) return;
+    if (role === 'barber' && !userId) return;
     saveSubscription(playerId);
-  }, [playerId, userId, initialized, saveSubscription]);
+  }, [playerId, userId, initialized, role, saveSubscription]);
 
   const enable = useCallback(async (): Promise<boolean> => {
     setLoading(true);
@@ -262,7 +263,7 @@ export function usePushNotifications({ role, userId, autoInit = true }: UsePushO
                 user_id: userId ?? undefined,
                 title: '🔔 Notificações ativadas!',
                 message: 'Você receberá avisos de novos agendamentos aqui.',
-                url: '/',
+                url: role === 'admin' ? '/admin' : role === 'barber' ? '/barber' : '/',
               },
             })
             .catch((e) => console.warn('[push] welcome push falhou:', e));

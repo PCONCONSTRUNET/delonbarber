@@ -14,6 +14,7 @@ import {
   Phone,
   Scissors,
   Crown,
+  Bell,
 } from 'lucide-react';
 import { Barber, CreateBarberInput, useAdminBarbers } from '@/hooks/useBarbers';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ export function BarbersManager() {
   const [commissionPercent, setCommissionPercent] = useState('50');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(true);
+  const [notifyPush, setNotifyPush] = useState(true);
   const [accessMode, setAccessMode] = useState<'none' | 'create' | 'link'>('create');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -82,6 +84,7 @@ export function BarbersManager() {
     setCommissionPercent('50');
     setAvatarUrl(null);
     setIsActive(true);
+    setNotifyPush(true);
     setAccessMode('create');
     setEmail('');
     setPassword('');
@@ -96,6 +99,7 @@ export function BarbersManager() {
     setCommissionPercent(String(barber.commission_percent ?? 50));
     setAvatarUrl(barber.avatar_url);
     setIsActive(barber.is_active);
+    setNotifyPush(barber.notify_push ?? true);
     setAccessMode('none');
     setEmail(barber.email || '');
     setPassword('');
@@ -149,6 +153,7 @@ export function BarbersManager() {
         commission_percent: parsedComm,
         avatar_url: avatarUrl,
         is_active: isActive,
+        notify_push: notifyPush,
       });
       if (ok) setDialogOpen(false);
     } else {
@@ -159,6 +164,7 @@ export function BarbersManager() {
         commission_percent: parsedComm,
         avatar_url: avatarUrl,
         is_active: isActive,
+        notify_push: notifyPush,
         is_owner: false,
         accessMode,
         email: email.trim() || undefined,
@@ -313,10 +319,25 @@ export function BarbersManager() {
                   Login do Painel
                 </p>
                 {barber.user_id ? (
-                  <p className="text-xs font-medium text-green-500 flex items-center gap-1 mt-1 truncate" title={barber.email || ''}>
-                    <UserCheck className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{barber.email || 'Conta vinculada'}</span>
-                  </p>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      <p className="text-xs font-medium text-green-500 flex items-center gap-1 truncate" title={barber.email || ''}>
+                        <UserCheck className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{barber.email || 'Conta vinculada'}</span>
+                      </p>
+                      {!barber.is_owner && (
+                        <Badge
+                          variant="outline"
+                          className={`text-[9px] px-1.5 py-0 ${
+                            barber.notify_push !== false
+                              ? 'border-primary/40 text-primary'
+                              : 'border-border text-muted-foreground'
+                          }`}
+                        >
+                          <Bell className="h-2.5 w-2.5 mr-0.5" />
+                          {barber.notify_push !== false ? 'Push ativo' : 'Push off'}
+                        </Badge>
+                      )}
+                    </div>
                 ) : (
                   <p className="text-xs text-amber-500 mt-1">Sem login vinculado</p>
                 )}
@@ -450,6 +471,25 @@ export function BarbersManager() {
                 placeholder="Ex: Especialista em Degradê e Barba"
               />
             </div>
+
+            {!editingBarber?.is_owner && (
+              <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5">
+                <div className="space-y-0.5">
+                  <Label htmlFor="barber-notify-push" className="text-sm font-medium flex items-center gap-1.5 cursor-pointer">
+                    <Bell className="h-3.5 w-3.5 text-primary" />
+                    Notificação Push de novos agendamentos
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Envia push para este barbeiro sempre que um cliente agendar com ele.
+                  </p>
+                </div>
+                <Switch
+                  id="barber-notify-push"
+                  checked={notifyPush}
+                  onCheckedChange={setNotifyPush}
+                />
+              </div>
+            )}
 
             {!editingBarber && (
               <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-3">

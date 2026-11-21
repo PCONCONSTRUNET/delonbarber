@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.barbers (
   is_owner BOOLEAN NOT NULL DEFAULT false,
   is_active BOOLEAN NOT NULL DEFAULT true,
   is_open_today BOOLEAN NOT NULL DEFAULT true,
+  notify_push BOOLEAN NOT NULL DEFAULT true,
   display_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -635,6 +636,34 @@ BEGIN
 END;
 $$;
 
+ALTER TABLE public.barbers
+  ADD COLUMN IF NOT EXISTS notify_push BOOLEAN NOT NULL DEFAULT true;
+
+-- 10b. RPC para o barbeiro alternar notificação Push de novos agendamentos
+CREATE OR REPLACE FUNCTION public.toggle_my_barber_notify_push(p_enabled BOOLEAN DEFAULT NULL)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_new_status BOOLEAN;
+BEGIN
+  UPDATE public.barbers
+  SET notify_push = COALESCE(p_enabled, NOT notify_push),
+      updated_at = now()
+  WHERE user_id = auth.uid()
+    AND is_active = true
+  RETURNING notify_push INTO v_new_status;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Barbeiro não encontrado para o usuário logado';
+  END IF;
+
+  RETURN v_new_status;
+END;
+$$;
+
 -- 11. RPC exclusiva do Admin para vincular conta auth (por e-mail) ao barbeiro e confirmar o e-mail
 CREATE OR REPLACE FUNCTION public.admin_assign_barber_account(p_barber_id UUID, p_email TEXT)
 RETURNS UUID
@@ -763,6 +792,7 @@ DECLARE
   client_name  TEXT;
   barber_name  TEXT;
   barber_uid   UUID;
+  barber_push  BOOLEAN;
   apt_time     TEXT;
   apt_date     TEXT;
   msg_text     TEXT;
@@ -779,7 +809,8 @@ BEGIN
     END IF;
   END IF;
 
-  SELECT b.name, b.user_id INTO barber_name, barber_uid
+  SELECT b.name, b.user_id, COALESCE(b.notify_push, true)
+  INTO barber_name, barber_uid, barber_push
   FROM public.barbers b
   WHERE b.id = NEW.barber_id;
 
@@ -815,10 +846,13 @@ BEGIN
     timeout_milliseconds := 5000
   ) INTO request_id;
 
-  -- Push para o Barbeiro específico (caso não seja admin)
-  IF barber_uid IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM public.user_roles ur WHERE ur.user_id = barber_uid AND ur.role = 'admin'
-  ) THEN
+  -- Push exclusivo para o Barbeiro específico quando notify_push = true (caso não seja admin)
+  IF barber_uid IS NOT NULL
+     AND COALESCE(barber_push, true) IS TRUE
+     AND NOT EXISTS (
+       SELECT 1 FROM public.user_roles ur WHERE ur.user_id = barber_uid AND ur.role = 'admin'
+     )
+  THEN
     SELECT net.http_post(
       url := function_url,
       headers := jsonb_build_object(
@@ -829,9 +863,9 @@ BEGIN
       body := jsonb_build_object(
         'role', 'barber',
         'user_id', barber_uid,
-        'title', '📅 Novo Agendamento na sua Agenda',
+        'title', '📅 Novo Agendamento para Você',
         'message', msg_text,
-        'url', '/barbeiro/agenda',
+        'url', '/barber/agenda',
         'data', jsonb_build_object('appointment_id', NEW.id, 'barber_id', NEW.barber_id)
       ),
       timeout_milliseconds := 5000
@@ -1052,5 +1086,6 @@ GRANT EXECUTE ON FUNCTION public.get_my_barber_id() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_barber(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_my_barber_profile() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.toggle_my_barber_status() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.toggle_my_barber_notify_push(BOOLEAN) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_assign_barber_account(UUID, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_my_barber_account() TO authenticated;

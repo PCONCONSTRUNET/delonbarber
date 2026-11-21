@@ -52,7 +52,9 @@ Deno.serve(async (req) => {
       if (subsErr) throw subsErr;
       playerIds = (subs ?? []).map((s) => String(s.player_id).trim()).filter(Boolean);
 
-      if (playerIds.length === 0) {
+      // Fallback de dispositivos órfãos (user_id NULL) apenas para admin;
+      // barbeiros e clientes sempre recebem apenas nos dispositivos vinculados ao seu user_id.
+      if (playerIds.length === 0 && body.role === "admin") {
         const { data: orphans } = await supabase
           .from("push_subscriptions")
           .select("player_id")

@@ -16,6 +16,7 @@ export interface Barber {
   is_owner: boolean;
   is_active: boolean;
   is_open_today: boolean;
+  notify_push: boolean;
   display_order: number;
   created_at: string;
   updated_at: string;
@@ -77,6 +78,7 @@ export function useBarbers(options?: { includeInactive?: boolean }) {
       return (data || []).map((b: any) => ({
         ...b,
         commission_percent: Number(b.commission_percent ?? 50),
+        notify_push: b.notify_push ?? true,
       }));
     },
     staleTime: 60_000,
@@ -140,6 +142,7 @@ export function useMyBarber() {
         return {
           ...data,
           commission_percent: Number((data as any).commission_percent ?? 50),
+          notify_push: (data as any).notify_push ?? true,
         };
       }
 
@@ -151,6 +154,7 @@ export function useMyBarber() {
           return {
             ...claimed,
             commission_percent: Number((claimed as any).commission_percent ?? 50),
+            notify_push: (claimed as any).notify_push ?? true,
           };
         }
       }
@@ -176,6 +180,20 @@ export function useMyBarber() {
     return Boolean(data);
   }
 
+  async function toggleMyNotifyPush(enabled?: boolean): Promise<boolean | null> {
+    const { data, error } = await scopedClient.rpc('toggle_my_barber_notify_push', {
+      p_enabled: enabled ?? null,
+    });
+    if (error) {
+      toast.error('Não foi possível atualizar preferência de push (execute a SQL de notificações no Supabase)');
+      return null;
+    }
+    queryClient.invalidateQueries({ queryKey: ['barber', 'me', scope, userId] });
+    queryClient.invalidateQueries({ queryKey: BARBERS_KEY });
+    toast.success(data ? 'Push de novos agendamentos ativado!' : 'Push de novos agendamentos pausado!');
+    return Boolean(data);
+  }
+
   return {
     barber,
     isBarber: Boolean(barber),
@@ -183,6 +201,7 @@ export function useMyBarber() {
     loading,
     refetch,
     toggleMyStatus,
+    toggleMyNotifyPush,
   };
 }
 
@@ -194,6 +213,7 @@ export interface CreateBarberInput {
   avatar_url?: string | null;
   is_owner?: boolean;
   is_active?: boolean;
+  notify_push?: boolean;
   accessMode?: 'none' | 'create' | 'link';
   email?: string;
   password?: string;
@@ -299,6 +319,7 @@ export function useAdminBarbers() {
         avatar_url: input.avatar_url || null,
         is_owner: input.is_owner ?? false,
         is_active: input.is_active ?? true,
+        notify_push: input.notify_push ?? true,
         display_order: nextOrder,
         email: input.email?.trim().toLowerCase() || null,
       })
@@ -333,12 +354,13 @@ export function useAdminBarbers() {
     return {
       ...data,
       commission_percent: Number((data as any).commission_percent ?? 50),
+      notify_push: (data as any).notify_push ?? true,
     };
   }
 
   async function updateBarber(
     id: string,
-    updates: Partial<Pick<Barber, 'name' | 'phone' | 'bio' | 'commission_percent' | 'avatar_url' | 'is_active' | 'is_owner' | 'display_order'>>
+    updates: Partial<Pick<Barber, 'name' | 'phone' | 'bio' | 'commission_percent' | 'avatar_url' | 'is_active' | 'is_owner' | 'notify_push' | 'display_order'>>
   ): Promise<boolean> {
     const { error } = await supabase
       .from('barbers')
