@@ -9,21 +9,21 @@ import {
   ExternalLink,
   Scissors,
 } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { AdminNotificationBell } from '@/components/admin/AdminNotificationBell';
-import { Barber } from '@/hooks/useBarbers';
+import { Barber, getBarberBasePath } from '@/hooks/useBarbers';
 
-const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/barbeiro' },
-  { icon: Calendar, label: 'Minha Agenda', path: '/barbeiro/agenda' },
-  { icon: Users, label: 'Meus Clientes', path: '/barbeiro/clientes' },
-  { icon: DollarSign, label: 'Financeiro', path: '/barbeiro/financeiro' },
-  { icon: CalendarPlus, label: 'Agendamento manual', path: '/barbeiro/agendamento-manual' },
+const menuDefs = [
+  { icon: LayoutDashboard, label: 'Dashboard', suffix: '' },
+  { icon: Calendar, label: 'Minha Agenda', suffix: '/agenda' },
+  { icon: Users, label: 'Meus Clientes', suffix: '/clientes' },
+  { icon: DollarSign, label: 'Financeiro', suffix: '/financeiro' },
+  { icon: CalendarPlus, label: 'Agendamento manual', suffix: '/agendamento-manual' },
 ];
 
 let barberSidebarCollapsedCache = false;
@@ -34,6 +34,9 @@ interface BarberSidebarProps {
 
 export function BarberSidebar({ barber }: BarberSidebarProps) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const basePath = getBarberBasePath(pathname);
+  const menuItems = menuDefs.map((m) => ({ ...m, path: `${basePath}${m.suffix}` }));
   const [collapsed, setCollapsedState] = useState(barberSidebarCollapsedCache);
   const setCollapsed = (value: boolean) => {
     barberSidebarCollapsedCache = value;
@@ -42,7 +45,7 @@ export function BarberSidebar({ barber }: BarberSidebarProps) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/barbeiro/login');
+    navigate(`${basePath}/login`);
   };
 
   return (
@@ -82,7 +85,7 @@ export function BarberSidebar({ barber }: BarberSidebarProps) {
           <NavLink
             key={item.path}
             to={item.path}
-            end={item.path === '/barbeiro'}
+            end={item.suffix === ''}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors',

@@ -9,20 +9,20 @@ import {
   LogOut,
   Scissors,
 } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { AdminNotificationBell } from '@/components/admin/AdminNotificationBell';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Barber } from '@/hooks/useBarbers';
+import { Barber, getBarberBasePath } from '@/hooks/useBarbers';
 
-const mainItems = [
-  { icon: LayoutDashboard, label: 'Home', path: '/barbeiro' },
-  { icon: Calendar, label: 'Agenda', path: '/barbeiro/agenda' },
-  { icon: Users, label: 'Clientes', path: '/barbeiro/clientes' },
-  { icon: DollarSign, label: 'Finanças', path: '/barbeiro/financeiro' },
+const mainDefs = [
+  { icon: LayoutDashboard, label: 'Home', suffix: '' },
+  { icon: Calendar, label: 'Agenda', suffix: '/agenda' },
+  { icon: Users, label: 'Clientes', suffix: '/clientes' },
+  { icon: DollarSign, label: 'Finanças', suffix: '/financeiro' },
 ];
 
 interface MobileBarberNavProps {
@@ -32,11 +32,14 @@ interface MobileBarberNavProps {
 export function MobileBarberNav({ barber }: MobileBarberNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const basePath = getBarberBasePath(pathname);
+  const mainItems = mainDefs.map((m) => ({ ...m, path: `${basePath}${m.suffix}` }));
 
   const handleLogout = async () => {
     setMoreOpen(false);
     await supabase.auth.signOut();
-    navigate('/barbeiro/login');
+    navigate(`${basePath}/login`);
   };
 
   return (
@@ -68,7 +71,7 @@ export function MobileBarberNav({ barber }: MobileBarberNavProps) {
             <NavLink
               key={item.path}
               to={item.path}
-              end={item.path === '/barbeiro'}
+              end={item.suffix === ''}
               className={({ isActive }) =>
                 cn(
                   'flex flex-col items-center justify-center gap-0.5 w-16 h-full transition-colors',
@@ -103,7 +106,7 @@ export function MobileBarberNav({ barber }: MobileBarberNavProps) {
               </SheetHeader>
               <div className="grid grid-cols-2 gap-3 pb-6">
                 <NavLink
-                  to="/barbeiro/agendamento-manual"
+                  to={`${basePath}/agendamento-manual`}
                   onClick={() => setMoreOpen(false)}
                   className={({ isActive }) =>
                     cn(

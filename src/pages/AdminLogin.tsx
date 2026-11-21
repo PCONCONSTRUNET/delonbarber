@@ -40,7 +40,7 @@ const AdminLogin = () => {
         .maybeSingle();
 
       if (mounted && barberRow) {
-        navigate("/barbeiro", { replace: true });
+        navigate("/barber", { replace: true });
       }
     };
     checkSession();
@@ -89,7 +89,7 @@ const AdminLogin = () => {
           toast.error("Esta conta é de barbeiro. Acesse a Área do Barbeiro.", {
             action: {
               label: "Ir para Área do Barbeiro",
-              onClick: () => navigate("/barbeiro/login"),
+              onClick: () => navigate("/barber/login"),
             },
           });
         } else {

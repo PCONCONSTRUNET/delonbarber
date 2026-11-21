@@ -28,7 +28,7 @@ export function PushToggle({ role, userId, variant = 'default' }: PushToggleProp
           role,
           title: '🔔 Push de teste',
           message: `Se você está vendo isso, as notificações estão funcionando! (${new Date().toLocaleTimeString('pt-BR')})`,
-          url: role === 'admin' ? '/admin' : role === 'barber' ? '/barbeiro' : '/cliente',
+          url: role === 'admin' ? '/admin' : role === 'barber' ? '/barber' : '/cliente',
           ...((role === 'cliente' || role === 'barber') && userId ? { user_id: userId } : {}),
         },
       });

@@ -61,7 +61,7 @@ export function BarbersManager() {
   const [accessTab, setAccessTab] = useState<'create' | 'link'>('create');
   const [savingAccess, setSavingAccess] = useState(false);
 
-  const barberLoginUrl = `${window.location.origin}/barbeiro/login`;
+  const barberLoginUrl = `${window.location.origin}/barber/login`;
 
   const copyBarberLoginLink = async () => {
     try {
@@ -221,8 +221,8 @@ export function BarbersManager() {
           </div>
           <p className="text-xs text-muted-foreground">
             Cada barbeiro cadastrado entra por{' '}
-            <code className="px-1.5 py-0.5 rounded bg-muted text-foreground">/barbeiro/login</code>{' '}
-            com sua própria agenda, sem acessar o Admin.
+            <code className="px-1.5 py-0.5 rounded bg-muted text-foreground">/barber</code> (ou{' '}
+            <code className="px-1.5 py-0.5 rounded bg-muted text-foreground">/barber/login</code>) com sua própria agenda, sem acessar o Admin.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -582,7 +582,7 @@ export function BarbersManager() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  O acesso deste usuário será liberado em <code>/barbeiro/login</code> sem conceder acesso de Admin.
+                  O acesso deste usuário será liberado em <code>/barber</code> sem conceder acesso de Admin.
                 </p>
               </TabsContent>
             </Tabs>

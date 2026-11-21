@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { getBarberBasePath } from '@/hooks/useBarbers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,11 +12,13 @@ import { motion } from 'framer-motion';
 
 const BarberLogin = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const basePath = getBarberBasePath(pathname);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Se já estiver logado como barbeiro ativo, vai direto para /barbeiro
+  // Se já estiver logado como barbeiro ativo, vai direto para o painel (/barber ou /barbeiro)
   useEffect(() => {
     let mounted = true;
     const checkSession = async () => {
@@ -30,12 +33,12 @@ const BarberLogin = () => {
         .maybeSingle();
 
       if (mounted && barber) {
-        navigate('/barbeiro', { replace: true });
+        navigate(basePath, { replace: true });
       }
     };
     checkSession();
     return () => { mounted = false; };
-  }, [navigate]);
+  }, [navigate, basePath]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +77,7 @@ const BarberLogin = () => {
 
       toast.success(`Bem-vindo, ${barber.name}!`);
       setIsLoading(false);
-      navigate('/barbeiro', { replace: true });
+      navigate(basePath, { replace: true });
     } catch (err) {
       console.error(err);
       toast.error('Erro ao entrar');

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { BarberSidebar } from '@/components/barber/BarberSidebar';
 import { MobileBarberNav } from '@/components/barber/MobileBarberNav';
 import { DashboardStats } from '@/components/admin/DashboardStats';
@@ -22,7 +22,7 @@ import { PushToggle } from '@/components/push/PushToggle';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAdminAppointments, useAdminClients } from '@/hooks/useAdmin';
 import { useBusinessHours } from '@/hooks/useAppointments';
-import { useMyBarber, Barber } from '@/hooks/useBarbers';
+import { useMyBarber, Barber, getBarberBasePath } from '@/hooks/useBarbers';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -48,6 +48,11 @@ function BarberLayout({ barber, children }: { barber: Barber; children: React.Re
   );
 }
 
+function BarberLoginRedirect() {
+  const { pathname } = useLocation();
+  return <Navigate to={`${getBarberBasePath(pathname)}/login`} replace />;
+}
+
 export function BarberDashboard() {
   const { barber, loading: barberLoading, toggleMyStatus } = useMyBarber();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -59,7 +64,7 @@ export function BarberDashboard() {
       </div>
     );
   }
-  if (!barber) return <Navigate to="/barbeiro/login" replace />;
+  if (!barber) return <BarberLoginRedirect />;
 
   return <BarberDashboardContent barber={barber} selectedDate={selectedDate} onSelectDate={setSelectedDate} onToggleStatus={toggleMyStatus} />;
 }
@@ -168,7 +173,7 @@ export function BarberAgenda() {
       </div>
     );
   }
-  if (!barber) return <Navigate to="/barbeiro/login" replace />;
+  if (!barber) return <BarberLoginRedirect />;
 
   return <BarberAgendaContent barber={barber} />;
 }
@@ -301,7 +306,7 @@ export function BarberClientes() {
       </div>
     );
   }
-  if (!barber) return <Navigate to="/barbeiro/login" replace />;
+  if (!barber) return <BarberLoginRedirect />;
 
   return <BarberClientesContent barber={barber} />;
 }
@@ -384,7 +389,7 @@ export function BarberFinanceiro() {
       </div>
     );
   }
-  if (!barber) return <Navigate to="/barbeiro/login" replace />;
+  if (!barber) return <BarberLoginRedirect />;
 
   return <BarberFinanceiroContent barber={barber} />;
 }
@@ -422,7 +427,7 @@ export function BarberManualBooking() {
       </div>
     );
   }
-  if (!barber) return <Navigate to="/barbeiro/login" replace />;
+  if (!barber) return <BarberLoginRedirect />;
 
   return (
     <BarberLayout barber={barber}>

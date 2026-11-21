@@ -48,8 +48,9 @@ const RouteFallback = () => (
 // Executado durante o render (antes das rotas) para valer já na primeira pintura.
 const AdminMotionSwitch = () => {
   const { pathname } = useLocation();
+  const lower = pathname.toLowerCase();
   MotionGlobalConfig.skipAnimations =
-    pathname.startsWith('/admin') || pathname.startsWith('/barbeiro');
+    lower.startsWith('/admin') || lower.startsWith('/barbeiro') || lower.startsWith('/barber');
   return null;
 };
 
@@ -85,6 +86,12 @@ const App = () => {
                 <Route path="/admin/pacotes" element={<AdminPacotes />} />
                 <Route path="/admin/avaliacoes" element={<AdminAvaliacoes />} />
                 <Route path="/admin/fidelidade" element={<AdminFidelidade />} />
+                <Route path="/barber/login" element={<BarberLogin />} />
+                <Route path="/barber" element={<BarberDashboard />} />
+                <Route path="/barber/agenda" element={<BarberAgenda />} />
+                <Route path="/barber/clientes" element={<BarberClientes />} />
+                <Route path="/barber/financeiro" element={<BarberFinanceiro />} />
+                <Route path="/barber/agendamento-manual" element={<BarberManualBooking />} />
                 <Route path="/barbeiro/login" element={<BarberLogin />} />
                 <Route path="/barbeiro" element={<BarberDashboard />} />
                 <Route path="/barbeiro/agenda" element={<BarberAgenda />} />

@@ -239,7 +239,7 @@ const Agendar = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => navigate('/barbeiro')}
+                    onClick={() => navigate('/barber')}
                     className="rounded-full text-primary text-xs px-2"
                   >
                     Barbeiro

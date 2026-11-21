@@ -23,6 +23,12 @@ export interface Barber {
 
 const BARBERS_KEY = ['barbers'] as const;
 
+/** Retorna o prefixo ativo do painel do barbeiro (`/barber` ou `/barbeiro`) para manter a navegação consistente. */
+export function getBarberBasePath(pathname?: string): '/barber' | '/barbeiro' {
+  const path = (pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '/barber')).toLowerCase();
+  return path === '/barbeiro' || path.startsWith('/barbeiro/') ? '/barbeiro' : '/barber';
+}
+
 let cachedBarberAuthUid: string | null | undefined = undefined;
 
 /**
