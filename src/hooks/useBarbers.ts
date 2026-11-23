@@ -394,6 +394,44 @@ export function useAdminBarbers() {
     return true;
   }
 
+  /** Remove um barbeiro nao-proprietario e suas assinaturas push de barbeiro, preservando historico. */
+  async function deleteBarber(
+    barber: Pick<Barber, 'id' | 'name' | 'is_owner' | 'user_id'>
+  ): Promise<boolean> {
+    if (barber.is_owner) {
+      toast.error('Não é possível excluir o barbeiro proprietário');
+      return false;
+    }
+
+    if (barber.user_id) {
+      try {
+        await (supabase as any)
+          .from('push_subscriptions')
+          .delete()
+          .eq('user_id', barber.user_id)
+          .eq('role', 'barber');
+      } catch (err) {
+        console.warn('Could not clean up barber push subscriptions:', err);
+      }
+    }
+
+    const { error } = await supabase
+      .from('barbers')
+      .delete()
+      .eq('id', barber.id);
+
+    if (error) {
+      console.error('Error deleting barber:', error);
+      toast.error('Erro ao excluir barbeiro');
+      return false;
+    }
+
+    invalidate();
+    queryClient.invalidateQueries({ queryKey: ['admin', 'appointments'] });
+    toast.success(`${barber.name} excluído!`);
+    return true;
+  }
+
   return {
     barbers,
     loading,
@@ -403,5 +441,6 @@ export function useAdminBarbers() {
     updateBarber,
     assignBarberAccount,
     unlinkBarberAccount,
+    deleteBarber,
   };
 }

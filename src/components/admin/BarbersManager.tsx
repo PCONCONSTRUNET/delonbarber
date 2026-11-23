@@ -15,6 +15,7 @@ import {
   Scissors,
   Crown,
   Bell,
+  Trash2,
 } from 'lucide-react';
 import { Barber, CreateBarberInput, useAdminBarbers } from '@/hooks/useBarbers';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,16 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
@@ -36,6 +47,7 @@ export function BarbersManager() {
     updateBarber,
     assignBarberAccount,
     unlinkBarberAccount,
+    deleteBarber,
   } = useAdminBarbers();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -62,6 +74,10 @@ export function BarbersManager() {
   const [accessPassword, setAccessPassword] = useState('');
   const [accessTab, setAccessTab] = useState<'create' | 'link'>('create');
   const [savingAccess, setSavingAccess] = useState(false);
+
+  // Confirmacao de exclusao
+  const [barberToDelete, setBarberToDelete] = useState<Barber | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const barberLoginUrl = `${window.location.origin}/barber/login`;
 
@@ -206,6 +222,16 @@ export function BarbersManager() {
       setAccessDialogBarber(null);
     }
     setSavingAccess(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!barberToDelete) return;
+    setDeleting(true);
+    const ok = await deleteBarber(barberToDelete);
+    setDeleting(false);
+    if (ok) {
+      setBarberToDelete(null);
+    }
   };
 
   if (loading) {
@@ -378,6 +404,16 @@ export function BarbersManager() {
                       <Unlink className="h-4 w-4" />
                     </Button>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setBarberToDelete(barber)}
+                    title="Excluir barbeiro"
+                    aria-label={`Excluir barbeiro ${barber.name}`}
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </>
               )}
             </div>
@@ -644,6 +680,50 @@ export function BarbersManager() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmação de Exclusão de Barbeiro */}
+      <AlertDialog
+        open={Boolean(barberToDelete)}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setBarberToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Excluir barbeiro {barberToDelete?.name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              O acesso deste profissional ao Painel do Barbeiro e seus horários/bloqueios
+              exclusivos serão removidos permanentemente. O histórico de atendimentos e o
+              faturamento já registrados na barbearia serão preservados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Excluir Barbeiro
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

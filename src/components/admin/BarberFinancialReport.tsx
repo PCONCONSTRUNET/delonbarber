@@ -12,6 +12,13 @@ import {
   TrendingUp,
   Check,
   Wallet,
+  Clock,
+  User,
+  Phone,
+  FileText,
+  ChevronRight,
+  CheckCircle2,
+  Hash,
 } from 'lucide-react';
 import { AdminAppointment } from '@/hooks/useAdmin';
 import { Barber, useAdminBarbers } from '@/hooks/useBarbers';
@@ -23,6 +30,13 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import {
   format,
   startOfDay,
@@ -73,6 +87,23 @@ const paymentMethodIcons: Record<string, typeof QrCode> = {
   subscriber: Crown,
 };
 
+const appointmentStatusConfig: Record<string, { label: string; className: string }> = {
+  pending: { label: 'Pendente', className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' },
+  confirmed: { label: 'Confirmado', className: 'bg-blue-500/20 text-blue-500 border-blue-500/30' },
+  completed: { label: 'Concluído', className: 'bg-green-500/20 text-green-500 border-green-500/30' },
+  cancelled: { label: 'Cancelado', className: 'bg-red-500/20 text-red-500 border-red-500/30' },
+  no_show: { label: 'Falta', className: 'bg-orange-500/20 text-orange-500 border-orange-500/30' },
+};
+
+function formatEndTime(timeStr: string, durationMinutes: number): string {
+  const start = (timeStr || '00:00').slice(0, 5);
+  const [h = 0, m = 0] = start.split(':').map(Number);
+  const total = h * 60 + m + (durationMinutes || 30);
+  const endH = Math.floor(total / 60) % 24;
+  const endM = total % 60;
+  return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+}
+
 export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinancialReportProps) {
   const isAdminView = !fixedBarber;
   const { barbers: allBarbers, updateBarber } = useAdminBarbers();
@@ -93,6 +124,12 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
   const [editingCommission, setEditingCommission] = useState('');
   const [savingCommission, setSavingCommission] = useState(false);
   const [includePending, setIncludePending] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+
+  const selectedAppointment = useMemo(
+    () => (selectedAppointmentId ? appointments.find((a) => a.id === selectedAppointmentId) || null : null),
+    [appointments, selectedAppointmentId]
+  );
 
   // Auto-select first commissioned barber (or first barber) on admin load
   useEffect(() => {
@@ -170,6 +207,47 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
       return Number(apt.commission_percent_at_booking);
     }
     return barber.is_owner ? 100 : Number(barber.commission_percent ?? 50);
+  };
+
+  /** Calcula os valores financeiros e metadados exibidos tanto na lista quanto no modal de detalhes. */
+  const getAppointmentDetails = (apt: AdminAppointment, barber: Barber) => {
+    const isVip = apt.payment_method === 'subscriber';
+    const isActiveNonVip = !isVip && apt.status !== 'cancelled' && apt.status !== 'no_show';
+    const isPaid = apt.payment_status === 'paid' && isActiveNonVip;
+    const isForecast = apt.payment_status !== 'paid' && isActiveNonVip;
+    const price = Number(apt.total_price || 0);
+    const cutRate = getAptCommissionRate(apt, barber);
+    const cutCommission = isActiveNonVip ? (price * cutRate) / 100 : 0;
+    const shopAmount = isActiveNonVip ? price - cutCommission : 0;
+    const clientName = apt.guest_name || apt.profile?.name || 'Cliente';
+    const clientPhone = apt.guest_phone || apt.profile?.phone || null;
+    const startTime = (apt.appointment_time || '00:00').slice(0, 5);
+    const duration = apt.total_duration || 30;
+    const endTime = formatEndTime(apt.appointment_time, duration);
+
+    return {
+      isVip,
+      isActiveNonVip,
+      isPaid,
+      isForecast,
+      price,
+      cutRate,
+      cutCommission,
+      shopAmount,
+      clientName,
+      clientPhone,
+      startTime,
+      endTime,
+      duration,
+    };
+  };
+
+  const openClientWhatsApp = (phone: string, clientName: string) => {
+    const digits = phone.replace(/\D/g, '');
+    if (!digits) return;
+    const normalized = digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`;
+    const url = `https://wa.me/${normalized}?text=${encodeURIComponent(`Olá ${clientName}!`)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   // Resumo rápido de todos os barbeiros no período (somente no modo Admin)
@@ -607,25 +685,31 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
             ) : (
               <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                 {barberAppointments.map((apt) => {
-                  const isVip = apt.payment_method === 'subscriber';
-                  const isActiveNonVip = !isVip && apt.status !== 'cancelled' && apt.status !== 'no_show';
-                  const isPaid = apt.payment_status === 'paid' && isActiveNonVip;
-                  const isForecast = apt.payment_status !== 'paid' && isActiveNonVip;
-                  const price = Number(apt.total_price || 0);
-                  const cutRate = getAptCommissionRate(apt, activeBarber);
-                  const cutCommission = isActiveNonVip ? (price * cutRate) / 100 : 0;
-                  const clientName = apt.guest_name || apt.profile?.name || 'Cliente';
+                  const {
+                    isVip,
+                    isPaid,
+                    isForecast,
+                    price,
+                    cutRate,
+                    cutCommission,
+                    clientName,
+                    startTime,
+                  } = getAppointmentDetails(apt, activeBarber);
 
                   return (
-                    <div
+                    <button
                       key={apt.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-muted/40 border border-border/50"
+                      type="button"
+                      onClick={() => setSelectedAppointmentId(apt.id)}
+                      className="w-full text-left flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-muted/40 border border-border/50 hover:bg-muted/70 hover:border-primary/40 transition-colors cursor-pointer group"
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-sm">{clientName}</span>
+                          <span className="font-medium text-sm group-hover:text-primary transition-colors">
+                            {clientName}
+                          </span>
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            {format(parseISO(apt.appointment_date + 'T12:00:00'), 'dd/MM')} • {apt.appointment_time.slice(0, 5)}
+                            {format(parseISO(apt.appointment_date + 'T12:00:00'), 'dd/MM')} • {startTime}
                           </Badge>
                           {isVip && (
                             <Badge className="bg-yellow-500/20 text-yellow-500 text-[10px] px-1.5 py-0">
@@ -669,8 +753,9 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
                             {isPaid || isForecast ? `R$ ${cutCommission.toFixed(2)}` : '-'}
                           </p>
                         </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-primary transition-colors hidden sm:block" />
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -678,6 +763,272 @@ export function BarberFinancialReport({ appointments, fixedBarber }: BarberFinan
           </div>
         </>
       )}
+
+      {/* Modal de Detalhes Completos do Atendimento */}
+      <Dialog
+        open={Boolean(selectedAppointment)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedAppointmentId(null);
+        }}
+      >
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+          {selectedAppointment && (() => {
+            const modalBarber =
+              barbersList.find((b) => b.id === selectedAppointment.barber_id) || activeBarber;
+            if (!modalBarber) return null;
+
+            const details = getAppointmentDetails(selectedAppointment, modalBarber);
+            const statusCfg = appointmentStatusConfig[selectedAppointment.status] || {
+              label: selectedAppointment.status,
+              className: 'bg-muted text-muted-foreground',
+            };
+            const PaymentIcon = selectedAppointment.payment_method
+              ? paymentMethodIcons[selectedAppointment.payment_method] || DollarSign
+              : DollarSign;
+            const paymentLabel = selectedAppointment.payment_method
+              ? paymentMethodLabels[selectedAppointment.payment_method] || selectedAppointment.payment_method
+              : 'Não definida';
+
+            return (
+              <>
+                <DialogHeader className="flex-shrink-0 space-y-2">
+                  <DialogTitle className="flex items-center gap-2">
+                    <Scissors className="h-5 w-5 text-primary shrink-0" />
+                    <span>Detalhes do Atendimento</span>
+                  </DialogTitle>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline" className={statusCfg.className}>
+                      {statusCfg.label}
+                    </Badge>
+                    {details.isVip ? (
+                      <Badge className="bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 gap-1">
+                        <Crown className="h-3 w-3" />
+                        Assinante VIP
+                      </Badge>
+                    ) : details.isPaid ? (
+                      <Badge className="bg-green-500/20 text-green-500 border border-green-500/30 gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Pago
+                      </Badge>
+                    ) : details.isForecast ? (
+                      <Badge className="bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                        Aguardando pagamento
+                      </Badge>
+                    ) : null}
+                    {selectedAppointment.guest_name && (
+                      <Badge variant="outline" className="text-amber-400 border-amber-500/30">
+                        Agendamento manual
+                      </Badge>
+                    )}
+                  </div>
+                </DialogHeader>
+
+                <div className="flex-1 overflow-y-auto min-h-0 space-y-4 pr-1 py-2">
+                  {/* Cliente */}
+                  <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Cliente
+                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-primary shrink-0" />
+                          <span className="font-semibold text-sm truncate">{details.clientName}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Phone className="h-3.5 w-3.5 shrink-0" />
+                          <span>{details.clientPhone || 'Telefone não informado'}</span>
+                        </div>
+                      </div>
+                      {details.clientPhone && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openClientWhatsApp(details.clientPhone!, details.clientName)}
+                          className="gap-1.5 shrink-0 border-green-500/40 text-green-500 hover:bg-green-500/10"
+                        >
+                          <WhatsAppIcon size={14} />
+                          WhatsApp
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Data, Horário & Barbeiro */}
+                  <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Data
+                      </p>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+                        <span className="capitalize">
+                          {format(
+                            parseISO(selectedAppointment.appointment_date + 'T12:00:00'),
+                            "EEE, dd/MM/yyyy",
+                            { locale: ptBR }
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Horário & Duração
+                      </p>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-4 w-4 text-primary shrink-0" />
+                        <span>
+                          {details.startTime} - {details.endTime} ({details.duration} min)
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 sm:col-span-2 pt-1 border-t border-border/40">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Barbeiro Responsável
+                      </p>
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <Scissors className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span>{selectedAppointment.barber?.name || modalBarber.name}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Serviços Realizados */}
+                  <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Serviços ({selectedAppointment.services.length})
+                    </p>
+                    {selectedAppointment.services.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nenhum serviço detalhado.</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {selectedAppointment.services.map((service) => (
+                          <div
+                            key={service.id}
+                            className="flex items-center justify-between text-sm py-1 border-b border-border/30 last:border-b-0 last:pb-0"
+                          >
+                            <span>{service.name}</span>
+                            <span className="font-medium text-muted-foreground">
+                              {details.isVip ? 'Incluso (VIP)' : `R$ ${Number(service.price || 0).toFixed(2)}`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resumo Financeiro & Comissão */}
+                  <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 space-y-2.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Financeiro & Comissão
+                    </p>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Forma de pagamento</span>
+                        <span className="flex items-center gap-1.5 font-medium">
+                          <PaymentIcon className="h-3.5 w-3.5 text-primary" />
+                          {paymentLabel}
+                        </span>
+                      </div>
+
+                      {selectedAppointment.payment_date && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Pago em</span>
+                          <span className="font-medium">
+                            {format(parseISO(selectedAppointment.payment_date), "dd/MM/yyyy 'às' HH:mm", {
+                              locale: ptBR,
+                            })}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-1.5 border-t border-border/40">
+                        <span className="text-muted-foreground">Valor total</span>
+                        <span className="font-bold text-green-500">
+                          {details.isVip ? 'VIP' : `R$ ${details.price.toFixed(2)}`}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">
+                          Taxa de comissão
+                          {selectedAppointment.commission_percent_at_booking != null && ' (registrada)'}
+                        </span>
+                        <span className="font-medium">
+                          {details.isVip ? '-' : `${details.cutRate}%`}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">
+                          {details.isForecast ? 'Comissão prevista' : 'Comissão do barbeiro'}
+                        </span>
+                        <span
+                          className={cn(
+                            'font-bold',
+                            details.isPaid
+                              ? 'text-amber-500'
+                              : details.isForecast
+                              ? 'text-amber-500/80'
+                              : 'text-muted-foreground'
+                          )}
+                        >
+                          {details.isPaid || details.isForecast
+                            ? `R$ ${details.cutCommission.toFixed(2)}`
+                            : '-'}
+                        </span>
+                      </div>
+
+                      {isAdminView && !modalBarber.is_owner && details.isActiveNonVip && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Líquido barbearia</span>
+                          <span className="font-semibold text-primary">
+                            R$ {details.shopAmount.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Observações */}
+                  {selectedAppointment.notes && (
+                    <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5" />
+                        <span>Observações</span>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap break-words">{selectedAppointment.notes}</p>
+                    </div>
+                  )}
+
+                  {/* Metadados */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground px-1">
+                    <span>
+                      Criado em{' '}
+                      {format(parseISO(selectedAppointment.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                        locale: ptBR,
+                      })}
+                    </span>
+                    <span className="inline-flex items-center gap-1 font-mono">
+                      <Hash className="h-3 w-3" />
+                      {selectedAppointment.id.slice(0, 8)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex-shrink-0 pt-2 border-t border-border/50 flex justify-end">
+                  <Button variant="outline" onClick={() => setSelectedAppointmentId(null)}>
+                    Fechar
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
