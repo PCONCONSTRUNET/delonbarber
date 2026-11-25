@@ -54,7 +54,11 @@ export function ClientList({ clients, onDeleteClient }: ClientListProps) {
                     </Badge>
                   )}
                   {client.has_active_package && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                      title="Assinante VIP (Sábado Bloqueado)"
+                    >
                       <Crown className="h-2.5 w-2.5 mr-0.5" />
                       Assinante
                     </Badge>

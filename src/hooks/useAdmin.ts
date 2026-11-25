@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import { supabase, getAuthScope, getScopedSupabase, AuthScope } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -386,10 +387,12 @@ async function fetchAdminClientsQuery(barberId?: string | null): Promise<Client[
       .select('guest_client_id, total_price, appointment_date, status')
       .not('guest_client_id', 'is', null)
       .neq('status', 'cancelled');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     let scopedPackagesQuery = supabase
       .from('client_packages')
       .select('user_id')
-      .eq('status', 'active');
+      .eq('status', 'active')
+      .gte('end_date', todayStr);
 
     if (barberId) {
       scopedAppointmentsQuery = scopedAppointmentsQuery.eq('barber_id', barberId);

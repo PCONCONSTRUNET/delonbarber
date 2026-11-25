@@ -63,16 +63,21 @@ export interface MyPackage {
 type CacheEntry = {
   userId: string | null;
   packages: MyPackage[];
+  hasActiveSubscription: boolean;
   fetchedAt: number;
 };
+type PackagesFetchResult = {
+  packages: MyPackage[];
+  hasActiveSubscription: boolean;
+};
 let cacheEntry: CacheEntry | null = null;
-let inflight: Promise<MyPackage[]> | null = null;
+let inflight: Promise<PackagesFetchResult> | null = null;
 let currentFetchId = 0;
 const CACHE_TTL_MS = 10_000; // 10s - curto o suficiente para atualizar após agendamento
 
-const subscribers = new Set<(pkgs: MyPackage[]) => void>();
-function notifyAll(pkgs: MyPackage[]) {
-  subscribers.forEach((cb) => cb(pkgs));
+const subscribers = new Set<(result: PackagesFetchResult) => void>();
+function notifyAll(result: PackagesFetchResult) {
+  subscribers.forEach((cb) => cb(result));
 }
 
 /** Invalida o cache e força todos os componentes a buscarem o estado atualizado */
@@ -82,7 +87,8 @@ export function invalidateMyPackagesCache() {
   getPackagesCached(true); // Força um fetch e notifica via notifyAll
 }
 
-async function loadPackages(userId: string): Promise<MyPackage[]> {
+async function loadPackages(userId: string): Promise<PackagesFetchResult> {
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
   // Single query: client_packages joined with packages and barber
   const { data: clientPackages, error } = await supabase
     .from('client_packages')
@@ -99,12 +105,14 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
     `)
     .eq('user_id', userId)
     .eq('status', 'active')
-    .gte('end_date', new Date().toISOString().split('T')[0]);
+    .gte('end_date', todayStr);
 
   if (error || !clientPackages || clientPackages.length === 0) {
     if (error) console.error('Error fetching packages:', error);
-    return [];
+    return { packages: [], hasActiveSubscription: false };
   }
+
+  const hasActiveSubscription = clientPackages.length > 0;
 
   const packageIds = clientPackages.map((cp: any) => cp.package_id);
   const clientPackageIds = clientPackages.map((cp: any) => cp.id);
@@ -232,33 +240,39 @@ async function loadPackages(userId: string): Promise<MyPackage[]> {
     });
   }
 
-  return result;
+  return { packages: result, hasActiveSubscription };
 }
 
-async function getPackagesCached(force = false): Promise<MyPackage[]> {
+async function getPackagesCached(force = false): Promise<PackagesFetchResult> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    cacheEntry = { userId: null, packages: [], fetchedAt: Date.now() };
-    return [];
+    const emptyResult: PackagesFetchResult = { packages: [], hasActiveSubscription: false };
+    cacheEntry = { userId: null, ...emptyResult, fetchedAt: Date.now() };
+    return emptyResult;
   }
 
   const fresh = cacheEntry &&
     cacheEntry.userId === user.id &&
     Date.now() - cacheEntry.fetchedAt < CACHE_TTL_MS;
 
-  if (!force && fresh) return cacheEntry!.packages;
+  if (!force && fresh) {
+    return {
+      packages: cacheEntry!.packages,
+      hasActiveSubscription: cacheEntry!.hasActiveSubscription,
+    };
+  }
   if (inflight) return inflight;
 
   const fetchId = ++currentFetchId;
   inflight = (async () => {
     try {
-      const pkgs = await loadPackages(user.id);
+      const result = await loadPackages(user.id);
       // Somente atualiza o cache e notifica se esta for a última requisição disparada
       if (fetchId === currentFetchId) {
-        cacheEntry = { userId: user.id, packages: pkgs, fetchedAt: Date.now() };
-        notifyAll(pkgs);
+        cacheEntry = { userId: user.id, ...result, fetchedAt: Date.now() };
+        notifyAll(result);
       }
-      return pkgs;
+      return result;
     } finally {
       if (fetchId === currentFetchId) {
         inflight = null;
@@ -272,6 +286,9 @@ export function useMyPackages() {
   const [packages, setPackages] = useState<MyPackage[]>(
     cacheEntry?.packages ?? []
   );
+  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean>(
+    cacheEntry?.hasActiveSubscription ?? false
+  );
   const [loading, setLoading] = useState(!cacheEntry);
   const [userId, setUserId] = useState<string | null>(cacheEntry?.userId ?? null);
 
@@ -279,8 +296,9 @@ export function useMyPackages() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     setUserId(user?.id ?? null);
-    const pkgs = await getPackagesCached(force);
-    setPackages(pkgs);
+    const result = await getPackagesCached(force);
+    setPackages(result.packages);
+    setHasActiveSubscription(result.hasActiveSubscription);
     setLoading(false);
   }, []);
 
@@ -288,7 +306,12 @@ export function useMyPackages() {
     let mounted = true;
 
     // Subscribe to global cache updates so all instances stay in sync
-    const handler = (pkgs: MyPackage[]) => { if (mounted) setPackages(pkgs); };
+    const handler = (result: PackagesFetchResult) => {
+      if (mounted) {
+        setPackages(result.packages);
+        setHasActiveSubscription(result.hasActiveSubscription);
+      }
+    };
     subscribers.add(handler);
 
     void fetchMyPackages();
@@ -412,10 +435,13 @@ export function useMyPackages() {
     return null;
   };
 
+  const refetchMyPackages = useCallback(() => fetchMyPackages(true), [fetchMyPackages]);
+
   return {
     packages,
+    hasActiveSubscription,
     loading,
-    fetchMyPackages: () => fetchMyPackages(true),
+    fetchMyPackages: refetchMyPackages,
     hasAvailableBenefit,
     getRemainingForService,
     isBlockedByWeeklyLimit,

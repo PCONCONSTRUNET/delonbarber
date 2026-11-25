@@ -56,10 +56,16 @@ export function useIsExclusiveClient() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     async function check() {
+      if (mounted) setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setLoading(false);
+        if (mounted) {
+          setIsExclusive(false);
+          setLoading(false);
+        }
         return;
       }
 
@@ -68,11 +74,23 @@ export function useIsExclusiveClient() {
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
-      
-      setIsExclusive(!!data && !error);
-      setLoading(false);
+
+      if (mounted) {
+        setIsExclusive(!!data && !error);
+        setLoading(false);
+      }
     }
-    check();
+
+    void check();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      void check();
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return { isExclusive, loading };

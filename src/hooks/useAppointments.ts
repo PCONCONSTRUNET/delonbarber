@@ -217,16 +217,43 @@ export function useAppointments() {
     // Check for active package benefits (filtrando pelo barbeiro selecionado quando aplicável)
     const appointmentDate = date;
     const appointmentDateStr = format(appointmentDate, 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-    const { data: rawActivePackages, error: pkgError } = await supabase
-      .from('client_packages')
-      .select('id, package_id, barber_id, start_date, end_date, packages:package_id(type)')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .gte('end_date', new Date().toISOString().split('T')[0]);
+    const [packagesRes, exclusiveRes] = await Promise.all([
+      supabase
+        .from('client_packages')
+        .select('id, package_id, barber_id, start_date, end_date, packages:package_id(type)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .gte('end_date', todayStr),
+      supabase
+        .from('exclusive_clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+    ]);
+
+    const rawActivePackages = packagesRes.data;
+    const pkgError = packagesRes.error;
 
     if (pkgError) {
       console.error('Error fetching active packages:', pkgError);
+    }
+
+    const hasAnyActiveVipPackage = (rawActivePackages || []).length > 0;
+    const isExclusiveClient = Boolean(exclusiveRes.data && !exclusiveRes.error);
+    const appointmentDow = appointmentDate.getDay();
+
+    if (
+      (appointmentDow === 6 && (hasAnyActiveVipPackage || isExclusiveClient)) ||
+      (appointmentDow === 0 && hasAnyActiveVipPackage)
+    ) {
+      toast({
+        title: "Dia indisponível para plano VIP",
+        description: "Clientes com assinatura VIP não podem agendar aos sábados. Escolha um dia útil disponível conforme o painel.",
+        variant: "destructive"
+      });
+      return null;
     }
 
     const activePackages = (rawActivePackages || []).filter((pkg: any) => {
@@ -538,6 +565,12 @@ export function useAppointments() {
         toast({
           title: "⚠️ Intervalo de almoço",
           description: "Este horário coincide com o intervalo de almoço. Por favor, escolha outro horário.",
+          variant: "destructive"
+        });
+      } else if (msg.includes('VIP_SATURDAY_BLOCKED')) {
+        toast({
+          title: "⚠️ Sábado bloqueado para plano VIP",
+          description: "Clientes com assinatura VIP só podem agendar nos dias úteis configurados no painel (sem sábados).",
           variant: "destructive"
         });
       } else if (msg.includes('BARBER_UNAVAILABLE')) {

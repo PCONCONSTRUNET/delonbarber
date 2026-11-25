@@ -9,6 +9,106 @@ export interface BusinessHourRow {
   lunch_end: string | null;
 }
 
+export const SHORT_DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as const;
+export const FULL_DAY_NAMES = [
+  'Domingo',
+  'Segunda',
+  'Terça',
+  'Quarta',
+  'Quinta',
+  'Sexta',
+  'Sábado',
+] as const;
+
+/**
+ * Agrupa índices de dias da semana (0..6) consecutivos em faixas legíveis.
+ * Ex: [1,2,3,4,5] -> "Seg-Sex" (ou "Segunda a Sexta" com separador " a ").
+ */
+export function formatDayGroups(
+  days: number[],
+  names: readonly string[] = SHORT_DAY_NAMES,
+  rangeSeparator = '-'
+): string {
+  if (!days || days.length === 0) return '';
+  const sorted = [...new Set(days)].filter((d) => d >= 0 && d <= 6).sort((a, b) => a - b);
+  if (sorted.length === 0) return '';
+
+  const groups: { start: number; end: number }[] = [];
+  for (const d of sorted) {
+    const last = groups[groups.length - 1];
+    if (last && last.end === d - 1) {
+      last.end = d;
+    } else {
+      groups.push({ start: d, end: d });
+    }
+  }
+
+  return groups
+    .map((g) =>
+      g.start === g.end
+        ? names[g.start]
+        : `${names[g.start]}${rangeSeparator}${names[g.end]}`
+    )
+    .join(', ');
+}
+
+export interface ScheduleDaySummary {
+  openDays: number[];
+  closedDays: number[];
+  saturdayBlockedByVip: boolean;
+  sundayBlockedByVip: boolean;
+  openShortLabel: string;
+  openFullLabel: string;
+  closedShortLabel: string;
+}
+
+/**
+ * Gera resumo dinâmico dos dias abertos/fechados a partir dos horários do painel,
+ * aplicando a restrição de sábado/fim de semana para clientes VIP / exclusivos.
+ */
+export function getScheduleDaySummary(
+  businessHours: BusinessHourRow[],
+  options?: { blockSaturday?: boolean; blockSunday?: boolean }
+): ScheduleDaySummary {
+  const blockSaturday = Boolean(options?.blockSaturday);
+  const blockSunday = Boolean(options?.blockSunday);
+
+  const openDays: number[] = [];
+  const closedDays: number[] = [];
+  let saturdayBlockedByVip = false;
+  let sundayBlockedByVip = false;
+
+  for (let day = 0; day <= 6; day++) {
+    const row = businessHours.find((h) => h.day_of_week === day);
+    const panelOpen = Boolean(row?.is_open);
+
+    if (day === 6 && blockSaturday) {
+      if (panelOpen) saturdayBlockedByVip = true;
+      else closedDays.push(day);
+      continue;
+    }
+
+    if (day === 0 && blockSunday) {
+      if (panelOpen) sundayBlockedByVip = true;
+      else closedDays.push(day);
+      continue;
+    }
+
+    if (panelOpen) openDays.push(day);
+    else closedDays.push(day);
+  }
+
+  return {
+    openDays,
+    closedDays,
+    saturdayBlockedByVip,
+    sundayBlockedByVip,
+    openShortLabel: formatDayGroups(openDays, SHORT_DAY_NAMES, '-'),
+    openFullLabel: formatDayGroups(openDays, FULL_DAY_NAMES, ' a '),
+    closedShortLabel: formatDayGroups(closedDays, SHORT_DAY_NAMES, '-'),
+  };
+}
+
 /**
  * Normaliza o par de intervalo de almoço:
  * valores vazios, '00:00' / '00:00:00' ou onde início >= fim retornam null.

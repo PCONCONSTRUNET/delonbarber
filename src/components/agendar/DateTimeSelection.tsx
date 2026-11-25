@@ -9,7 +9,7 @@ import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useMyPackages } from '@/hooks/useMyPackages';
 import { useIsExclusiveClient } from '@/hooks/useExclusiveClients';
-import { sanitizeLunchBreak } from '@/lib/businessHours';
+import { getScheduleDaySummary, sanitizeLunchBreak } from '@/lib/businessHours';
 
 
 interface DateTimeSelectionProps {
@@ -35,11 +35,22 @@ export function DateTimeSelection({
   isRefreshing = false,
   selectedBarberId,
 }: DateTimeSelectionProps) {
-  const { packages } = useMyPackages();
+  const { packages, hasActiveSubscription, loading: packagesLoading, fetchMyPackages } = useMyPackages();
   const { isExclusive: isExclusiveClient, loading: isExclusiveClientLoading } = useIsExclusiveClient();
   const [blockedWeekDates, setBlockedWeekDates] = useState<Date[]>([]);
   const [isVipBooking, setIsVipBooking] = useState(false);
   const [isSequentialVipBooking, setIsSequentialVipBooking] = useState(false);
+
+  const isVipSubscriber = useMemo(
+    () => hasActiveSubscription || packages.some((p) => p.status === 'active'),
+    [hasActiveSubscription, packages]
+  );
+  const isVipOrExclusiveClient = isVipSubscriber || isExclusiveClient;
+  const isVipAccessLoading = packagesLoading || isExclusiveClientLoading;
+
+  useEffect(() => {
+    void fetchMyPackages();
+  }, [fetchMyPackages]);
 
   // Check if any selected service has VIP benefit with weekly limit OR is sequential
   useEffect(() => {
@@ -276,6 +287,13 @@ export function DateTimeSelection({
   // Generate available time slots based on business hours (excluding lunch break)
   const availableSlots = useMemo(() => {
     if (!selectedDate || !selectedDayHours || !selectedDayHours.is_open) return [];
+    const dow = selectedDate.getDay();
+    if (
+      (dow === 6 && (isVipOrExclusiveClient || isVipAccessLoading)) ||
+      (dow === 0 && (isVipSubscriber || packagesLoading))
+    ) {
+      return [];
+    }
 
     const slots: string[] = [];
     const [openHour, openMin] = selectedDayHours.open_time.split(':').map(Number);
@@ -330,7 +348,7 @@ export function DateTimeSelection({
     }
 
     return slots;
-  }, [selectedDate, selectedDayHours, selectedServices]);
+  }, [selectedDate, selectedDayHours, selectedServices, isVipOrExclusiveClient, isVipAccessLoading, isVipSubscriber, packagesLoading]);
 
   // Check if a date is blocked due to VIP weekly limit
   const isDateBlockedByVip = (date: Date): boolean => {
@@ -339,17 +357,52 @@ export function DateTimeSelection({
     );
   };
 
-  // Disable days that are closed OR blocked by VIP weekly limit OR Saturday for non-exclusive
+  // Disable days that are closed OR blocked by VIP weekly limit OR Saturday/weekend for VIP/exclusive clients
   const disabledDays = (date: Date) => {
     const dayOfWeek = date.getDay();
     const dayHours = businessHours.find(bh => bh.day_of_week === dayOfWeek);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     const isBlockedByVipLimit = isDateBlockedByVip(date);
-    // Saturday (6) is blocked for exclusive clients (Subscribers), or while loading to prevent race conditions
-    const isSaturdayRestricted = dayOfWeek === 6 && (isExclusiveClient || isExclusiveClientLoading);
-    
-    return isPast || !dayHours?.is_open || isBlockedByVipLimit || isSaturdayRestricted;
+    // Saturday (6) is blocked for VIP subscribers and exclusive clients, or while loading to prevent race conditions.
+    // Sunday (0) is also blocked for VIP subscribers so only configured weekdays (Mon-Fri / Tue-Fri) remain available.
+    const isSaturdayRestricted = dayOfWeek === 6 && (isVipOrExclusiveClient || isVipAccessLoading);
+    const isSundayRestrictedForVip = dayOfWeek === 0 && (isVipSubscriber || packagesLoading);
+
+    return isPast || !dayHours?.is_open || isBlockedByVipLimit || isSaturdayRestricted || isSundayRestrictedForVip;
   };
+
+  // Clear selectedDate if it becomes restricted (e.g. Saturday when VIP status finishes loading)
+  useEffect(() => {
+    if (!selectedDate || isVipAccessLoading) return;
+    const dow = selectedDate.getDay();
+    const dayHours = businessHours.find(bh => bh.day_of_week === dow);
+    const restrictedByVip =
+      (dow === 6 && isVipOrExclusiveClient) ||
+      (dow === 0 && isVipSubscriber);
+    const isInBlockedWeek = blockedWeekDates.some(
+      (blockedDate) => blockedDate.toDateString() === selectedDate.toDateString()
+    );
+    if (restrictedByVip || (businessHours.length > 0 && !dayHours?.is_open) || isInBlockedWeek) {
+      onSelectDate(undefined);
+    }
+  }, [
+    selectedDate,
+    isVipAccessLoading,
+    isVipOrExclusiveClient,
+    isVipSubscriber,
+    businessHours,
+    blockedWeekDates,
+    onSelectDate,
+  ]);
+
+  const scheduleSummary = useMemo(
+    () =>
+      getScheduleDaySummary(businessHours, {
+        blockSaturday: isVipOrExclusiveClient,
+        blockSunday: isVipSubscriber,
+      }),
+    [businessHours, isVipOrExclusiveClient, isVipSubscriber]
+  );
 
   // Custom day content to show VIP blocked indicator
   const modifiers = useMemo(() => {
@@ -374,38 +427,54 @@ export function DateTimeSelection({
   return (
     <div className="space-y-6">
 
-      {/* VIP / Sequential info banner */}
-      {isVipBooking && blockedWeekDates.length > 0 && (
+      {/* VIP / Sequential / Weekday restriction banner */}
+      {((isVipBooking && blockedWeekDates.length > 0) || (isVipOrExclusiveClient && !isVipAccessLoading)) && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`border rounded-2xl p-3 ${
-            isSequentialVipBooking
-              ? 'bg-yellow-500/10 border-yellow-500/30'
-              : 'bg-yellow-500/10 border-yellow-500/30'
-          }`}
+          className="border rounded-2xl p-3 bg-yellow-500/10 border-yellow-500/30 space-y-2"
         >
-          <div className="flex items-start gap-2">
-            <Crown className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-            <div className="text-xs">
-              {isSequentialVipBooking ? (
-                <>
-                  <p className="font-medium text-yellow-600">Plano Sequencial VIP</p>
-                  <p className="text-muted-foreground mt-0.5">
-                    Limite de 1 atendimento por semana dentro da validade da assinatura. Semanas já utilizadas/agendadas ficam destacadas em amarelo.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="font-medium text-yellow-600">Limite VIP semanal</p>
-                  <p className="text-muted-foreground mt-0.5">
-                    Semanas com agendamento VIP marcado estão destacadas em amarelo. 
-                    Escolha uma semana diferente.
-                  </p>
-                </>
-              )}
+          {isVipBooking && blockedWeekDates.length > 0 && (
+            <div className="flex items-start gap-2">
+              <Crown className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+              <div className="text-xs">
+                {isSequentialVipBooking ? (
+                  <>
+                    <p className="font-medium text-yellow-600">Plano Sequencial VIP</p>
+                    <p className="text-muted-foreground mt-0.5">
+                      Limite de 1 atendimento por semana dentro da validade da assinatura. Semanas já utilizadas/agendadas ficam destacadas em amarelo.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium text-yellow-600">Limite VIP semanal</p>
+                    <p className="text-muted-foreground mt-0.5">
+                      Semanas com agendamento VIP marcado estão destacadas em amarelo. 
+                      Escolha uma semana diferente.
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {isVipOrExclusiveClient && !isVipAccessLoading && (
+            <div className="flex items-start gap-2">
+              <Crown className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+              <div className="text-xs">
+                <p className="font-medium text-yellow-600">
+                  {isVipSubscriber
+                    ? `Plano VIP (${scheduleSummary.openFullLabel || 'Dias úteis'})`
+                    : 'Cliente Exclusivo'}
+                </p>
+                <p className="text-muted-foreground mt-0.5">
+                  {scheduleSummary.openFullLabel
+                    ? `Agendamentos disponíveis somente de ${scheduleSummary.openFullLabel}, conforme configurado no painel. Sábados são bloqueados para assinantes.`
+                    : 'Nenhum dia útil aberto configurado no painel no momento.'}
+                </p>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -444,8 +513,15 @@ export function DateTimeSelection({
           />
           
           <div className="flex flex-wrap justify-center gap-3 mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
-            <span>🟢 Ter-Sáb</span>
-            <span>🔴 Dom-Seg</span>
+            {scheduleSummary.openShortLabel && (
+              <span>🟢 {scheduleSummary.openShortLabel}</span>
+            )}
+            {scheduleSummary.closedShortLabel && (
+              <span>🔴 {scheduleSummary.closedShortLabel}</span>
+            )}
+            {scheduleSummary.saturdayBlockedByVip && (
+              <span>🚫 Sáb (VIP)</span>
+            )}
             {isVipBooking && blockedWeekDates.length > 0 && (
               <span className="flex items-center gap-1">
                 <div className="w-3 h-3 rounded bg-yellow-500/30"></div>

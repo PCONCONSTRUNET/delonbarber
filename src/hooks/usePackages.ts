@@ -414,7 +414,7 @@ export function useClientPackages() {
       return false;
     }
 
-    const endDate = format(addDays(new Date(startDate), pkg.duration_days), 'yyyy-MM-dd');
+    const endDate = format(addDays(new Date(startDate + 'T00:00:00'), pkg.duration_days), 'yyyy-MM-dd');
 
     const { error } = await supabase.from('client_packages').insert({
       user_id: userId,
@@ -425,11 +425,6 @@ export function useClientPackages() {
       end_date: endDate,
       status: 'active',
     });
-
-    if (!error) {
-      // Auto-mark as exclusive so Saturdays are blocked
-      await supabase.from('exclusive_clients').upsert({ user_id: userId }, { onConflict: 'user_id' });
-    }
 
     if (error) {
       toast({ title: 'Erro', description: 'Não foi possível adicionar assinatura.', variant: 'destructive' });
@@ -458,17 +453,10 @@ export function useClientPackages() {
   }
 
   async function confirmSubscription(id: string) {
-    const { data: pkgData } = await supabase.from('client_packages').select('user_id').eq('id', id).single();
-
     const { error } = await supabase
       .from('client_packages')
       .update({ status: 'active' })
       .eq('id', id);
-
-    if (!error && pkgData) {
-      // Auto-mark as exclusive so Saturdays are blocked
-      await supabase.from('exclusive_clients').upsert({ user_id: pkgData.user_id }, { onConflict: 'user_id' });
-    }
 
     if (error) {
       toast({ title: 'Erro', description: 'Não foi possível confirmar.', variant: 'destructive' });

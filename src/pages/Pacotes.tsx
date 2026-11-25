@@ -20,6 +20,7 @@ import { PixIcon } from '@/components/icons/PixIcon';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useBarbers } from '@/hooks/useBarbers';
+import { invalidateMyPackagesCache } from '@/hooks/useMyPackages';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { User } from '@supabase/supabase-js';
@@ -227,11 +228,6 @@ const Pacotes = () => {
         status: 'active', // Auto-activate subscription
       });
 
-      if (!error) {
-        // Auto-mark as exclusive so Saturdays are blocked
-        await supabase.from('exclusive_clients').upsert({ user_id: user.id }, { onConflict: 'user_id' });
-      }
-
       if (error) {
         console.error('Error subscribing:', error);
         toast({
@@ -240,6 +236,7 @@ const Pacotes = () => {
           variant: "destructive",
         });
       } else {
+        invalidateMyPackagesCache();
         // Show success modal
         setPaymentModal({
           open: true,
